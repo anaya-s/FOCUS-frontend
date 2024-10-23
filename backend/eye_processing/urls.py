@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import ProcessEyeDataView, RetrieveEyeMetricsView
+from .views import ProcessVideoFrameView, RetrieveEyeMetricsView
 
 urlpatterns = [
-    path('process/', ProcessEyeDataView.as_view(), name='process_eye_data'),
-    path('metrics/', RetrieveEyeMetricsView.as_view(), name='retrieve_eye_metrics'),
+    path('process/', ProcessVideoFrameView.as_view(), name='process_eye_data'),  # Handles frame processing
+    path('metrics/', RetrieveEyeMetricsView.as_view(), name='retrieve_eye_metrics'),  # Retrieves metrics for a user
 ]

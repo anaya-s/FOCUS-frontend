@@ -1,21 +1,39 @@
-from rest_framework import views
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import VideoDataSerializer
+from .models import EyeMetrics
 
-class ProcessEyeDataView(views.APIView):
-    def post(self, request):
-        serializer = VideoDataSerializer(data=request.data)
-        if serializer.is_valid():
-            # Perform eye data processing here
-            processed_metrics = process_eye_data(request.data['video_frame'])
-            return Response(processed_metrics)
-        return Response(serializer.errors, status=400)
+class ProcessVideoFrameView(APIView):
+    def post(self, request, *args, **kwargs):
+        user = request.user  # Current logged-in user
+        session_id = request.data.get('session_id')
+        blink_count = request.data.get('blink_count')
+        eye_aspect_ratio = request.data.get('eye_aspect_ratio')
 
-class RetrieveEyeMetricsView(views.APIView):
-    def get(self, request):
-        # placeholder for metrics - add others later
-        metrics = {
-            'blink_count': 12,
-            'eye_aspect_ratio': 0.25,
-        }
-        return Response(metrics)
+        # Store the raw data in EyeMetrics
+        EyeMetrics.objects.create(
+            user=user,
+            session_id=session_id,
+            blink_count=blink_count,
+            eye_aspect_ratio=eye_aspect_ratio,
+        )
+        return Response({"message": "Frame processed"}, status=200)
+
+class RetrieveEyeMetricsView(APIView):
+    def get(self, request, *args, **kwargs):
+        # Filter by session_id
+        session_id = request.query_params.get('session_id', None)
+        if session_id:
+            metrics = EyeMetrics.objects.filter(user=request.user, session_id=session_id)
+        else:
+            metrics = EyeMetrics.objects.filter(user=request.user)
+
+        # Prepare the response with metrics
+        data = [
+            {
+                "session_id": metric.session_id,
+                "blink_count": metric.blink_count,
+                "eye_aspect_ratio": metric.eye_aspect_ratio,
+                "frame_id": metric.frame_id,
+            } for metric in metrics
+        ]
+        return Response(data, status=200)
