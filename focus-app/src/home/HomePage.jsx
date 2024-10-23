@@ -1,12 +1,19 @@
-import React from "react";
-import Typography from "@mui/material/Typography";
+import React from 'react'
+import PageOne from './components/PageOne'
+import PageTwo from './components/PageTwo'
 
-export default function HomePage() {
-  return (
-    <div>
-      <Typography variant="h1" color = "primary">
-        Unlock your potential with FOCUS
-      </Typography>
-    </div>
-  );
+const containerStyle = {
+  //display: 'flex',
+
+  height: '100vh'
 }
+const HomePage = () => {
+  return (
+    <div style={containerStyle}>
+      <PageOne />
+      <PageTwo />
+    </div>
+  )
+}
+
+export default HomePage

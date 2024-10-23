@@ -1,0 +1,37 @@
+# IF YOU MAKE ANY CHANGES TO THIS FILE PLEASE ENSURE YOU SAVE IT IN ANSI ENCODING
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ignore ALL files in ANY directory named temp
+temp/
+# ignore ALL files in ANY directory called node_modules
+node_modules/
+# ignore ALL files in ANY directory called cache
+.cache/
+# ignore ALL files in ANY directory called __pycache__
+__pycache__/
+# ignore all .pyc files
+*.pyc
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
