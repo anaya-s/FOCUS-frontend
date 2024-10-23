@@ -1,30 +1,6 @@
 // src/Login.js
 import React, { useState } from 'react';
-
-const styles = {
-  container: {
-    maxWidth: '400px',
-    margin: '50px auto',
-    padding: '20px',
-    border: '1px solid #ccc',
-    borderRadius: '10px',
-    textAlign: 'center',
-  },
-  input: {
-    width: '100%',
-    padding: '10px',
-    margin: '10px 0',
-    borderRadius: '5px',
-  },
-  button: {
-    padding: '10px 20px',
-    backgroundColor: '#007bff',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-  },
-};
+import { TextField, Button, Container, Typography, Box } from '@mui/material';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -38,35 +14,53 @@ function Login() {
   };
 
   return (
-    <div style={styles.container}>
-      <h2>Login Page</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Email:</label>
-          <input
+    <Container maxWidth="xs">
+      <Box
+        sx={{
+          marginTop: 8,
+          padding: 3,
+          border: '1px solid #ccc',
+          borderRadius: 2,
+          textAlign: 'center',
+        }}
+      >
+        <Typography variant="h4" component="h1" gutterBottom>
+          Login Page
+        </Typography>
+        <form onSubmit={handleSubmit}>
+          <TextField
+            label="Email"
             type="email"
+            fullWidth
+            variant="outlined"
+            margin="normal"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={styles.input}
           />
-        </div>
-        <div>
-          <label>Password:</label>
-          <input
+          <TextField
+            label="Password"
             type="password"
+            fullWidth
+            variant="outlined"
+            margin="normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={styles.input}
           />
-        </div>
-        <button type="submit" style={styles.button}>Login</button>
-      </form>
-    </div>
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            color="primary"
+            sx={{ marginTop: 2, backgroundColor: 'green', '&:hover': { backgroundColor: 'darkgreen' } }}
+          >
+            Login
+          </Button>
+        </form>
+      </Box>
+    </Container>
   );
 }
-
-
 
 export default Login;
