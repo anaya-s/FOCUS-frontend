@@ -2,6 +2,7 @@ import React from "react";
 import Typography from "@mui/material/Typography";
 
 const pageStyle = {
+  height: '100vh'
    // display: 'flex',
    // flexDirection: 'column',
 }

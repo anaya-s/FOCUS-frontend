@@ -1,7 +1,9 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom'; 
 import HomePage from './home/HomePage';
-import NavBar from './home/components/navbar'; 
+import LoginPage from './login/LoginPage';
+import NavBar from './home/NavBar'; 
+import Footer from './home/Footer';
 
 function App() {
   return (
@@ -20,7 +22,9 @@ function App() {
         {/* Define Routes */}
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
         </Routes>
+        <Footer />
       </div>
     </Router>
   );
