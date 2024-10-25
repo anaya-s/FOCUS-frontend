@@ -1,12 +1,16 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.jsx'
 import Login from './Login.jsx' // Login page
-import './index.css'
+
+import { ThemeProvider } from '@mui/material/styles';
+
+import theme from './assets/theme.js'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    {/* <App /> */}
-    <Login />
+    <ThemeProvider theme={theme}>
+        {/* <App /> */}
+        <Login />
+    </ThemeProvider>
   </StrictMode>,
 )
