@@ -1,4 +1,3 @@
-// src/Login.js
 import React, { useState } from "react";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
@@ -10,13 +9,15 @@ import Link from "@mui/material/Link";
 
 import { useNavigate } from "react-router-dom";
 
-function Login() {
+function Register() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Login Successful!");
+    console.log("Account Creation Successful!");
+    console.log("Name: ", name);
     console.log("Email:", email);
     console.log("Password:", password);
   };
@@ -31,22 +32,18 @@ function Login() {
 
   const navigate = useNavigate();
 
-  const toCreateAccount = () => {
-    navigate("/register");
-  };
-
-  const toForgotPassword = () => {
-    navigate("/forgot-password");
+  const toLogin = () => {
+    navigate("/");
   };
 
   return (
     <Box style={pageStyle}>
       <Container maxWidth="xs">
-        <Typography variant="h3" component="h1" gutterBottom>
-          Welcome back👋
+        <Typography variant="h4" component="h1" gutterBottom>
+          Experience the future of productivity
         </Typography>
         <Typography variant="h6" component="h1">
-          Enter your login details
+          Create your new account
         </Typography>
         <Box
           sx={{
@@ -71,10 +68,23 @@ function Login() {
               }}
             >
               <img src="./images/google_logo.svg" style={{ marginRight: 10 }} />
-              Sign in with Google
+              Sign up with Google
             </Button>
             <Divider>OR</Divider>
             <Typography textAlign={"left"} marginLeft={0.5}>
+              Name
+            </Typography>
+            <TextField
+              // label="Name"
+              type="name"
+              fullWidth
+              variant="outlined"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              margin="dense"
+              required
+            />
+            <Typography textAlign={"left"} marginLeft={0.5} marginTop={1}>
               Email
             </Typography>
             <TextField
@@ -100,15 +110,6 @@ function Login() {
               margin="dense"
               required
             />
-            <Typography sx={{ marginBottom: 1 }}>
-              <Link
-                onClick={toForgotPassword}
-                size="small"
-                style={{ cursor: "pointer" }}
-              >
-                Forgotten password?
-              </Link>
-            </Typography>
             <Button
               type="submit"
               fullWidth
@@ -116,26 +117,28 @@ function Login() {
               color="primary"
               sx={{
                 marginTop: 2,
+                marginBottom: 2,
                 backgroundColor: "green",
                 "&:hover": { backgroundColor: "darkgreen" },
               }}
             >
-              Sign in
+              Sign up
             </Button>
+            <Typography>
+              By signing up, you agree to our{" "}
+              <Link style={{ cursor: "pointer" }}>T&Cs</Link>
+            </Typography>
           </form>
         </Box>
-        <Typography sx={{ marginTop: 1.5 }}>
-          <Button
-            onClick={toCreateAccount}
-            size="large"
-            style={{ cursor: "pointer" }}
-          >
-            Create an account
-          </Button>
+        <Typography sx={{ marginTop: 2 }} fontSize="18px">
+          Already have an account?{" "}
+          <Link onClick={toLogin} style={{ cursor: "pointer" }}>
+            Log in
+          </Link>
         </Typography>
       </Container>
     </Box>
   );
 }
 
-export default Login;
+export default Register;
