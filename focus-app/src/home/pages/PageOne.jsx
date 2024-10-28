@@ -13,9 +13,9 @@ const pageStyle = {
 const contentStyle = {
   display: "flex",
   flexDirection: "column",
-  alignItems: "center", // Centers items within content column
-  textAlign: "center", // Centers the text within Typography components
-  gap: "15px", // Adds space between elements
+  alignItems: "center", 
+  textAlign: "center",
+  gap: "15px", 
 };
 
 const imageStyle = {
