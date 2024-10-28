@@ -8,13 +8,13 @@ const pageStyle = {
   justifyContent: "center", // Centers content vertically
   height: "100vh",
   textAlign: "center", // Centers text within each Typography component
-  padding: "0 20px", // Optional: Adds padding for small screens
+  padding: "0 150px", // Optional: Adds padding for small screens
 };
 
 const PageFive = () => {
   return (
     <div style={pageStyle}>
-      <Typography variant="h5">
+      <Typography variant="h1">
         F.O.C.U.S makes it easy to boost productivity, empowering you to work
         smarter in the digital age.
       </Typography>

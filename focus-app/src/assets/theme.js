@@ -8,6 +8,15 @@ const theme = createTheme({
     h1: {
       fontWeight: 700, 
     },
+    h2: {
+      fontFamily: '"Istok Web", sans-serif',
+      fontweight: 1000,
+    },
+    h3: {
+      fontFamily: '"Jua", sans-serif',
+      color: '#06760D',
+      fontweight: 5000,
+    },
     h5: {
       fontFamily: '"Jua", sans-serif',
       color: '#06760D',

@@ -17,7 +17,7 @@ const headingStyle = {
 const featureStyle = {
   display: "flex",
   justifyContent: "center", // Centers the feature items horizontally
-  gap: "50px", // Space between each feature item
+  gap: "100px", // Space between each feature item
 };
 
 const featureItemStyle = {
