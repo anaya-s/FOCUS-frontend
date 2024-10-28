@@ -1,10 +1,21 @@
 import { createTheme } from '@mui/material/styles';
+import '@fontsource/jua';
+import '@fontsource/inter';
 
 const theme = createTheme({
   typography: {
     fontFamily: '"Istok Web", sans-serif',
     h1: {
       fontWeight: 700, 
+    },
+    h5: {
+      fontFamily: '"Jua", sans-serif',
+      color: '#06760D',
+      fontweight: 700,
+    },
+    h6: {
+      fontFamily: '"Inter", sans-serif',
+      fontweight: 500,
     },
     body1: {
       fontSize: '1rem',

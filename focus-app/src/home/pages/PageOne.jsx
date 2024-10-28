@@ -2,19 +2,27 @@ import React from "react";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 
+const pageStyle = {
+  display: "flex",
+  alignItems: "center",    // Centers content vertically
+  justifyContent: "center", // Centers content horizontally
+  height: "100vh",
+  gap: "20px", // Adds space between the text content and the image
+};
+
 const contentStyle = {
-  // display : 'flex',
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center", // Centers items within content column
+  textAlign: "center", // Centers the text within Typography components
+  gap: "15px", // Adds space between elements
 };
 
 const imageStyle = {
   width: "225px",
   height: "225px",
 };
-const pageStyle = {
-  display: "flex",
-  height: "100vh",
-  //flexDirection: 'column',
-};
+
 const PageOne = () => {
   return (
     <div style={pageStyle}>

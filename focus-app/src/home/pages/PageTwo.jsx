@@ -2,22 +2,36 @@ import React from "react";
 import Typography from "@mui/material/Typography";
 
 const pageStyle = {
-  height: '100vh'
-   // display: 'flex',
-   // flexDirection: 'column',
-}
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center", // Centers everything horizontally
+  justifyContent: "center", // Centers everything vertically
+  height: "100vh",
+  gap: "40px", // Space between heading section and feature section
+};
 
 const headingStyle = {
-//    margin : '10px 50px 50px 10px',
-// display: 'flex',
-// // flexDirection: 'row',
-//  alignItems: 'center',
-//  justifyContent: 'center',
-}
+  textAlign: "center", // Centers the heading text
+};
+
 const featureStyle = {
-    display:  'flex',
-    // flexDirection: 'column',
-}
+  display: "flex",
+  justifyContent: "center", // Centers the feature items horizontally
+  gap: "50px", // Space between each feature item
+};
+
+const featureItemStyle = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center", // Centers text and image within each feature item
+  textAlign: "center", // Centers the text under each image
+  maxWidth: "200px", // Optional: Limits the width of each feature item
+};
+
+const imageStyle = {
+  width: "100px",
+  height: "100px",
+};
 
 const PageTwo = () => {
   return (
@@ -29,32 +43,32 @@ const PageTwo = () => {
         </Typography>
       </div>
       <div style={featureStyle}>
-        <div>
+        <div style={featureItemStyle}>
           <img
             src="/images/eye.png"
             alt="Image for eye tracking"
-            //   style={imageStyle}
+            style={imageStyle}
           />
-          <Typography>Real Time</Typography>
-          <Typography>Use your camera to track eye movements</Typography>
+          <Typography variant="h5">Real Time</Typography>
+          <Typography variant="h6">Use your camera to track eye movements</Typography>
         </div>
-        <div>
+        <div style={featureItemStyle}>
           <img
             src="/images/fatigue.png"
             alt="Image for fatigue"
-            //   style={imageStyle}
+            style={imageStyle}
           />
-          <Typography>Eye Fatigue</Typography>
-          <Typography>Monitors eye health with in-house technology</Typography>
+          <Typography variant="h5">Eye Fatigue</Typography>
+          <Typography variant="h6">Monitors eye health with in-house technology</Typography>
         </div>
-        <div>
+        <div style={featureItemStyle}>
           <img
             src="/images/productive.png"
             alt="Image for improving productivity"
-            //   style={imageStyle}
+            style={imageStyle}
           />
-          <Typography>Be Productive</Typography>
-          <Typography>Personalised tips to boost productivity</Typography>
+          <Typography variant="h5">Be Productive</Typography>
+          <Typography variant="h6">Personalised tips to boost productivity</Typography>
         </div>
       </div>
     </div>
