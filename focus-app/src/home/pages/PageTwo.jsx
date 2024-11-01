@@ -29,8 +29,8 @@ const featureItemStyle = {
 };
 
 const imageStyle = {
-  width: "100px",
-  height: "100px",
+  width: "130px",
+  height: "130px",
 };
 
 const PageTwo = () => {

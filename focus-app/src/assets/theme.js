@@ -20,7 +20,7 @@ const theme = createTheme({
     h5: {
       fontFamily: '"Jua", sans-serif',
       color: '#06760D',
-      fontweight: 1000,
+      fontweight: 1500,
     },
     h6: {
       fontFamily: '"Inter", sans-serif',
