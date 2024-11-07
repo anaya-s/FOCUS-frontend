@@ -1,140 +1,138 @@
-// src/Login.js
-import React, { useState } from "react";
-import TextField from "@mui/material/TextField";
-import Button from "@mui/material/Button";
-import Container from "@mui/material/Container";
-import Typography from "@mui/material/Typography";
-import Box from "@mui/material/Box";
-import Divider from "@mui/material/Divider";
-import Link from "@mui/material/Link";
+import React, { useState, useEffect, useRef } from "react";
 
-import { useNavigate } from "react-router-dom";
+import webgazer from "./webgazer.js"
 
 function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const videoRef = useRef(null);
+  const socket = useRef(null);
+  const [stream, setStream] = useState(null);
+  const [streamObtained, changeStatus] = useState(false);
+  const [connectionOpen, changeStatusConn] = useState(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Login Successful!");
-    console.log("Email:", email);
-    console.log("Password:", password);
+  const intervalRef = useRef(null);
+  
+  useEffect(() => {
+
+    webgazer.begin(); // Start Webgazer.js to get the video stream, and to enable eye tracking
+
+    /* Setting parameters for Webgazer.js */
+    webgazer.params.showVideo = false;
+    webgazer.params.showGazeDot = true;
+    webgazer.params.showVideoPreview = false;
+    webgazer.params.saveDataAcrossSessions = false;
+
+    /* Fetch the video stream from Webgazer */
+    const intervalId = setInterval(() => {
+      const stream = webgazer.getVideoStream();
+  
+      if (stream !== null) {
+        // console.log("Got stream");
+        setStream(stream); // Set your stream here
+        changeStatus(true); // Update any state or flags as needed
+        videoRef.current.srcObject = stream;
+        clearInterval(intervalId); // Stop checking once we have the stream
+      } 
+      // else {
+      //   console.log("Did not get video stream, retrying...");
+      // }
+    }, 500); // Check every 500 milliseconds
+    
+    // Cleanup when component unmounts
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []); // Only run once on mount to get video stream
+
+  useEffect(() => {
+    if (stream && !socket.current) {
+      // Only create the WebSocket connection once the stream is set
+      socket.current = new WebSocket("ws://localhost:8000/ws/video/");
+
+      socket.current.onopen = () => {
+        console.log("WebSocket connection established");
+        changeStatusConn(true);
+      };
+
+      socket.current.onclose = () => {
+        console.log("WebSocket connection closed");
+        socket.current = null; // Reset the socket reference on close
+        changeStatusConn(false);
+      };
+
+      socket.current.onerror = (error) => {
+        // console.error("WebSocket error:", error);
+        console.error("Ensure that the server is running.");
+      };
+    }
+
+    // Cleanup WebSocket and media stream on component unmount
+    return () => {
+      if (socket.current) {
+        socket.current.close(); // Close the WebSocket connection
+        socket.current = null; // Ensure socket is reset to null
+      }
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current); // Stop the frame sending interval
+      }
+    };
+  }, [streamObtained == true]); // Only run when stream is obtained
+
+  const sendVideoFrame = () => {
+    if (videoRef.current && socket.current && socket.current.readyState === WebSocket.OPEN) {
+      const canvas = document.createElement("canvas");
+      // canvas.width = videoRef.current.videoWidth; // 640px
+      canvas.width = 320; // Testing lower resolutions
+      // canvas.height = videoRef.current.videoHeight; // 480px
+      canvas.height = 240; // Testing lower resolutions
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+      console.log("Sending frame");
+
+      // Convert the canvas image to Base64
+      const frame = canvas.toDataURL("image/jpeg");
+
+      // Send the frame via WebSocket
+      socket.current.send(
+        JSON.stringify({
+          frame: frame,
+        })
+      );
+    }
   };
 
-  const pageStyle = {
-    display: "flex",
-    height: "100vh",
-    justifyContent: "center",
-    alignItems: "center",
-    textAlign: "center",
-  };
+  useEffect(() => {
+    // Start sending frames every 100ms once stream is available
+    if (stream && !intervalRef.current) {
+      intervalRef.current = setInterval(() => {
+        sendVideoFrame();
+      }, 0); // Set interval between each frame in milliseconds
+    }
 
-  const navigate = useNavigate();
+    /* Observations on FPS limit:
+    - 50ms interval between frame is the lowest limit - for frames to be received 'close' to real-time without delays
+    - Any interval < 50ms introduces delays in receiving - front-end sending frames too quickly for back-end to receive and process them into images
+    - However, the above applied to image resolution 640x480
+    - If res is reduced to 320x240 (half image quality), the interval can be brought down to 0 ms (NO interval) !!!
+    - Ultimately, both the interval and resolution depends on the the speed of the real-time processing of eye metrics and the necessary image quality for such processing.
+     */
 
-  const toCreateAccount = () => {
-    navigate("/register");
-  };
-
-  const toForgotPassword = () => {
-    navigate("/forgot-password");
-  };
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current); // Clean up the interval
+      }
+    };
+  }, [streamObtained == true && connectionOpen == true]); // Only run when the stream is available
 
   return (
-    <Box style={pageStyle}>
-      <Container maxWidth="xs">
-        <Typography variant="h3" component="h1" gutterBottom>
-          Welcome back👋
-        </Typography>
-        <Typography variant="h6" component="h1">
-          Enter your login details
-        </Typography>
-        <Box
-          sx={{
-            marginTop: 3,
-            padding: 3,
-            border: "1px solid #ccc",
-            borderRadius: 2,
-            textAlign: "center",
-            alignItems: "center",
-          }}
-        >
-          <form onSubmit={handleSubmit}>
-            <Button
-              //onClick={} // Link with Google OAuth
-              fullWidth
-              variant="contained"
-              color="black"
-              sx={{
-                marginBottom: 2,
-                backgroundColor: "white",
-                "&:hover": { backgroundColor: "lightgray" },
-              }}
-            >
-              <img src="./images/google_logo.svg" style={{ marginRight: 10 }} />
-              Sign in with Google
-            </Button>
-            <Divider>OR</Divider>
-            <Typography textAlign={"left"} marginLeft={0.5}>
-              Email
-            </Typography>
-            <TextField
-              // label="Email"
-              type="email"
-              fullWidth
-              variant="outlined"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              margin="dense"
-              required
-            />
-            <Typography textAlign={"left"} marginLeft={0.5} marginTop={1}>
-              Password
-            </Typography>
-            <TextField
-              // label="Password"
-              type="password"
-              fullWidth
-              variant="outlined"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              margin="dense"
-              required
-            />
-            <Typography sx={{ marginBottom: 1 }}>
-              <Link
-                onClick={toForgotPassword}
-                size="small"
-                style={{ cursor: "pointer" }}
-              >
-                Forgotten password?
-              </Link>
-            </Typography>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              color="primary"
-              sx={{
-                marginTop: 2,
-                backgroundColor: "green",
-                "&:hover": { backgroundColor: "darkgreen" },
-              }}
-            >
-              Sign in
-            </Button>
-          </form>
-        </Box>
-        <Typography sx={{ marginTop: 1.5 }}>
-          <Button
-            onClick={toCreateAccount}
-            size="large"
-            style={{ cursor: "pointer" }}
-          >
-            Create an account
-          </Button>
-        </Typography>
-      </Container>
-    </Box>
+    <div>
+      <video ref={videoRef} autoPlay width="1280" height="720"></video>
+    </div>
   );
 }
 
