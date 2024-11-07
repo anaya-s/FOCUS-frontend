@@ -13,18 +13,23 @@ const theme = createTheme({
       fontweight: 1000,
     },
     h3: {
-      fontFamily: '"Jua", sans-serif',
+      fontFamily: '"Istok Web", sans-serif',
       color: '#06760D',
-      fontweight: 5000,
+      fontweight: 500,
     },
     h5: {
-      fontFamily: '"Jua", sans-serif',
+      fontFamily: '"Istok Web", sans-serif',
       color: '#06760D',
-      fontweight: 1500,
+      fontweight: 10000,
     },
     h6: {
-      fontFamily: '"Inter", sans-serif',
+      fontFamily: '"Istok Web", sans-serif',
+      color: '000000',
       fontweight: 500,
+    },
+    h7: {
+      fontFamily: '"Istok Web", sans-serif',
+      fontweight: 1700,
     },
     body1: {
       fontSize: '1rem',

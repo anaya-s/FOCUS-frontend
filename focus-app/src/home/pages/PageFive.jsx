@@ -14,7 +14,7 @@ const pageStyle = {
 const PageFive = () => {
   return (
     <div style={pageStyle}>
-      <Typography variant="h1">
+      <Typography variant="h2" fontWeight="bold">
         F.O.C.U.S makes it easy to boost productivity, empowering you to work
         smarter in the digital age.
       </Typography>

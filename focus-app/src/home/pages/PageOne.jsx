@@ -7,7 +7,7 @@ const pageStyle = {
   alignItems: "center",    // Centers content vertically
   justifyContent: "center", // Centers content horizontally
   height: "100vh",
-  gap: "20px", // Adds space between the text content and the image
+  gap: "200px", // Adds space between the text content and the image
 };
 
 const contentStyle = {
@@ -18,8 +18,9 @@ const contentStyle = {
   gap: "15px", 
 };
 
+
 const imageStyle = {
-  width: "225px",
+  width: "400px",
   height: "225px",
 };
 
@@ -27,18 +28,25 @@ const PageOne = () => {
   return (
     <div style={pageStyle}>
       <div style={contentStyle}>
-        <Typography variant="h3">Unlock your potential with FOCUS</Typography>
-        <Typography variant="h4">
+        <Typography variant="h3" fontWeight="bold">Unlock your potential</Typography>
+        <Typography variant="h4" fontWeight="bold">with FOCUS</Typography>
+        <Typography variant="h7">
           Enhance Reading and Boost Productivity
         </Typography>
-        <Button variant="contained" color="primary">
+        <Button
+          variant="contained"
+          color="primary"
+          sx={{ borderRadius: "20px" }} // Adds rounded edges to the button
+        >
           FIND OUT MORE
         </Button>
-        <Button variant="text">CREATE AN ACCOUNT</Button>
+        <Button variant="h4" sx={{ borderRadius: "20px" }}>
+          CREATE AN ACCOUNT
+        </Button>
       </div>
       <div>
         <img
-          src="/images/felix.png"
+          src="/images/felixspeech.png" //temporary
           alt="Felix the productivity robot"
           style={imageStyle}
         />

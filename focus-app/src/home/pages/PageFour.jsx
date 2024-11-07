@@ -7,6 +7,7 @@ const pageStyle = {
   alignItems: "center", // Vertically centers content within the page
   justifyContent: "center", // Horizontally centers content within the page
   height: "100vh",
+  marginRight: "150px",
   padding: "0 20px", // Adds padding for small screens
 };
 
@@ -46,16 +47,13 @@ const PageFour = () => {
         />
       </div>
       <div style={rightColumnStyle}>
-        <Typography variant="h3">Smart Breaks</Typography>
-        <Typography variant="h2">Stay on top with your progress</Typography>
-        <Typography variant="body1">
+        <Typography variant="h3" sx={{ fontSize: "30px" }}>Smart Breaks</Typography>
+        <Typography variant="h2" fontWeight="bold">Stay on top with your progress</Typography>
+        <Typography variant="body1" sx={{ color: "gray" }}>
           Access your own personalised dashboard with Felix. Felix ensures
           productivity by encouraging the 20-20-20 rule, helping prevent eye
           fatigue with regular breaks.
         </Typography>
-        <Button style={buttonStyle} variant="contained" color="primary">
-          Get Started
-        </Button>
       </div>
     </div>
   );

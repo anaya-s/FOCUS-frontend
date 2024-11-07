@@ -7,6 +7,8 @@ const pageStyle = {
   alignItems: "center", // Vertically centers content within the page
   justifyContent: "center", // Horizontally centers content within the page
   height: "100vh",
+  marginLeft: "120px",     // Margin on the left
+  marginRight: "30px",    // Margin on the right
   padding: "0 20px", // Adds padding for small screens
 };
 
@@ -16,7 +18,7 @@ const leftColumnStyle = {
   flexDirection: "column",
   justifyContent: "center", // Centers content vertically within the column
   textAlign: "left", // Left-aligns text
-  paddingRight: "20px", // Adds padding between columns
+  paddingRight: "200px", // Adds padding between columns
 };
 
 const rightColumnStyle = {
@@ -32,28 +34,25 @@ const buttonStyle = {
 };
 
 const imageStyle = {
-  width: "250px", // Set width of the image
-  height: "auto", // Maintain aspect ratio
+  width: "500px", // Set width of the image
+  height: "500px", // Maintain aspect ratio
 };
 
 const PageThree = () => {
   return (
     <div style={pageStyle}>
       <div style={leftColumnStyle}>
-        <Typography variant="h3">Reading Made Easy</Typography>
-        <Typography variant="h2">Elevate your reading experience</Typography>
-        <Typography variant="body1">
+        <Typography variant="h3" sx={{ fontSize: "30px" }}>Reading Made Easy</Typography>
+        <Typography variant="h2" fontWeight="bold">Elevate your reading experience</Typography>
+        <Typography variant="body1" sx={{ color: "gray" }}>
           Say goodbye to fatigue while reading your documents. Elevate your
           experience with smart highlighting and assistive tools for effortless
           reading.
         </Typography>
-        <Button style={buttonStyle} variant="contained" color="primary">
-          Get Started
-        </Button>
       </div>
       <div style={rightColumnStyle}>
         <img
-          src="/images/pdf_upload" //SORT PDF UPLOAD STUFF ASAP
+          src="/images/upload.png" //SORT PDF UPLOAD STUFF ASAP
           alt="Reading experience"
           style={imageStyle}
         />
