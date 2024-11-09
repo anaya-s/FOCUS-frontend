@@ -73,8 +73,8 @@ function Login() {
       socket.current.readyState === WebSocket.OPEN
     ) {
       const canvas = document.createElement("canvas");
-      canvas.width = 320 // 640p
-      canvas.height = 240 // 480p
+      canvas.width = videoRef.current.videoWidth // 640p
+      canvas.height = videoRef.current.videoHeight // 480p
       const context = canvas.getContext("2d", { willReadFrequently: true });
       context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
