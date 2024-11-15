@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import webgazer from "../webgazer/webgazer.js";
 
+const videoStyle = {marginTop: "300px"}
+
 function Temp() {
   const videoRef = useRef(null);
   const socket = useRef(null);
@@ -112,8 +114,8 @@ function Temp() {
   }, [streamObtained && connectionOpen]);
 
   return (
-    <div>
-      <video ref={videoRef} autoPlay width="1280" height="720"></video>
+    <div style={videoStyle}>
+      <video ref={videoRef} autoPlay width="700" height="700"></video>
     </div>
   );
 }
