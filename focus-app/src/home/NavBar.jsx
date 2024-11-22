@@ -37,10 +37,22 @@ const NavBar = () => {
     navigate("/login");
   };
 
+  const toCalibration = () => {
+    navigate("/calibration");
+  };
+
   return (
     <div style={barStyle}>
       <Button onClick={toHome}>F.O.C.U.S</Button>
       <div style={navStyle}>
+      <Button
+          onClick={toCalibration}
+          style={buttonStyle}
+          variant="contained"
+          color="primary"
+        >
+          Calibration
+        </Button>
         <Button style={buttonStyle}>About</Button>
         <Button style={buttonStyle}>Our Products</Button>
         <Button

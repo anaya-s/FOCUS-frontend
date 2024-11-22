@@ -29,7 +29,7 @@ const theme = createTheme({
     },
     h7: {
       fontFamily: '"Istok Web", sans-serif',
-      fontweight: 1700,
+      fontweight: 100,
     },
     body1: {
       fontSize: '1rem',
