@@ -42,7 +42,9 @@ function Temp() {
 
   useEffect(() => {
     if (stream && !socket.current) {
-      socket.current = new WebSocket("ws://localhost:8000/ws/video/");
+      const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
+      socket.current = new WebSocket(`ws://localhost:8000/ws/video/?token=${token}`);
+
       socket.current.onopen = () => changeStatusConn(true);
       socket.current.onclose = () => {
         socket.current = null;

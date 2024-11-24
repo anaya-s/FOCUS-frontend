@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
       },
       body: JSON.stringify({
         email: email,
-        username: "lewis",
+        username: "test",
         password: password,
       }),
     });
