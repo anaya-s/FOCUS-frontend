@@ -5,21 +5,21 @@ import Typography from "@mui/material/Typography";
 const CalibrationPage = () => {
   const [clickCounts, setClickCounts] = useState(Array(15).fill(0)); // Tracks click counts for each circle
 
-  useEffect(() => {
-    // Initialize WebGazer and hide video and prediction points
-    webgazer
-      .setGazeListener((data, timestamp) => {
-        if (data == null) return;
-      })
-      .showVideo(false) // Disable live video feed
-      .showPredictionPoints(false) // Disable prediction dots
-      .begin();
+  // useEffect(() => {
+  //   // Initialize WebGazer and hide video and prediction points
+  //   webgazer
+  //     .setGazeListener((data, timestamp) => {
+  //       if (data == null) return;
+  //     })
+  //     .showVideo(false) // Disable live video feed
+  //     .showPredictionPoints(false) // Disable prediction dots
+  //     .begin();
 
-    return () => {
-      // Stop WebGazer when component unmounts
-      webgazer.end();
-    };
-  }, []);
+  //   return () => {
+  //     // Stop WebGazer when component unmounts
+  //     webgazer.end();
+  //   };
+  // }, []);
 
   const handleCalibrationClick = (index) => {
     // Update the click count for the clicked circle
@@ -27,8 +27,6 @@ const CalibrationPage = () => {
     newClickCounts[index] = (newClickCounts[index] + 1) % 4; // Cycles through 0, 1, 2, 3
     setClickCounts(newClickCounts);
 
-    // Simulate recording calibration data (optional)
-    webgazer.recordScreenPosition();
   };
 
   const getColor = (clickCount) => {
