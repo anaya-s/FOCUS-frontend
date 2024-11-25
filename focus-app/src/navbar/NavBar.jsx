@@ -46,15 +46,15 @@ const NavBar = () => {
           onClick={toAbout}
           >About</Button>
         <Button style={buttonStyle}>Our Products</Button>
-        <AccountMenu />
-        {/* <Button
+        {/* <AccountMenu /> */}
+        <Button
           onClick={handleUser}
           style={buttonStyle}
           variant="contained"
           color="primary"
         >
-          
-        </Button>  */}
+          {text}
+        </Button> 
       </div>
     </div>
   );
