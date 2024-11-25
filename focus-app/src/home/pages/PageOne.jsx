@@ -45,7 +45,7 @@ const PageOne = () => {
       </div>
       <div>
         <img
-          src="/images/felixspeech.png" 
+          src="/images/homepage/felixspeech.png" 
           alt="Felix the productivity robot"
           style={imageStyle}
         />

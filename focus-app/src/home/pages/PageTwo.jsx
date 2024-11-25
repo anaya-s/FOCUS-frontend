@@ -45,7 +45,7 @@ const PageTwo = () => {
       <div style={featureStyle}>
         <div style={featureItemStyle}>
           <img
-            src="/images/eye.png"
+            src="/images/homepage/eye.png"
             alt="Image for eye tracking"
             style={imageStyle}
           />
@@ -58,7 +58,7 @@ const PageTwo = () => {
         </div>
         <div style={featureItemStyle}>
           <img
-            src="/images/fatigue.png"
+            src="/images/homepage/fatigue.png"
             alt="Image for fatigue"
             style={imageStyle}
           />
@@ -71,7 +71,7 @@ const PageTwo = () => {
         </div>
         <div style={featureItemStyle}>
           <img
-            src="/images/productive.png"
+            src="/images/homepage/productive.png"
             alt="Image for improving productivity"
             style={imageStyle}
           />

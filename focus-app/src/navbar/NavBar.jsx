@@ -1,7 +1,8 @@
 import { useContext } from "react";
 import Button from "@mui/material/Button";
+import { useNavigation } from '../utils/navigation';
+import AccountMenu from "./account/AccountMenu";
 import AuthContext from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 const barStyle = {
   display: "flex",
@@ -29,29 +30,11 @@ const buttonStyle = {
 };
 
 const NavBar = () => {
-  const navigate = useNavigate();
   let { user, logoutUser } = useContext(AuthContext);
-
-  const toHome = () => {
-    navigate("/");
-  };
-
-  const toLogin = () => {
-    navigate("/login");
-    console.log(user)
-  };
-
-  const toAbout = () => {
-    navigate("/about");
-  }
-  const toDashboard = () => {
-    navigate("/dashboard");
-  }
+  const {toHome, toLogin, toAbout, toDashboard} = useNavigation();
   
   const text = user ? "Logout" : "Login";
-
   const handleUser = user ? logoutUser : toLogin;
-
 
   return (
     <div style={barStyle}>
@@ -63,14 +46,15 @@ const NavBar = () => {
           onClick={toAbout}
           >About</Button>
         <Button style={buttonStyle}>Our Products</Button>
-        <Button
+        <AccountMenu />
+        {/* <Button
           onClick={handleUser}
           style={buttonStyle}
           variant="contained"
           color="primary"
         >
-          {text}
-        </Button> 
+          
+        </Button>  */}
       </div>
     </div>
   );

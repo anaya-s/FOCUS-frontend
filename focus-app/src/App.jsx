@@ -4,10 +4,10 @@ import HomePage from "./home/HomePage";
 import LoginPage from "./login/LoginPage";
 import ResetPass from "./login/ResetPass";
 import Register from "./login/Register";
-import NavBar from "./home/NavBar";
+import NavBar from "./navbar/NavBar";
 import Footer from "./home/Footer";
 import NotFound from "./utils/NotFound";
-import AboutUs from "./about/AboutUs";
+import AboutUs from "./navbar/products/AboutUs";
 import Temp from "./text_reader/Temp"
 import ProtectedRoute from "./utils/ProtectedRoute";
 // Named export

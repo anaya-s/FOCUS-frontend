@@ -1,7 +1,6 @@
 import { Typography } from "@mui/material";
 import { useContext, useState, useEffect} from "react";
-import AuthContext from "../context/AuthContext";
-
+import AuthContext from "../../context/AuthContext";
 
 const pageStyle = {
   display: "flex",
@@ -15,7 +14,7 @@ const pageStyle = {
 const AboutUs = () => {
   const [nblinks, setNumber] = useState(0);
   let { authTokens } = useContext(AuthContext);
-  let totalBlinks = async (email,password) => {
+  let totalBlinks = async () => {
 
     let accessToken = localStorage.getItem("authTokens");
 

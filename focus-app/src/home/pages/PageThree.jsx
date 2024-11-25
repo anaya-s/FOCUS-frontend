@@ -54,7 +54,7 @@ const PageThree = () => {
       </div>
       <div style={rightColumnStyle}>
         <img
-          src="/images/upload.png" //SORT PDF UPLOAD STUFF ASAP
+          src="/images/homepage/upload.png" 
           alt="Reading experience"
           style={imageStyle}
         />

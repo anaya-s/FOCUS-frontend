@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, useCallback } from "react";
 import { jwtDecode } from "jwt-decode";
-import { useNavigate } from 'react-router-dom';
+import { useNavigation } from "../utils/navigation";
 import NotAuthorized from "../utils/NotAuthorized";
 
 const AuthContext = createContext("");
@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
   );
   let [isAuthorized, setIsAuthorized] = useState(null);
 
-  const navigate = useNavigate()
+  const { toHome } = useNavigation();
 
   let loginUser = async (email,password) => {
     let response = await fetch("http://127.0.0.1:8000/api/token/", {
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }) => {
       },
       body: JSON.stringify({
         email: email,
-        username: "test",
+        username: email,
         password: password,
       }),
     });
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
       setAuthTokens(data);
       setUser(jwtDecode(data.access));
       localStorage.setItem("authTokens", JSON.stringify(data));
-      navigate("/");
+      toHome();
     } else {
       alert("Credentials do not match");
     }
@@ -51,8 +51,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setIsAuthorized(false);
     localStorage.removeItem("authTokens");
-    navigate("/");
-  }, [setAuthTokens, setUser, setIsAuthorized, navigate]);
+    toHome();
+  }, [setAuthTokens, setUser, setIsAuthorized, toHome]);
 
   let updateToken = useCallback(async () => {
     let response = await fetch("http://127.0.0.1:8000/api/token/refresh/", {

@@ -41,7 +41,7 @@ const PageFour = () => {
     <div style={pageStyle}>
       <div style={leftColumnStyle}>
         <img
-          src="/images/felix.png" // TEMP ROBOT IMAGE
+          src="/images/homepage/felix.png" 
           alt="Felix the productivity robot"
           style={imageStyle}
         />

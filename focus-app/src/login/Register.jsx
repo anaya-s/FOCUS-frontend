@@ -6,8 +6,7 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
-
-import { useNavigate } from "react-router-dom";
+import { useNavigation } from "../utils/navigation";
 
 const pageStyle = {
   display: "flex",
@@ -18,9 +17,11 @@ const pageStyle = {
 };
 
 function Register() {
-  const [name, setName] = useState("");
+  // const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const { toLogin } = useNavigation();
 
   const handleCreateUser = async (e) => {
       e.preventDefault();
@@ -31,7 +32,7 @@ function Register() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: name,
+          username: email,
           password: password,
           email: email
         })
@@ -42,12 +43,6 @@ function Register() {
       } else {
         alert("Unsuccessful transaction");
       }
-  };
-
-  const navigate = useNavigate();
-
-  const toLogin = () => {
-    navigate("/login");
   };
 
   return (
@@ -85,7 +80,7 @@ function Register() {
               Sign up with Google
             </Button>
             <Divider>OR</Divider>
-            <Typography textAlign={"left"} marginLeft={0.5}>
+            {/* <Typography textAlign={"left"} marginLeft={0.5}>
               Name
             </Typography>
             <TextField
@@ -97,7 +92,7 @@ function Register() {
               onChange={(e) => setName(e.target.value)}
               margin="dense"
               required
-            />
+            /> */}
             <Typography textAlign={"left"} marginLeft={0.5} marginTop={1}>
               Email
             </Typography>

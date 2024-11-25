@@ -5,11 +5,11 @@ import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Link from "@mui/material/Link";
-
-import { useNavigate } from "react-router-dom";
+import { useNavigation } from "../utils/navigation";
 
 function ResetPass() {
   const [email, setEmail] = useState("");
+  const { toLogin } = useNavigation();
   //   const [password, setPassword] = useState("");
 
   const handleSubmit = (e) => {
@@ -27,20 +27,14 @@ function ResetPass() {
     textAlign: "center",
   };
 
-  const navigate = useNavigate();
-
-  const toLogin = () => {
-    navigate("/login");
-  };
-
   return (
     <Box style={pageStyle}>
-      <Container sx={{width: "650px", minWidth: "500px"}}>
+      <Container sx={{ width: "650px", minWidth: "500px" }}>
         <Typography variant="h3" component="h1" gutterBottom>
           Change your password
         </Typography>
         <Typography variant="h6" component="h1">
-              Please enter your email for a link to reset your password.
+          Please enter your email for a link to reset your password.
         </Typography>
         <Box
           sx={{

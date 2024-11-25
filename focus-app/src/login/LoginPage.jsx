@@ -6,8 +6,7 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
-
-import { useNavigate } from "react-router-dom";
+import { useNavigation } from "../utils/navigation";
 import AuthContext from "../context/AuthContext";
 
 const pageStyle = {
@@ -23,20 +22,11 @@ function Login() {
   const [password, setPassword] = useState("");
 
   let { loginUser } = useContext(AuthContext);
+  const { toReset, toRegister } = useNavigation();
 
   const handleLogin = (e) => {
     e.preventDefault();
-    loginUser(email,password);
-  }
-
-  const navigate = useNavigate();
-
-  const toCreateAccount = () => {
-    navigate("/register");
-  };
-
-  const toForgotPassword = () => {
-    navigate("/reset-password");
+    loginUser(email, password);
   };
 
   return (
@@ -78,7 +68,6 @@ function Login() {
               Email
             </Typography>
             <TextField
-              // label="Email"
               type="email"
               fullWidth
               variant="outlined"
@@ -91,7 +80,6 @@ function Login() {
               Password
             </Typography>
             <TextField
-              // label="Password"
               type="password"
               fullWidth
               variant="outlined"
@@ -102,7 +90,7 @@ function Login() {
             />
             <Typography sx={{ marginBottom: 1 }}>
               <Link
-                onClick={toForgotPassword}
+                onClick={toReset}
                 size="small"
                 style={{ cursor: "pointer" }}
               >
@@ -127,7 +115,7 @@ function Login() {
         </Box>
         <Typography sx={{ marginTop: 1.5 }}>
           <Button
-            onClick={toCreateAccount}
+            onClick={toRegister}
             size="large"
             style={{ cursor: "pointer" }}
           >
