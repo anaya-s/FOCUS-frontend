@@ -9,6 +9,7 @@ import Footer from "./home/Footer";
 import NotFound from "./utils/NotFound";
 import AboutUs from "./navbar/products/AboutUs";
 import Temp from "./text_reader/Temp"
+import Calibration from "./calibration/Calibration"
 import ProtectedRoute from "./utils/ProtectedRoute";
 // Named export
 import { AuthProvider } from "./context/AuthContext";
@@ -31,6 +32,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Temp />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/calibrate"
+              element={
+                <ProtectedRoute>
+                  <Calibration />
                 </ProtectedRoute>
               }
             />
