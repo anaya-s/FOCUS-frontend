@@ -74,7 +74,7 @@ const CalibrationPage = () => {
         console.log(token);
 
         // Send calibration data to the backend
-        fetch(`http://localhost:8000/api/calibrate/?token=${token}`, {
+        fetch(`http://localhost:8000/api/user/calibrate/?token=${token}`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
