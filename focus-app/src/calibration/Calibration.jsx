@@ -74,11 +74,11 @@ const CalibrationPage = () => {
         console.log(token);
 
         // Send calibration data to the backend
-        fetch(`http://localhost:8000/api/user/calibrate/?token=${token}`, {
+        fetch(`http://localhost:8000/api/user/calibrate/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            // Authorization: `Bearer ${localStorage.getItem("authTokens")}`, // This is much more safer that adding token to URL - use this at some point
+            Authorization: `Bearer ${localStorage.getItem("authTokens")}`,
           },
           body: JSON.stringify({ data: calibrationData,  timestamp: date}),
         })
