@@ -63,22 +63,27 @@ const CalibrationPage = () => {
       if (totalClicks >= 45) {
         webgazer.end();
         webgazer.params.showGazeDot = false;
-        calibrationData = webgazer.getRegressionData();
 
+        calibrationData = webgazer.getRegressionData();
         isCalibrationLive(false);
 
         const date = Date.now(); // Get current timestamp of current frame
 
-        const token = localStorage.getItem("authTokens");
+        const authTokens = localStorage.getItem("authTokens");
+        if (!authTokens) {
+          console.error("authTokens is not found in localStorage");
+          return; // Prevent further execution if tokens are missing
+        }
 
-        console.log(token);
+        const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
+        const accessToken = parsedTokens?.access;
 
         // Send calibration data to the backend
         fetch(`http://localhost:8000/api/user/calibrate/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("authTokens")}`,
+            Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({ data: calibrationData,  timestamp: date}),
         })
