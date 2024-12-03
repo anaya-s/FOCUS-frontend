@@ -10,6 +10,7 @@ import NotFound from "./utils/NotFound";
 import AboutUs from "./navbar/products/AboutUs";
 import Temp from "./text_reader/Temp"
 import Calibration from "./calibration/Calibration"
+import DocumentDrivePage from "./document_drive/drive";
 import ProtectedRoute from "./utils/ProtectedRoute";
 // Named export
 import { AuthProvider } from "./context/AuthContext";
@@ -27,6 +28,14 @@ function App() {
             <Route path="/reset-password" element={<ResetPass />} />
             <Route path="*" element={<NotFound />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route 
+              path="/drive"
+              element={
+                <ProtectedRoute>
+                  <DocumentDrivePage />
+                </ProtectedRoute>
+              }     
+            />
             <Route
               path="/dashboard"
               element={
