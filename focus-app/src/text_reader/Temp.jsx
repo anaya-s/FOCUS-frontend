@@ -9,7 +9,7 @@ function Temp() {
   const [stream, setStream] = useState(null);
   const [streamObtained, changeStatus] = useState(false);
   const [connectionOpen, changeStatusConn] = useState(false);
-  const [framesData, setFramesData] = useState([]); // TO DO - Array to store frame data with timestamps
+  const [framesData, setFramesData] = useState([]);
 
   const intervalRef = useRef(null);
 
@@ -17,7 +17,7 @@ function Temp() {
     webgazer.begin();
 
     webgazer.params.showVideo = false;
-    webgazer.params.showGazeDot = true;
+    webgazer.params.showGazeDot = false;
     webgazer.params.showVideoPreview = false;
     webgazer.params.saveDataAcrossSessions = false;
 
@@ -69,7 +69,7 @@ function Temp() {
     };
   }, [streamObtained]);
 
-  const sendVideoFrame = () => {
+  const sendVideoFrame = (xCoord, yCoord) => {
     if (
       videoRef.current &&
       socket.current &&
@@ -88,14 +88,16 @@ function Temp() {
       // Store image data and timestamp in framesData array
       setFramesData((prevFrames) => [
         ...prevFrames,
-        { frame: frame, timestamp: timestamp },
+        { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord},
       ]);
 
       // Send the frame via WebSocket
       socket.current.send(
         JSON.stringify({
           frame: frame,
-          timestamp: timestamp
+          timestamp: timestamp,
+          xCoordinatePx: xCoord,
+          yCoordinatePx: yCoord
         })
       );
     }
@@ -103,21 +105,23 @@ function Temp() {
 
   useEffect(() => {
     if (stream && !intervalRef.current) {
-      intervalRef.current = setInterval(() => {
-        sendVideoFrame();
-      }, 0); // interval time doesn't matter for some reason, the latency calculated at backend is always the same regardless of this interval value
-    }
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [streamObtained && connectionOpen]);
+      webgazer.setGazeListener((data) => { /* Start gaze coordinate tracker and obtain gaze coordinates */
+        if (data) {
+          webgazer.util.bound(data);
+          var xPrediction = data.x; // Horizontal gaze coordinate
+          var yPrediction = data.y; // Vertical gaze coordinate
+          sendVideoFrame(xPrediction,yPrediction);
+        }
+        else
+          sendVideoFrame(0,0); // Send (0,0) if face is not detected
+      }).begin();
+    }
+  }, [streamObtained]);
 
   return (
     <div style={videoStyle}>
-      <video ref={videoRef} autoPlay width="700" height="700"></video>
+      <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video>
     </div>
   );
 }
