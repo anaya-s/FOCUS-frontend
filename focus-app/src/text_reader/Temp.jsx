@@ -111,10 +111,10 @@ function Temp() {
           webgazer.util.bound(data);
           var xPrediction = data.x; // Horizontal gaze coordinate
           var yPrediction = data.y; // Vertical gaze coordinate
-          sendVideoFrame(xPrediction,yPrediction);
+          sendVideoFrame(xPrediction,yPrediction); // Send coordinates data with frame
         }
         else
-          sendVideoFrame(0,0); // Send (0,0) if face is not detected
+          sendVideoFrame(); // Send no coordinates with frame if face is not detected
       }).begin();
     }
   }, [streamObtained]);
