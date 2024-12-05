@@ -51,6 +51,10 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setIsAuthorized(false);
     localStorage.removeItem("authTokens");
+    if (localStorage.getItem("calibration"))
+    {
+      localStorage.removeItem("calibration"); // Remove calibration data from localstorage, if exists
+    }
     toHome();
   }, [setAuthTokens, setUser, setIsAuthorized, toHome]);
 

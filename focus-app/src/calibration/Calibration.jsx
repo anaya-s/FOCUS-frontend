@@ -1,37 +1,138 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import webgazer from "../webgazer/webgazer";
 import Typography from "@mui/material/Typography";
+import { Button } from "@mui/material";
 import LinearProgress from "@mui/material/LinearProgress";
+
+var calibrationData = [];
 
 const CalibrationPage = () => {
   const [clickCounts, setClickCounts] = useState(Array(15).fill(0));
   const [totalClicks, setTotalClicks] = useState(1);
-  const [isWebGazerInitialized, setIsWebGazerInitialized] = useState(false);
-  const [loadingProgress, setLoadingProgress] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [calibrationStatus, isCalibrationLive] = useState(true);
-  const socket = useRef(null);
 
-  let calibrationData = [];
-  let websocket; // Define WebSocket variable
+  const [calibrationStatus, setCalibrationLive] = useState(false); // Make sure no more clicks are registered after all circles are filled
+  const [skipCalibration, setCalibrationSkip] = useState(false); // Used to skip calibration if already existing
+  const [performCalibration, setCalibration] = useState(false); // Used to start new calibration and launch webgazer
+
+  const [isCalibrationGETLoading, setCalibrationGETLoading] = useState(true);
+  const [isLoading, setWebgazerLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+
+
+  const [screenInfo, setScreenInfo] = useState({
+    screenWidth: window.screen.width,
+    screenHeight: window.screen.height,
+    windowWidth: window.innerWidth,
+    windowHeight: window.innerHeight,
+    devicePixelRatio: window.devicePixelRatio,
+  });
+
+  const navigate = useNavigate();
+
+  const goToTextReading = (path) => {
+    navigate("/dashboard"); // Change this to text reading page
+  };
+
+  // TO DO:
+
+  // Get screen dimensions
+  // Get screen resolution - DONE
+  // Send it with calibration data
+
+  // Make webpage go full screen on calibration, then exit fullscreen after
+  //  Alert when trying to exit fullscreen - make sure to pause webgazer so nothing is recorded
+
+  // On log in, redirect to this page
+
+  // After calibration finish, go to Temp (Text reading) page
+
 
   // Scroll automatically to top of page
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" }); // Auto-scroll to the top with smooth animation
   }, []);
 
+  // Check if calibration data exists
+  useEffect(() => {
+      setCalibrationGETLoading(true);
+      const getCalibrationDataDB = async () => {
+        try {
+
+          const authTokens = localStorage.getItem("authTokens");
+          if (!authTokens) {
+            console.error("authTokens is not found in localStorage");
+            return; // Prevent further execution if tokens are missing
+          }
+
+          const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
+          const accessToken = parsedTokens?.access;
+
+          const response = await fetch(`http://localhost:8000/api/user/calibration-retrieval/`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+        
+          if (!response.ok)
+          {
+            //if not data found then perform calibration
+            setCalibration(true);
+
+            setCalibrationGETLoading(false);
+          }
+          else
+          {
+            var responeMsg = await response.json();
+            var data = responeMsg.calibration_values;
+            localStorage.setItem("calibration", JSON.stringify(data));
+            // console.log("Copied from DB to localstorage");
+
+            // Skip calibration
+            setCalibrationSkip(true);
+
+            setCalibrationGETLoading(false);
+          }
+        } catch (error) {
+          console.error("Error getting calibration data:", error);
+          setCalibrationGETLoading(false);
+        }
+      };
+
+      // Check localstorage
+      if(localStorage.getItem("calibration"))
+      {
+        calibrationData = JSON.parse(localStorage.getItem("calibration"));
+        // console.log("Found calibration data from localstorage: ", calibrationData);
+        setCalibrationGETLoading(false);
+        setCalibrationSkip(true);
+      }
+      else // if nothing is found in localstorage, check database
+      {
+        getCalibrationDataDB(); 
+      }
+  }, []);
+
+
   // WebGazer initialization
   useEffect(() => {
+    if(performCalibration == true)
+    {
+      setWebgazerLoading(true);
     const initializeWebGazer = async () => {
       try {
+        
         const loadingInterval = setInterval(() => {
           setLoadingProgress((prevProgress) => {
             if (prevProgress >= 100) {
               clearInterval(loadingInterval);
             }
-            return Math.min(prevProgress + 10, 100);
+            return Math.min(prevProgress + 100, 100);
           });
         }, 250);
+
 
         webgazer.params.showVideo = false;
         webgazer.params.showGazeDot = true;
@@ -39,35 +140,38 @@ const CalibrationPage = () => {
         webgazer.params.saveDataAcrossSessions = false;
         webgazer.params.showPredictionPoints = false;
 
+        webgazer.setRegression("ridge"); // set a regression module
+
+        webgazer.clearData();
+
         await webgazer.begin();
 
-        setIsWebGazerInitialized(true);
-        setIsLoading(false);
+        setCalibration(false);
+        setCalibrationLive(true);
+
       } catch (error) {
         console.error("Error initializing WebGazer:", error);
-        setIsLoading(false);
       }
     };
 
     initializeWebGazer();
-
-    return () => {
-      if (isWebGazerInitialized) {
-        webgazer.end();
-      }
-    };
-  }, [isWebGazerInitialized]);
+    }
+  }, [performCalibration]);
 
   const handleCalibrationClick = (index) => {
     if (calibrationStatus) {
+      var reset = false;
       if (totalClicks >= 45) {
+        reset = true;
         webgazer.end();
         webgazer.params.showGazeDot = false;
 
         calibrationData = webgazer.getRegressionData();
-        isCalibrationLive(false);
 
-        const date = Date.now(); // Get current timestamp of current frame
+        localStorage.setItem("calibration", JSON.stringify(calibrationData));
+        setCalibrationLive(false);
+
+        const date = Date.now(); // Get current timestamp when calibration data is sent
 
         const authTokens = localStorage.getItem("authTokens");
         if (!authTokens) {
@@ -100,6 +204,7 @@ const CalibrationPage = () => {
             console.error("Error sending calibration data:", error);
           });
 
+          setCalibrationSkip(true);
       }
 
       const newClickCounts = [...clickCounts];
@@ -107,6 +212,18 @@ const CalibrationPage = () => {
         newClickCounts[index] += 1;
         setClickCounts(newClickCounts);
         setTotalClicks(totalClicks + 1);
+      }
+
+      // reset circle colours back to unfilled
+      if(reset)
+      {
+        for (var i = 0; i < 15; i++)
+        {
+          newClickCounts[i] = 0;
+        }
+        setClickCounts(newClickCounts);
+        reset = false;
+
       }
     }
   };
@@ -124,7 +241,23 @@ const CalibrationPage = () => {
     }
   };
 
-  if (isLoading) {
+  const restartCalibration = () => {
+    calibrationData = []
+    localStorage.removeItem("calibration");
+    setTotalClicks(1);
+    setCalibrationSkip(false);
+    setCalibration(true);
+    setLoadingProgress(0);
+  };
+
+  const finishCalibration = () => {
+    calibrationData = JSON.parse(localStorage.getItem("calibration"));
+    webgazer.setRegressionData(calibrationData);
+    // Move to next webpage
+    goToTextReading();
+  };
+
+  if (isCalibrationGETLoading) {
     return (
       <div
         style={{
@@ -134,6 +267,27 @@ const CalibrationPage = () => {
           justifyContent: "center",
           height: "100vh",
           backgroundColor: "#f9f9f9",
+          userSelect: "none"
+        }}
+      >
+        <Typography variant="h5" style={{ marginBottom: "20px" }}>
+          Checking Calibration Data...
+        </Typography>
+      </div>
+    );
+  }
+
+  if (isLoading && performCalibration && !isCalibrationGETLoading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          backgroundColor: "#f9f9f9",
+          userSelect: "none"
         }}
       >
         <Typography variant="h5" style={{ marginBottom: "20px" }}>
@@ -147,6 +301,35 @@ const CalibrationPage = () => {
       </div>
     );
   }
+  
+  if(skipCalibration)
+  {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          backgroundColor: "#f9f9f9",
+          userSelect: "none"
+        }}
+      >
+        <Typography variant="h5" style={{ marginBottom: "20px" }}>
+          Calibration data ready. Do you want to re-calibrate?
+        </Typography>
+        <Typography variant="h7" style={{ marginBottom: "15px" }}>
+        Please re-calibrate if you've switched location or devices since your last calibration.
+        </Typography>
+        {/* <Typography variant="h6" style={{ marginBottom: "20px" }}>
+          Last calibration date:
+        </Typography> */}
+        <Button onClick={restartCalibration} variant="outlined" sx={{mb: "20px"}}><span style={{ fontWeight: 'bold' }}>Yes</span></Button>
+        <Button onClick={finishCalibration} variant="contained">No,&nbsp;<span style={{ fontWeight: 'bold' }}> continue to text reading</span></Button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -157,6 +340,7 @@ const CalibrationPage = () => {
         justifyContent: "center",
         height: "100vh",
         backgroundColor: "#f9f9f9",
+        userSelect: "none"
       }}
     >
       <div
