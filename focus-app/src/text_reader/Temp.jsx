@@ -2,8 +2,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "../utils/navigation";
 import webgazer from "../webgazer/webgazer.js";
 
-const videoStyle = {marginTop: "300px"}
-
 function Temp() {
   const videoRef = useRef(null);
   const socket = useRef(null);
@@ -121,7 +119,7 @@ function Temp() {
   }, [streamObtained]);
 
   return (
-    <div style={videoStyle}>
+    <div>
       <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video>
     </div>
   );
