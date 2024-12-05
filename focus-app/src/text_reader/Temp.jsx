@@ -7,8 +7,8 @@ function Temp() {
   const videoRef = useRef(null);
   const socket = useRef(null);
   const [stream, setStream] = useState(null);
-  const [streamObtained, changeStatus] = useState(false);
-  const [connectionOpen, changeStatusConn] = useState(false);
+  const [streamObtained, setStreamStatus] = useState(false);
+  const [connectionOpen, setStatusConn] = useState(false);
   const [framesData, setFramesData] = useState([]);
 
   const intervalRef = useRef(null);
@@ -26,7 +26,7 @@ function Temp() {
       const stream = webgazer.getVideoStream();
       if (stream !== null) {
         setStream(stream);
-        changeStatus(true);
+        setStreamStatus(true);
         videoRef.current.srcObject = stream;
         clearInterval(intervalId); // Stop checking once stream is available
       }
@@ -45,10 +45,10 @@ function Temp() {
       const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
       socket.current = new WebSocket(`ws://localhost:8000/ws/video/?token=${token}`);
 
-      socket.current.onopen = () => changeStatusConn(true);
+      socket.current.onopen = () => setStatusConn(true);
       socket.current.onclose = () => {
         socket.current = null;
-        changeStatusConn(false);
+        setStatusConn(false);
       };
       socket.current.onerror = (error) => {
         console.error("Ensure that the server is running.");
