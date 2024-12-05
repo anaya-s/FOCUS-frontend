@@ -1,23 +1,24 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigation } from "../utils/navigation";
 import webgazer from "../webgazer/webgazer.js";
-
-const videoStyle = {marginTop: "300px"}
 
 function Temp() {
   const videoRef = useRef(null);
   const socket = useRef(null);
   const [stream, setStream] = useState(null);
-  const [streamObtained, changeStatus] = useState(false);
-  const [connectionOpen, changeStatusConn] = useState(false);
-  const [framesData, setFramesData] = useState([]); // TO DO - Array to store frame data with timestamps
+  const [streamObtained, setStreamStatus] = useState(false);
+  const [connectionOpen, setStatusConn] = useState(false);
+  const [framesData, setFramesData] = useState([]);
 
   const intervalRef = useRef(null);
+
+  const { toNotAuthorized } = useNavigation();
 
   useEffect(() => {
     webgazer.begin();
 
     webgazer.params.showVideo = false;
-    webgazer.params.showGazeDot = true;
+    webgazer.params.showGazeDot = false;
     webgazer.params.showVideoPreview = false;
     webgazer.params.saveDataAcrossSessions = false;
 
@@ -26,7 +27,7 @@ function Temp() {
       const stream = webgazer.getVideoStream();
       if (stream !== null) {
         setStream(stream);
-        changeStatus(true);
+        setStreamStatus(true);
         videoRef.current.srcObject = stream;
         clearInterval(intervalId); // Stop checking once stream is available
       }
@@ -45,14 +46,12 @@ function Temp() {
       const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
       socket.current = new WebSocket(`ws://localhost:8000/ws/video/?token=${token}`);
 
-      socket.current.onopen = () => changeStatusConn(true);
+      socket.current.onopen = () => setStatusConn(true);
       socket.current.onclose = () => {
         socket.current = null;
-        changeStatusConn(false);
+        setStatusConn(false);
       };
-      socket.current.onerror = (error) => {
-        console.error("Ensure that the server is running.");
-      };
+      socket.current.onerror = () => {toNotAuthorized};
     }
 
     return () => {
@@ -69,7 +68,7 @@ function Temp() {
     };
   }, [streamObtained]);
 
-  const sendVideoFrame = () => {
+  const sendVideoFrame = useCallback((xCoord, yCoord) => {
     if (
       videoRef.current &&
       socket.current &&
@@ -88,36 +87,40 @@ function Temp() {
       // Store image data and timestamp in framesData array
       setFramesData((prevFrames) => [
         ...prevFrames,
-        { frame: frame, timestamp: timestamp },
+        { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord},
       ]);
 
       // Send the frame via WebSocket
       socket.current.send(
         JSON.stringify({
           frame: frame,
-          timestamp: timestamp
+          timestamp: timestamp,
+          xCoordinatePx: xCoord,
+          yCoordinatePx: yCoord
         })
       );
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (stream && !intervalRef.current) {
-      intervalRef.current = setInterval(() => {
-        sendVideoFrame();
-      }, 0); // interval time doesn't matter for some reason, the latency calculated at backend is always the same regardless of this interval value
-    }
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [streamObtained && connectionOpen]);
+      webgazer.setGazeListener((data) => { /* Start gaze coordinate tracker and obtain gaze coordinates */
+        if (data) {
+          webgazer.util.bound(data);
+          var xPrediction = data.x; // Horizontal gaze coordinate
+          var yPrediction = data.y; // Vertical gaze coordinate
+          sendVideoFrame(xPrediction,yPrediction); // Send coordinates data with frame
+        }
+        else
+          sendVideoFrame(); // Send no coordinates with frame if face is not detected
+      }).begin();
+    }
+  }, [streamObtained]);
 
   return (
-    <div style={videoStyle}>
-      <video ref={videoRef} autoPlay width="700" height="700"></video>
+    <div>
+      <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video>
     </div>
   );
 }

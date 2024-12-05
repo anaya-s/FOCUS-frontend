@@ -7,9 +7,10 @@ import Register from "./login/Register";
 import NavBar from "./navbar/NavBar";
 import Footer from "./home/Footer";
 import NotFound from "./utils/NotFound";
+import NotAuthorized from "./utils/NotAuthorized";
 import AboutUs from "./navbar/products/AboutUs";
 import Temp from "./text_reader/Temp"
-import Calibration from "./calibration/Calibration"
+import CalibrationPage from "./calibration/Calibration";
 import ProtectedRoute from "./utils/ProtectedRoute";
 // Named export
 import { AuthProvider } from "./context/AuthContext";
@@ -25,7 +26,8 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<Register />} />
             <Route path="/reset-password" element={<ResetPass />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="error/404" element={<NotFound />} />
+            <Route path="error/403" element={<NotAuthorized />} />
             <Route path="/about" element={<AboutUs />} />
             <Route
               path="/dashboard"
@@ -39,7 +41,7 @@ function App() {
               path="/calibrate"
               element={
                 <ProtectedRoute>
-                  <Calibration />
+                  <CalibrationPage />
                 </ProtectedRoute>
               }
             />
