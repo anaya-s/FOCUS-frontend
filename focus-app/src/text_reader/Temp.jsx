@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigation } from "../utils/navigation";
 import webgazer from "../webgazer/webgazer.js";
 
 const videoStyle = {marginTop: "300px"}
@@ -12,6 +13,8 @@ function Temp() {
   const [framesData, setFramesData] = useState([]);
 
   const intervalRef = useRef(null);
+
+  const { toNotAuthorized } = useNavigation();
 
   useEffect(() => {
     webgazer.begin();
@@ -50,9 +53,7 @@ function Temp() {
         socket.current = null;
         setStatusConn(false);
       };
-      socket.current.onerror = (error) => {
-        console.error("Ensure that the server is running.");
-      };
+      socket.current.onerror = () => {toNotAuthorized};
     }
 
     return () => {
@@ -69,7 +70,7 @@ function Temp() {
     };
   }, [streamObtained]);
 
-  const sendVideoFrame = (xCoord, yCoord) => {
+  const sendVideoFrame = useCallback((xCoord, yCoord) => {
     if (
       videoRef.current &&
       socket.current &&
@@ -101,7 +102,7 @@ function Temp() {
         })
       );
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (stream && !intervalRef.current) {
