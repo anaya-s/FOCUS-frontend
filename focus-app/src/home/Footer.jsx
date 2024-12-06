@@ -8,6 +8,8 @@ const Footer = () => {
         p: 4, 
         mt: 'auto',
         marginTop: 10,
+        position: 'relative',
+        zIndex: 1300
         
       }}
       component="footer"

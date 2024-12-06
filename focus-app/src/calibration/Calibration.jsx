@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import webgazer from "../webgazer/webgazer";
 import Typography from "@mui/material/Typography";
 import { Button } from "@mui/material";
 import LinearProgress from "@mui/material/LinearProgress";
+import { useNavigation } from "../utils/navigation";
 
 var calibrationData = [];
 
 const CalibrationPage = () => {
-  const [clickCounts, setClickCounts] = useState(Array(15).fill(0));
+  const [clickCounts, setClickCounts] = useState(Array(24).fill(0));
   const [totalClicks, setTotalClicks] = useState(1);
 
   const [calibrationStatus, setCalibrationLive] = useState(false); // Make sure no more clicks are registered after all circles are filled
@@ -28,11 +28,7 @@ const CalibrationPage = () => {
     devicePixelRatio: window.devicePixelRatio,
   });
 
-  const navigate = useNavigate();
-
-  const goToTextReading = (path) => {
-    navigate("/dashboard"); // Change this to text reading page
-  };
+  const { toReadingPage } = useNavigation();
 
   // TO DO:
 
@@ -42,11 +38,6 @@ const CalibrationPage = () => {
 
   // Make webpage go full screen on calibration, then exit fullscreen after
   //  Alert when trying to exit fullscreen - make sure to pause webgazer so nothing is recorded
-
-  // On log in, redirect to this page
-
-  // After calibration finish, go to Temp (Text reading) page
-
 
   // Scroll automatically to top of page
   useEffect(() => {
@@ -140,11 +131,9 @@ const CalibrationPage = () => {
         webgazer.params.saveDataAcrossSessions = false;
         webgazer.params.showPredictionPoints = false;
 
-        webgazer.setRegression("ridge"); // set a regression module
-
         webgazer.clearData();
 
-        await webgazer.begin();
+        await webgazer.begin(true);
 
         setCalibration(false);
         setCalibrationLive(true);
@@ -161,12 +150,15 @@ const CalibrationPage = () => {
   const handleCalibrationClick = (index) => {
     if (calibrationStatus) {
       var reset = false;
-      if (totalClicks >= 45) {
+      if (totalClicks >= 72) {
         reset = true;
+        webgazer.stopCalibration();
         webgazer.end();
         webgazer.params.showGazeDot = false;
 
         calibrationData = webgazer.getRegressionData();
+
+        // console.log(calibrationData);
 
         localStorage.setItem("calibration", JSON.stringify(calibrationData));
         setCalibrationLive(false);
@@ -217,7 +209,7 @@ const CalibrationPage = () => {
       // reset circle colours back to unfilled
       if(reset)
       {
-        for (var i = 0; i < 15; i++)
+        for (var i = 0; i < 24; i++)
         {
           newClickCounts[i] = 0;
         }
@@ -251,10 +243,8 @@ const CalibrationPage = () => {
   };
 
   const finishCalibration = () => {
-    calibrationData = JSON.parse(localStorage.getItem("calibration"));
-    webgazer.setRegressionData(calibrationData);
     // Move to next webpage
-    goToTextReading();
+    toReadingPage();
   };
 
   if (isCalibrationGETLoading) {
@@ -360,13 +350,13 @@ const CalibrationPage = () => {
 
       <div
         style={{
-          width: "60%",
-          height: "60%",
+          width: "100%",
+          height: "500px",
           border: "2px dashed #06760D",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          padding: "20px",
+          padding: "10px",
           boxSizing: "border-box",
         }}
       >
@@ -374,11 +364,11 @@ const CalibrationPage = () => {
           style={{
             display: "grid",
             gridTemplateRows: "repeat(3, 1fr)",
-            gridTemplateColumns: "repeat(5, 1fr)",
-            gap: "90px",
+            gridTemplateColumns: "repeat(8, 1fr)",
+            gap: "130px",
           }}
         >
-          {Array.from({ length: 15 }).map((_, index) => (
+          {Array.from({ length: 24 }).map((_, index) => (
             <div
               key={index}
               style={{
@@ -387,7 +377,7 @@ const CalibrationPage = () => {
                 borderRadius: "50%",
                 border: "3px solid #06760D",
                 backgroundColor: getColor(clickCounts[index]),
-                cursor: "pointer",
+                cursor: "pointer"
               }}
               onClick={() => handleCalibrationClick(index)}
             />

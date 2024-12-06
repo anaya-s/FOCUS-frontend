@@ -9,7 +9,7 @@ import Footer from "./home/Footer";
 import NotFound from "./utils/NotFound";
 import NotAuthorized from "./utils/NotAuthorized";
 import AboutUs from "./navbar/products/AboutUs";
-import Temp from "./text_reader/Temp"
+import TextReaderPage from "./text_reader/TextReader"
 import CalibrationPage from "./calibration/Calibration";
 import ProtectedRoute from "./utils/ProtectedRoute";
 // Named export
@@ -29,11 +29,12 @@ function App() {
             <Route path="error/404" element={<NotFound />} />
             <Route path="error/403" element={<NotAuthorized />} />
             <Route path="/about" element={<AboutUs />} />
+            {/* CHANGE BELOW FOR DASHBOARD */}
             <Route
-              path="/dashboard"
+              path="/dashboard" 
               element={
                 <ProtectedRoute>
-                  <Temp />
+                  <TextReaderPage />  
                 </ProtectedRoute>
               }
             />
@@ -42,6 +43,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CalibrationPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reading"
+              element={
+                <ProtectedRoute>
+                  <TextReaderPage />
                 </ProtectedRoute>
               }
             />
