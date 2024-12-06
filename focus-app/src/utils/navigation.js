@@ -18,6 +18,9 @@ export function useNavigation() {
     //error
     toNotFound: () => navigate('error/404'),
     toNotAuthorized: () => navigate('error/403'),
+
+    toCalibration: () => navigate('/calibrate'),
+    toReadingPage: () => navigate('/reading'),
     
     
     toCustom: (path) => navigate(path), 

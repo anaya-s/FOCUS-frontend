@@ -13,6 +13,7 @@ const barStyle = {
   top: "0",
   left: "0",
   borderBottom: "1px solid",
+  zIndex: "1400"
 };
 
 const navStyle = {

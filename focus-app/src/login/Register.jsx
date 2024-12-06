@@ -40,6 +40,7 @@ function Register() {
   
       if (response.status === 201) {
         alert("Account successfully created!");
+        toLogin();
       } else {
         alert("Unsuccessful transaction");
       }
