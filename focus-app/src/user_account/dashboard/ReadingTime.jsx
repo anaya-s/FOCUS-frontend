@@ -29,7 +29,7 @@ const options = {
     },
     title: {
       display: true,
-      text: "Monthly Sales Data",
+      text: "Monthly Blink Count",
     },
   },
 };
@@ -39,8 +39,8 @@ export default function ReadingTime() {
     labels: ["January", "February", "March", "April", "May"],
     datasets: [
       {
-        label: "Sales",
-        data: [12, 19, 3, 5, 2],
+        label: "Blinks",
+        data: [120, 109, 30, 50, 20],
         backgroundColor: "rgba(75, 192, 192, 0.2)",
         borderColor: "rgba(75, 192, 192, 1)",
         borderWidth: 1,

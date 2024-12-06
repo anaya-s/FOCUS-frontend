@@ -36,7 +36,7 @@ export default function Barchart() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        //const result = await reauthenticatingFetch('/api/eye/reading-times/');
+        //const result = await reauthenticatingFetch('/eye/reading-times/');
         const result = {
           "sessions": [
               {
@@ -73,7 +73,7 @@ export default function Barchart() {
     labels: sessionLabels,
     datasets: [
       {
-        label: "Reading Times",
+        label: "Reading Times/min",
         data: sessionTotals,
         borderWidth: 1,
         backgroundColor: "rgba(75, 192, 192, 0.2)",

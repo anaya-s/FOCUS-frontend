@@ -43,20 +43,7 @@ const NavBar = () => {
           About
         </Button>
         <Button style={buttonStyle}>Our Products</Button>
-<<<<<<< HEAD
-        {/* <AccountMenu /> */}
-        <Button
-          onClick={handleUser}
-          style={buttonStyle}
-          variant="contained"
-          color="primary"
-        >
-          {text}
-        </Button> 
-=======
-        {/* {user ? <AccountMenu />} : <Button style={buttonStyle} onClick={toLogin}> Login </Button>/} */}
-        <AccountMenu />
->>>>>>> feature-01
+        {user ? <AccountMenu /> : <Button style={buttonStyle} onClick={toLogin}> Login </Button>}
       </div>
     </div>
   );

@@ -20,7 +20,11 @@ async function refreshAccessToken() {
 }
 
 export const reauthenticatingFetch = async (url) => {
-  let accessToken = localStorage.getItem(ACCESS_TOKEN);
+  
+  const authTokens = localStorage.getItem("authTokens");
+
+  const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
+  const accessToken = parsedTokens?.access;
 
   let options = {
     method: "GET",
