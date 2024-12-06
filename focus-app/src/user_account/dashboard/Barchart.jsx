@@ -22,12 +22,16 @@ ChartJS.register(
 );
 
 function processData(data) {
+  const sessionLabels = data.sessions.map((session) => `Session ${session.session_id}`);
+  const sessionTotals = data.sessions.map((session) => session.total_reading_time);
   
+  return{sessionLabels, sessionTotals};
 }
-export default function Barchart() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
 
+export default function Barchart() {
+  const [loading, setLoading] = useState(true);
+  const [sessionLabels, setSessionLabels] = useState([]);
+  const [sessionTotals, setSessionTotals] = useState([]);
   
   useEffect(() => {
     const fetchData = async () => {
@@ -37,7 +41,7 @@ export default function Barchart() {
           "sessions": [
               {
                   "session_id": 1,
-                  "total_reading_time": "1:30:45",
+                  "total_reading_time": "95",
                   "videos": [
                       {"video_id": 1, "total_reading_time": "0:45:30"},
                       {"video_id": 2, "total_reading_time": "0:45:15"}
@@ -45,7 +49,7 @@ export default function Barchart() {
               },
               {
                   "session_id": 2,
-                  "total_reading_time": "2:15:10",
+                  "total_reading_time": "1023",
                   "videos": [
                       {"video_id": 3, "total_reading_time": "1:15:00"},
                       {"video_id": 4, "total_reading_time": "1:00:10"}
@@ -53,7 +57,10 @@ export default function Barchart() {
               }
           ]
       }
-        setData(result);
+      const { sessionLabels, sessionTotals } = processData(result);
+      setSessionLabels(sessionLabels);
+      setSessionTotals(sessionTotals);
+      setLoading(false);
       } catch (err) {
         console.log(err);
       }
@@ -63,26 +70,14 @@ export default function Barchart() {
   }, []);
 
   const chartData = {
-    labels: ["January", "February", "March", "April", "May"],
+    labels: sessionLabels,
     datasets: [
       {
-        label: "Monthly Sales",
-        data: [65, 59, 80, 81, 56],
-        backgroundColor: [
-          "rgba(255, 99, 132, 0.2)",
-          "rgba(54, 162, 235, 0.2)",
-          "rgba(255, 206, 86, 0.2)",
-          "rgba(75, 192, 192, 0.2)",
-          "rgba(153, 102, 255, 0.2)",
-        ],
-        borderColor: [
-          "rgba(255, 99, 132, 1)",
-          "rgba(54, 162, 235, 1)",
-          "rgba(255, 206, 86, 1)",
-          "rgba(75, 192, 192, 1)",
-          "rgba(153, 102, 255, 1)",
-        ],
+        label: "Reading Times",
+        data: sessionTotals,
         borderWidth: 1,
+        backgroundColor: "rgba(75, 192, 192, 0.2)",
+        borderColor: "rgba(75, 192, 192, 1)",
       },
     ],
   };
@@ -95,7 +90,7 @@ export default function Barchart() {
       },
       title: {
         display: true,
-        text: "Monthly Sales Data", 
+        text: "Reading Times", 
       },
     },
   };
