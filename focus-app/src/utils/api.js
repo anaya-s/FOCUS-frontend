@@ -1,5 +1,5 @@
 import config from '../config'
-import { ACCESS_TOKEN, REFRESH_TOKEN } from './constants';
+import { ACCESS_TOKEN } from './constants';
 
 const baseURL = config.apiUrl
 

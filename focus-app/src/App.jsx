@@ -12,6 +12,11 @@ import Temp from "./text_reader/Temp"
 import ProtectedRoute from "./utils/ProtectedRoute";
 // Named export
 import { AuthProvider } from "./context/AuthContext";
+import NotAuthorized from "./utils/NotAuthorized";
+import DashboardOverall from "./user_account/dashboard/DashboardOverall";
+import UserAccount from "./user_account/UserAccount";
+import UserProfile from "./user_account/settings/UserProfile";
+import UserSettings from "./user_account/settings/UserSettings";
 
 function App() {
   return (
@@ -26,6 +31,16 @@ function App() {
             <Route path="/reset-password" element={<ResetPass />} />
             <Route path="*" element={<NotFound />} />
             <Route path="/about" element={<AboutUs />} />
+
+            <Route path="/account" element={<UserAccount />}>
+              <Route path="dashboard" element={<DashboardOverall />} />
+              <Route path="profile" element={<UserProfile />} />
+              <Route path="settings" element={<UserSettings />} />
+            </Route>
+
+
+            <Route path="error/404" element={<NotFound />} />
+            <Route path="error/403" element={<NotAuthorized />} />
             <Route
               path="/dashboard"
               element={

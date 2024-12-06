@@ -1,39 +1,38 @@
-import React from "react";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 
 const pageStyle = {
   display: "flex",
-  alignItems: "center", // Vertically centers content within the page
-  justifyContent: "center", // Horizontally centers content within the page
+  alignItems: "center", 
+  justifyContent: "center", 
   height: "100vh",
   marginRight: "150px",
-  padding: "0 20px", // Adds padding for small screens
+  padding: "0 20px", 
 };
 
 const leftColumnStyle = {
-  flex: "1", // Takes up half the available width
+  flex: "1",
   display: "flex",
-  justifyContent: "center", // Centers image horizontally within the left column
+  justifyContent: "center",
 };
 
 const rightColumnStyle = {
-  flex: "1", // Takes up half the available width
+  flex: "1", 
   display: "flex",
   flexDirection: "column",
-  justifyContent: "center", // Centers content vertically within the column
-  textAlign: "left", // Left-aligns text
-  paddingLeft: "20px", // Adds padding between columns
+  justifyContent: "center", 
+  textAlign: "left",
+  paddingLeft: "20px", 
 };
 
 const buttonStyle = {
   borderRadius: "17px",
-  marginTop: "20px", // Adds spacing above the button
+  marginTop: "20px",
 };
 
 const imageStyle = {
-  width: "250px", // Set width of the image
-  height: "auto", // Maintain aspect ratio
+  width: "250px", 
+  height: "auto", 
 };
 
 const PageFour = () => {
