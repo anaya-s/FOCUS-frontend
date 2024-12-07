@@ -14,7 +14,6 @@ import CalibrationPage from "./calibration/Calibration";
 import ProtectedRoute from "./utils/ProtectedRoute";
 // Named export
 import { AuthProvider } from "./context/AuthContext";
-import NotAuthorized from "./utils/NotAuthorized";
 import DashboardOverall from "./user_account/dashboard/DashboardOverall";
 import UserAccount from "./user_account/UserAccount";
 import UserProfile from "./user_account/settings/UserProfile";
