@@ -1,56 +1,120 @@
-import { Line } from "react-chartjs-2";
+import { useEffect, useState } from "react";
+import { Bar } from "react-chartjs-2";
+import { reauthenticatingFetch } from '../../utils/api';
+
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
   Title,
   Tooltip,
   Legend,
+  BarElement,
 } from "chart.js";
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
+  BarElement,
   Title,
   Tooltip,
   Legend
 );
 
-const options = {
-  responsive: false,
-  maintainAspectRatio: false, 
-  plugins: {
-    legend: {
-      position: "top",
-    },
-    title: {
-      display: true,
-      text: "Monthly Blink Count",
-    },
-  },
-};
+function processData(data) {
+  const sessionLabels = data.sessions.map((session) => `${session.session_id}`);
+  const sessionTotals = data.sessions.map((session) => session.total_reading_time);
+  
+  return{sessionLabels, sessionTotals};
+}
 
 export default function ReadingTime() {
-  const data = {
-    labels: ["January", "February", "March", "April", "May"],
+  const [loading, setLoading] = useState(true);
+  const [sessionLabels, setSessionLabels] = useState([]);
+  const [sessionTotals, setSessionTotals] = useState([]);
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // const result = await reauthenticatingFetch('/eye/reading-times/');
+
+      /* ---------------------Temporary for authentication ------------------------- */
+        
+      const authTokens = localStorage.getItem("authTokens");
+      if (!authTokens) {
+        console.error("authTokens is not found in localStorage");
+        return; // Prevent further execution if tokens are missing
+      }
+
+      const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
+      const accessToken = parsedTokens?.access;
+
+      const response = await fetch(`http://localhost:8000/api/eye/reading-times/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      const result = await response.json();
+
+      const { sessionLabels, sessionTotals } = processData(result);
+      setSessionLabels(sessionLabels);
+      setSessionTotals(sessionTotals);
+      setLoading(false);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    /* -----------------------------------------------------------------------------------*/
+
+    fetchData();
+  }, []);
+
+  const chartData = {
+    labels: sessionLabels,
     datasets: [
       {
-        label: "Blinks",
-        data: [120, 109, 30, 50, 20],
+        label: "Reading time (seconds)",
+        data: sessionTotals,
+        borderWidth: 1,
         backgroundColor: "rgba(75, 192, 192, 0.2)",
         borderColor: "rgba(75, 192, 192, 1)",
-        borderWidth: 1,
       },
     ],
   };
 
-  return (
-    <div>
-      <Line data={data} options={options} />
-    </div>
-  );
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top", 
+        display: false,
+      },
+      title: {
+        display: true,
+        text: "Reading Times", 
+      },
+    },
+    scales: {
+      y: {
+        title: {
+          display: true,
+          text: "Time (seconds)", // Set your Y-axis label here
+        },
+        beginAtZero: true, // Optional: Ensures the Y-axis starts at zero
+      },
+      x: {
+        title: {
+          display: true,
+          text: "Session ID",
+        },
+        beginAtZero: false, // Optional: Ensures the Y-axis starts at zero
+      },
+    },
+  };
+
+  return <Bar data={chartData} options={chartOptions} />;
 }
