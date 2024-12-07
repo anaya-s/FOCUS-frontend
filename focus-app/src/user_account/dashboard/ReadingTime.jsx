@@ -36,32 +36,11 @@ export default function ReadingTime() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // const result = await reauthenticatingFetch('/eye/reading-times/');
+        const result = await reauthenticatingFetch('http://localhost:8000/api/eye/reading-times/');
 
-      /* ---------------------Temporary for authentication ------------------------- */
-        
-      const authTokens = localStorage.getItem("authTokens");
-      if (!authTokens) {
-        console.error("authTokens is not found in localStorage");
-        return; // Prevent further execution if tokens are missing
-      }
-
-      const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
-      const accessToken = parsedTokens?.access;
-
-      const response = await fetch(`http://localhost:8000/api/eye/reading-times/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      const result = await response.json();
-
-      const { sessionLabels, sessionTotals } = processData(result);
-      setSessionLabels(sessionLabels);
-      setSessionTotals(sessionTotals);
+        const { sessionLabels, sessionTotals } = processData(result);
+        setSessionLabels(sessionLabels);
+        setSessionTotals(sessionTotals);
       setLoading(false);
       } catch (err) {
         console.log(err);

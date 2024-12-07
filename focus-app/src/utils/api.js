@@ -1,40 +1,51 @@
-import config from '../config'
+// import config from '../config'
 import { ACCESS_TOKEN } from './constants';
 
-const baseURL = config.apiUrl
+// const baseURL = config.apiUrl
 
 // same function as updateToken()
 async function refreshAccessToken() {
   // Make an API call to refresh the access token
-  const response = await fetch("/auth/refresh", {
+  var accessToken = JSON.parse(localStorage.getItem(ACCESS_TOKEN));
+  const response = await fetch("http://127.0.0.1:8000/api/token/refresh/", {
     method: "POST",
-    credentials: "include", // Include cookies if tokens are stored in cookies
+    headers: {
+      "Content-Type": "application/json", // Ensures DRF processes the request correctly
+    },
+    body: JSON.stringify({
+      refresh: accessToken?.refresh, // Pass the refresh token if stored in localStorage
+    }),
+    credentials: "include", // Include cookies if necessary
   });
 
   if (!response.ok) throw new Error("Failed to refresh token");
 
   const data = await response.json();
-  localStorage.setItem(ACCESS_TOKEN, data.accessToken);
 
-  return data.accessToken;
+  if (response.status === 200) {
+    data.refresh = accessToken?.refresh;
+    localStorage.setItem("authTokens", JSON.stringify(data));
+  }
+
+  return data.access; // this is the new access token to be returned to below function
 }
 
 export const reauthenticatingFetch = async (url) => {
   
-  const authTokens = localStorage.getItem("authTokens");
+  const authTokens = localStorage.getItem(ACCESS_TOKEN);
 
   const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
-  const accessToken = parsedTokens?.access;
+  var accessToken = parsedTokens?.access;
 
   let options = {
     method: "GET",
     headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer $accessToken`,
+        Authorization: `Bearer ${accessToken}`,
       },
   };
 
-  let response = await fetch(`${baseURL}${url}`, options);
+  let response = await fetch(url, options);
 
   if (response.status === 401) {
     try {

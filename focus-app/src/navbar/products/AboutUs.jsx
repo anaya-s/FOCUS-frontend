@@ -30,7 +30,7 @@ const AboutUs = () => {
 
     console.log(options)
 
-    let response = await fetch("http://127.0.0.1:8000/api/eye/api/last-blink-count/", options);
+    let response = await fetch("http://127.0.0.1:8000/api/eye/last-blink-count/", options);
     
     let data = await response.json();
 
