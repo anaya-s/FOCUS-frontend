@@ -23,8 +23,12 @@ async function refreshAccessToken() {
   const data = await response.json();
 
   if (response.status === 200) {
-    data.refresh = accessToken?.refresh;
-    localStorage.setItem("authTokens", JSON.stringify(data));
+    /* update authToken with new access token, ensuring that the refresh token comes before access token in the JSON data structure */
+    const newAuthTokens = {
+      "refresh": accessToken?.refresh,
+      "access": data.access,
+    }
+    localStorage.setItem("authTokens", JSON.stringify(newAuthTokens)); // store the new authTokens in localStorage
   }
 
   return data.access; // this is the new access token to be returned to below function
