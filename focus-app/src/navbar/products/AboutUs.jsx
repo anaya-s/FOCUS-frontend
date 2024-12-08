@@ -1,6 +1,7 @@
 import { Typography } from "@mui/material";
 import { useContext, useState, useEffect} from "react";
 import AuthContext from "../../context/AuthContext";
+import { reauthenticatingFetch } from "../../utils/api";
 
 const pageStyle = {
   display: "flex",
@@ -15,28 +16,11 @@ const AboutUs = () => {
   const [nblinks, setNumber] = useState(0);
   let { authTokens } = useContext(AuthContext);
   let totalBlinks = async () => {
+    const responseMsg = await reauthenticatingFetch("GET", "http://127.0.0.1:8000/api/eye/last-blink-count/");
 
-    let accessToken = localStorage.getItem("authTokens");
-
-    console.log("Token: ", accessToken)
-
-    let options = {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + String(authTokens.access),
-      },
-    };
-
-    console.log(options)
-
-    let response = await fetch("http://127.0.0.1:8000/api/eye/last-blink-count/", options);
-    
-    let data = await response.json();
-
-    if (response.status === 200) {
-      console.log(data)
-      setNumber(data.blink_count);
+    if (responseMsg.blink_count) {
+      console.log(responseMsg.blink_count)
+      setNumber(responseMsg.blink_count);
 
     } else {
       alert("Credentials do not match");

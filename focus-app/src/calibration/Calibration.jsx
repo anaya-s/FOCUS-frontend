@@ -60,7 +60,7 @@ const CalibrationPage = () => {
       const getCalibrationDataDB = async () => {
         try {
 
-          const responseMsg = await reauthenticatingFetch(`http://localhost:8000/api/user/calibration-retrieval/`)
+          const responseMsg = await reauthenticatingFetch("GET",`http://localhost:8000/api/user/calibration-retrieval/`)
         
           if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
           {
@@ -141,7 +141,7 @@ const CalibrationPage = () => {
     }
   }, [performCalibration]);
 
-  const handleCalibrationClick = (index) => {
+  const handleCalibrationClick = async(index) => {
     if (calibrationStatus) {
       var reset = false;
       if (totalClicks >= 72) {
@@ -168,29 +168,17 @@ const CalibrationPage = () => {
         const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
         const accessToken = parsedTokens?.access;
 
-        // Send calibration data to the backend
-        fetch(`http://localhost:8000/api/user/calibrate/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ data: calibrationData,  timestamp: date}),
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log("Calibration data sent successfully:", data);
-          })
-          .catch((error) => {
-            console.error("Error sending calibration data:", error);
-          });
+        const bodyContents = { data: calibrationData,  timestamp: date };
 
-          setCalibrationSkip(true);
+        // Send calibration data to the backend
+        const response = await reauthenticatingFetch("POST", `http://localhost:8000/api/user/calibrate/`, bodyContents)
+
+        if(response.error)
+          console.log(response.error);
+        else
+          console.log(response.message);
+
+        setCalibrationSkip(true);
       }
 
       const newClickCounts = [...clickCounts];

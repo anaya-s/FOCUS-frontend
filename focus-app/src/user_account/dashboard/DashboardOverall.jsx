@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import Grid from '@mui/material/Grid2';
 import Paper from "@mui/material/Paper";
 import { Typography } from '@mui/material';
@@ -15,6 +16,12 @@ const dashboardStyle = {
 
 
 const DashboardOverall = () => {
+
+  useEffect(() => {
+    // Re-enable scrolling if disabled by any other page
+    document.body.style.overflow = 'auto';
+  }, []);
+
   return (
     <div style={dashboardStyle}>
       <Typography variant='h3'>Welcome to your dashboard!</Typography>
