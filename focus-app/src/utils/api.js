@@ -34,7 +34,12 @@ async function refreshAccessToken() {
   return data.access; // this is the new access token to be returned to below function
 }
 
-export const reauthenticatingFetch = async (url) => {
+/*
+This function automatically refreshes the access token if expired 
+  For GET method: don't pass in any value for 'body' (leave it undefined) e.g. reauthenticatingFetch(method, url)
+  For POST method: pass the correct value for 'body' in JSON format  e.g. reauthenticatingFetch(method, url, body)
+*/
+export const reauthenticatingFetch = async (method, url, body) => {
   
   const authTokens = localStorage.getItem(ACCESS_TOKEN);
 
@@ -42,11 +47,12 @@ export const reauthenticatingFetch = async (url) => {
   var accessToken = parsedTokens?.access;
 
   let options = {
-    method: "GET",
+    method: method,
     headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
       },
+    ...(body !== undefined && { body: JSON.stringify(body) }),
   };
 
   let response = await fetch(url, options);
