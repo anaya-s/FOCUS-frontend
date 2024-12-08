@@ -41,15 +41,13 @@ export default function ReadingTime() {
         const { sessionLabels, sessionTotals } = processData(result);
         setSessionLabels(sessionLabels);
         setSessionTotals(sessionTotals);
-      setLoading(false);
+        setLoading(false);
       } catch (err) {
         console.log(err);
       }
     };
 
-    /* -----------------------------------------------------------------------------------*/
-
-    fetchData();
+      fetchData();
   }, []);
 
   const chartData = {

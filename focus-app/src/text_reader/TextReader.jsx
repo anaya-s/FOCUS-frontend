@@ -40,6 +40,16 @@ function TextReaderPage() {
 
   const { toNotAuthorized } = useNavigation();
 
+  useEffect(() => {
+    // Disable scrolling
+    document.body.style.overflow = 'hidden';
+
+    // Cleanup to restore scrolling on component unmount
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
+
   // Webgazer initialisation
   useEffect(() => {
     const initializeWebGazer = async () => {

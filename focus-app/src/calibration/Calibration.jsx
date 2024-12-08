@@ -4,6 +4,7 @@ import Typography from "@mui/material/Typography";
 import { Button } from "@mui/material";
 import LinearProgress from "@mui/material/LinearProgress";
 import { useNavigation } from "../utils/navigation";
+import { reauthenticatingFetch } from "../utils/api";
 
 var calibrationData = [];
 
@@ -39,10 +40,19 @@ const CalibrationPage = () => {
   // Make webpage go full screen on calibration, then exit fullscreen after
   //  Alert when trying to exit fullscreen - make sure to pause webgazer so nothing is recorded
 
-  // Scroll automatically to top of page
   useEffect(() => {
+
+    // Scroll automatically to top of page
     window.scrollTo({ top: 0, behavior: "smooth" }); // Auto-scroll to the top with smooth animation
-  }, []);
+
+    // Disable scrolling
+    document.body.style.overflow = 'hidden';
+
+    // Cleanup to restore scrolling on component unmount
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [performCalibration, isCalibrationGETLoading, skipCalibration]);
 
   // Check if calibration data exists
   useEffect(() => {
@@ -50,38 +60,22 @@ const CalibrationPage = () => {
       const getCalibrationDataDB = async () => {
         try {
 
-          const authTokens = localStorage.getItem("authTokens");
-          if (!authTokens) {
-            console.error("authTokens is not found in localStorage");
-            return; // Prevent further execution if tokens are missing
-          }
-
-          const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
-          const accessToken = parsedTokens?.access;
-
-          const response = await fetch(`http://localhost:8000/api/user/calibration-retrieval/`, {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-          });
+          const responseMsg = await reauthenticatingFetch(`http://localhost:8000/api/user/calibration-retrieval/`)
         
-          if (!response.ok)
+          if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
           {
-            //if not data found then perform calibration
+            // perform calibration
             setCalibration(true);
 
             setCalibrationGETLoading(false);
           }
           else
           {
-            var responeMsg = await response.json();
-            var data = responeMsg.calibration_values;
-            localStorage.setItem("calibration", JSON.stringify(data));
+            var data = responseMsg.calibration_values;
+            localStorage.setItem("calibration", JSON.stringify(data)); // store local copy of calibration data in localstorage, so no need to fetch from database in same session
             // console.log("Copied from DB to localstorage");
 
-            // Skip calibration
+            // skip calibration
             setCalibrationSkip(true);
 
             setCalibrationGETLoading(false);
