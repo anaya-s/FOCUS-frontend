@@ -11,8 +11,12 @@ import {
   Typography,
   IconButton,
   Divider,
+  CardMedia,
+  CardHeader,
+  InputAdornment
 } from "@mui/material";
-import { CloudUpload, StarBorder, AccessTime } from "@mui/icons-material"
+import { CloudUpload, StarBorder, AccessTime, MoreHoriz } from "@mui/icons-material"
+import SearchIcon from '@mui/icons-material/Search';
 
 function DocumentDrivePage() {
 
@@ -125,32 +129,48 @@ function DocumentDrivePage() {
 
       {/* Main content */}
       <Box component="main" sx={{ flexGrow: 1, p: 3, ml: "240px", mt: 2 }}>
-        <Typography variant="h4" gutterBottom>
+        <Typography variant="h2" gutterBottom sx={{textAlign: "center", mb: 5}}>
           Welcome to your drive
         </Typography>
         <TextField
           placeholder="Search for a document"
           variant="outlined"
-          fullWidth
-          sx={{ mb: 3 }}
+          sx={{ display: "flex", alignContent: "center", justifyContent: "center", marginLeft: "auto", marginRight: "auto", width: "60%", mb: 6, "& .MuiOutlinedInput-root": {borderRadius: "9999px"} }}
+          slotProps={{
+            input: {
+              endAdornment: <InputAdornment position="end"><IconButton><SearchIcon /></IconButton></InputAdornment>,
+            },
+          }}
         />
 
-        <Grid2 container spacing={3}>
-          {Array(4)
+        <Grid2 container spacing={3} sx={{display: "flex", alignContent: "center", justifyContent: "center"}}>
+          {Array(10)
             .fill()
             .map((_, index) => (
               <Grid2 item xs={12} sm={6} md={3} key={index}>
-                <Card>
-                  <CardContent>
-                    <Typography variant="h6">DocumentName.pdf</Typography>
-                    <Typography variant="body2">Opened on 1/11/2024</Typography>
-                  </CardContent>
-                  <CardActions>
-                    <Button size="small">Details</Button>
-                    <IconButton>
-                      <StarBorder />
-                    </IconButton>
-                  </CardActions>
+                <Card sx={{border: '2px solid',  borderColor: 'primary.main', borderRadius: '30px', boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.25)'}}>
+                  <CardHeader
+                    title={<Typography variant="h6">DocumentName.pdf</Typography>}
+                    action={
+                      <IconButton>
+                        <StarBorder />
+                      </IconButton>
+                    }
+                  />
+                  <CardMedia
+                    component="img"
+                    height="194"
+                    image="/public/images/drive/Temp.png"
+                    alt="Temp"
+                  />
+                  <CardHeader
+                    title={<Typography variant="body2">Opened on 1/11/2024</Typography>}
+                    action={
+                      <IconButton>
+                        <MoreHoriz />
+                      </IconButton>
+                    }
+                  />
                 </Card>
               </Grid2>
             ))}
