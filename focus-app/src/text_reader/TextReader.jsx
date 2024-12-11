@@ -10,6 +10,8 @@ import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import LinearProgress from "@mui/material/LinearProgress";
+import { useLocation } from "react-router-dom";
+import { reauthenticatingFetch } from "../utils/api";
 
 function TextReaderPage() {
   const videoRef = useRef(null);
@@ -29,6 +31,8 @@ function TextReaderPage() {
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
 
   const [fontSize, setFontSize] = useState(28); // Initialize font size
+
+  const [fileName, setFileName] = useState("");
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
@@ -65,9 +69,15 @@ function TextReaderPage() {
         }, 250);
 
         webgazer.params.showVideo = false;
-        webgazer.params.showGazeDot = false;
+        webgazer.params.showGazeDot = true;
         webgazer.params.showVideoPreview = false;
         webgazer.params.saveDataAcrossSessions = false;
+        webgazer.setRegression("weightedRidge");
+
+        // change moveTickSize, videoViewerWidth and videoViewerHeight for accuracy
+        webgazer.params.videoViewerWidth = 1920;
+        webgazer.params.videoViewerHeight = 1080;
+        webgazer.params.moveTickSize = 25;
 
         await webgazer.begin(false);
 
@@ -142,6 +152,9 @@ function TextReaderPage() {
       const context = canvas.getContext("2d", { willReadFrequently: true });
       context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
+      if(!(xCoord && yCoord))
+        document.getElementById(webgazer.params.gazeDotId).style.display = "hidden"; // hide the gaze dot if face is not detected
+
       const timestamp = Date.now(); // Get current timestamp of current frame
 
       const frame = canvas.toDataURL("image/jpeg");
@@ -206,6 +219,7 @@ function TextReaderPage() {
   /* Function which handles the uploading of files, detecting whether the file types are valid */
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
+    setFileName(file.name);
     if (file) {
       if (file.type === "application/pdf") {
         // Check for .pdf file type
@@ -221,6 +235,21 @@ function TextReaderPage() {
       }
     }
   };
+
+  const sendReadingProgress = async () => {
+
+    const bodyContents = { fileName: fileName,  lineNumber: currentLine };
+    console.log(bodyContents);
+      
+    const response = await reauthenticatingFetch("POST", `http://localhost:8000/api/user/reading-progress/`, bodyContents);
+
+    if(response.error)
+        console.log(response.error);
+    else
+    {
+      // the response should contain the line number of previous session, if exists, otherwise set current line number to 0
+    }
+}
 
   /* Function which parses the text within PDF files */
   const handlePdfFile = async (file) => {
@@ -262,6 +291,7 @@ function TextReaderPage() {
       }
 
       setTextArray(extractedTextArray); // set 2D array (lines, words) to be displayed and highlighted later on
+      sendReadingProgress();
       iterateWords(extractedTextArray); // TEMPORARY: start automatic highlighting of words
     };
     reader.readAsArrayBuffer(file);
@@ -287,6 +317,7 @@ function TextReaderPage() {
       });
 
       setTextArray(extractedTextArray); // set 2D array (lines, words) to be displayed and highlighted later on
+      sendReadingProgress();
       iterateWords(extractedTextArray); // TEMPORARY: start automatic highlighting of words
     };
     reader.readAsArrayBuffer(file);
@@ -303,6 +334,7 @@ function TextReaderPage() {
         .map((line) => line.trim().split(/\s+/).filter(Boolean)); // split text into lines and words
 
       setTextArray(extractedTextArray); // set 2D array (lines, words) to be displayed and highlighted later on
+      sendReadingProgress();
       iterateWords(extractedTextArray); // TEMPORARY: start automatic highlighting of words
     };
 
@@ -312,8 +344,8 @@ function TextReaderPage() {
   /* TEMPORARY function that iterates through each element in 2D array (every word in every line)*/
   const iterateWords = async (lines) => {
     if (!textArray.length) {
-      for (let lineNo = 0; lineNo < lines.length; lineNo++) {
-        for (let wordNo = 0; wordNo < lines[lineNo].length; wordNo++) {
+      for (let lineNo = currentLine; lineNo < lines.length; lineNo++) {
+        for (let wordNo = currentWord; wordNo < lines[lineNo].length; wordNo++) {
           setCurrentLine(lineNo);
           setCurrentWord(wordNo);
           await new Promise((resolve) => setTimeout(resolve, 500)); // set time interval
@@ -364,15 +396,15 @@ function TextReaderPage() {
         <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUpload} style={{border: "1px solid #06760D", borderRadius: "2px", padding: "5px", marginRight: "10px"}}/>
         <Button onClick={increaseFontSize}>Increase Font Size</Button>
         <Button onClick={decreaseFontSize}>Decrease Font Size</Button>
+        <Button onClick={sendReadingProgress}>Save Progress</Button>
         <Typography variant="h6">Extracted text:</Typography>
       </Container>
       <Typography
         sx={{
           width: "100%",
-          height: "500px",
+          height: "70vh",
           overflowY: "scroll",
           border: "1px solid #ccc",
-          padding: "10px",
           backgroundColor: "#f9f9f9",
           fontSize: `${fontSize}px`, // can be adjusted
           lineHeight: "2"

@@ -54,6 +54,18 @@ const CalibrationPage = () => {
     };
   }, [performCalibration, isCalibrationGETLoading, skipCalibration]);
 
+  const [gap, setGap] = useState(window.innerWidth / 10);
+
+  /* Change gap between calibration points if window size changes */
+  useEffect(() => {
+    const handleResize = () => {
+      setGap(window.innerWidth / 10); // Update the gap on resize
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize); // Cleanup on unmount
+  }, []);
+
   // Check if calibration data exists
   useEffect(() => {
       setCalibrationGETLoading(true);
@@ -120,10 +132,16 @@ const CalibrationPage = () => {
 
 
         webgazer.params.showVideo = false;
-        webgazer.params.showGazeDot = true;
+        webgazer.params.showGazeDot = true; // set false to remove gaze dot
         webgazer.params.showVideoPreview = false;
         webgazer.params.saveDataAcrossSessions = false;
         webgazer.params.showPredictionPoints = false;
+        webgazer.setRegression("weightedRidge");
+
+        // change moveTickSize, videoViewerWidth and videoViewerHeight for accuracy
+        webgazer.params.videoViewerWidth = 1920;
+        webgazer.params.videoViewerHeight = 1080;
+        webgazer.params.moveTickSize = 25;
 
         webgazer.clearData();
 
@@ -158,15 +176,6 @@ const CalibrationPage = () => {
         setCalibrationLive(false);
 
         const date = Date.now(); // Get current timestamp when calibration data is sent
-
-        const authTokens = localStorage.getItem("authTokens");
-        if (!authTokens) {
-          console.error("authTokens is not found in localStorage");
-          return; // Prevent further execution if tokens are missing
-        }
-
-        const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
-        const accessToken = parsedTokens?.access;
 
         const bodyContents = { data: calibrationData,  timestamp: date };
 
@@ -321,7 +330,7 @@ const CalibrationPage = () => {
           marginBottom: "30px",
         }}
       >
-        <Typography variant="h3" fontWeight="bold">
+        <Typography variant="h3" fontWeight="bold" sx={{mt: "100px"}}>
           Calibration:
         </Typography>
         <Typography variant="h7">
@@ -333,7 +342,7 @@ const CalibrationPage = () => {
       <div
         style={{
           width: "100%",
-          height: "500px",
+          height: "70vh",
           border: "2px dashed #06760D",
           display: "flex",
           justifyContent: "center",
@@ -347,7 +356,7 @@ const CalibrationPage = () => {
             display: "grid",
             gridTemplateRows: "repeat(3, 1fr)",
             gridTemplateColumns: "repeat(8, 1fr)",
-            gap: "130px",
+            gap: `${window.innerWidth / 10}px`
           }}
         >
           {Array.from({ length: 24 }).map((_, index) => (
