@@ -66,7 +66,6 @@ function calculatePrecision(past50Array,div) {
   export async function calcAccuracy(div, timerDiv) {
     // Return a Promise that wraps the entire flow
     return new Promise((resolve, reject) => {
-      var precisionMeasurement = 0;
       swal({
         title: "Calculating Accuracy",
         text: "Please proceed to stare at the middle countdown number for the next 5 seconds. This will allow us to calculate the accuracy of the gaze predictions.",
@@ -100,7 +99,7 @@ function calculatePrecision(past50Array,div) {
               webgazer.params.storingPoints = false; // Stop storing the prediction points
               const past50 = webgazer.getStoredPoints(); // Retrieve the stored points
   
-              precisionMeasurement = calculatePrecision(past50, div);
+              var precisionMeasurement = calculatePrecision(past50, div);
               console.log("Precision measurement:", precisionMeasurement);
   
               // Resolve the Promise with the result
@@ -113,8 +112,6 @@ function calculatePrecision(past50Array,div) {
         .catch((error) => {
           reject(error); // Handle swal rejection
         });
-
-        return precisionMeasurement;
     });
   }
   

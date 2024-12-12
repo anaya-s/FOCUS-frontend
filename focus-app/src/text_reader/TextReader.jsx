@@ -83,7 +83,7 @@ function TextReaderPage() {
         
         try
         {
-          if(localStorage.getItem("calibration"))
+          if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
           {
             var calibrationData = JSON.parse(localStorage.getItem("calibration"));
             webgazer.setRegressionData(calibrationData);

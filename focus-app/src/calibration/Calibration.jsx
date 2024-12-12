@@ -101,13 +101,15 @@ const CalibrationPage = () => {
             setAccuracy(responseMsg.accuracy);
             try
             {
-              localStorage.setItem("calibration", JSON.stringify(responseMsg)); // store local copy of calibration data in localstorage, so no need to fetch from database in same session
+              localStorage.setItem("calibration", JSON.stringify(data)); // store local copy of calibration data in localstorage, so no need to fetch from database in same session
+              localStorage.setItem("accuracy",JSON.stringify(responseMsg.accuracy)); // also store accuracy of current calibration data for reference
               // console.log("Copied from DB to localstorage");
             }
             catch (error) 
             {
               console.error("Failed to save calibration data to localStorage:", error);
               localStorage.removeItem("calibration");
+              localStorage.removeItem("accuracy");
               console.log("Applying the calibration data directly to the WebGazer instance");
               webgazer.setRegressionData(data);
             }
@@ -124,12 +126,13 @@ const CalibrationPage = () => {
       };
 
       // Check localstorage
-      if(localStorage.getItem("calibration"))
+      if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
       {
         calibrationData = JSON.parse(localStorage.getItem("calibration"));
+        const accuracyValue = JSON.parse(localStorage.getItem("accuracy"));
         // console.log("Found calibration data from localstorage: ", calibrationData);
-        setAccuracy(calibrationData.accuracy);
-        console.log(calibrationData.accuracy);
+        setAccuracy(accuracyValue);
+
         setCalibrationGETLoading(false);
         setCalibrationSkip(true);
       }
@@ -198,7 +201,7 @@ const CalibrationPage = () => {
         setTotalClicks(totalClicks + 1);
       }
 
-      if (totalClicks >= 72) {
+      if (totalClicks >= 10) {
 
         reset = true;
         webgazer.stopCalibration();
@@ -215,7 +218,9 @@ const CalibrationPage = () => {
         const calibrationArea = document.getElementById("calibrationArea");
         const calibrationArea_rect = calibrationArea.getBoundingClientRect();
 
-        setAccuracy(await calcAccuracy(calibrationArea_rect, countdownDiv)); // calculate accuracy of calibration
+        const accuracyValue = await calcAccuracy(calibrationArea_rect, countdownDiv); // calculate accuracy of calibration
+
+        setAccuracy(accuracyValue);
 
         webgazer.end();
         webgazer.params.showGazeDot = false;
@@ -224,17 +229,20 @@ const CalibrationPage = () => {
 
         try {
         localStorage.setItem("calibration", JSON.stringify(calibrationData));
+        localStorage.setItem("accuracy",JSON.stringify(accuracyValue)); // also store accuracy of current calibration data for reference
         } catch(error)
         {
           console.error("Failed to save calibration data to localStorage:", error);
           localStorage.removeItem("calibration");
+          localStorage.removeItem("accuracy");
         }
 
         setCalibrationLive(false);
 
         const date = Date.now(); // Get current timestamp when calibration data is sent
 
-        const bodyContents = { data: calibrationData,  timestamp: date, accuracy: accuracy };
+        const bodyContents = { data: calibrationData,  timestamp: date, accuracy: accuracyValue };
+        console.log(bodyContents);
 
         // Send calibration data to the backend
         const response = await reauthenticatingFetch("POST", `http://localhost:8000/api/user/calibrate/`, bodyContents)
@@ -277,6 +285,7 @@ const CalibrationPage = () => {
   const restartCalibration = () => {
     calibrationData = []
     localStorage.removeItem("calibration");
+    localStorage.removeItem("accuracy");
     setTotalClicks(1);
     setCalibrationSkip(false);
     setCalibration(true);
