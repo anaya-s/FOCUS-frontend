@@ -80,9 +80,21 @@ function TextReaderPage() {
         webgazer.params.moveTickSize = 25;
 
         await webgazer.begin(false);
-
-        var calibrationData = JSON.parse(localStorage.getItem("calibration"));
-        webgazer.setRegressionData(calibrationData);
+        
+        try
+        {
+          if(localStorage.getItem("calibration"))
+          {
+            var calibrationData = JSON.parse(localStorage.getItem("calibration"));
+            webgazer.setRegressionData(calibrationData);
+          }
+          else
+            console.log("No calibration data found in localStorage. Data already stored in WebGazer instance during calibration.");
+        }
+        catch(error)
+        {
+          console.error("Failed to load calibration data to localStorage:", error);
+        }
 
         /* Fetch the video stream from Webgazer */
         const intervalId = setInterval(() => {

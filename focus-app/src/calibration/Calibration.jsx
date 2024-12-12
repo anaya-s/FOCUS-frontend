@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import webgazer from "../webgazer/webgazer";
 import Typography from "@mui/material/Typography";
+import Box from "@mui/material/Box";
 import { Button } from "@mui/material";
 import LinearProgress from "@mui/material/LinearProgress";
 import { useNavigation } from "../utils/navigation";
 import { reauthenticatingFetch } from "../utils/api";
+import { calcAccuracy } from "./accuracy.js";
 
 var calibrationData = [];
 
@@ -20,6 +22,8 @@ const CalibrationPage = () => {
   const [isLoading, setWebgazerLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
+  const [accuracy, setAccuracy] = useState(0);
+  const [calibrationDate, setCalibrationDate] = useState(formatDate(new Date(Date.now())));
 
   const [screenInfo, setScreenInfo] = useState({
     screenWidth: window.screen.width,
@@ -30,6 +34,16 @@ const CalibrationPage = () => {
   });
 
   const { toReadingPage } = useNavigation();
+
+  /* Temporary function to calculate date in format DD/MM/YY, this probably won't be needed if backend is sending timestamp as string */
+  function formatDate(date)
+  {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+    const year = String(date.getFullYear()).slice(-2);
+
+    return `${day}/${month}/${year}`;
+  }
 
   // TO DO:
 
@@ -84,8 +98,19 @@ const CalibrationPage = () => {
           else
           {
             var data = responseMsg.calibration_values;
-            localStorage.setItem("calibration", JSON.stringify(data)); // store local copy of calibration data in localstorage, so no need to fetch from database in same session
-            // console.log("Copied from DB to localstorage");
+            setAccuracy(responseMsg.accuracy);
+            try
+            {
+              localStorage.setItem("calibration", JSON.stringify(responseMsg)); // store local copy of calibration data in localstorage, so no need to fetch from database in same session
+              // console.log("Copied from DB to localstorage");
+            }
+            catch (error) 
+            {
+              console.error("Failed to save calibration data to localStorage:", error);
+              localStorage.removeItem("calibration");
+              console.log("Applying the calibration data directly to the WebGazer instance");
+              webgazer.setRegressionData(data);
+            }
 
             // skip calibration
             setCalibrationSkip(true);
@@ -103,6 +128,8 @@ const CalibrationPage = () => {
       {
         calibrationData = JSON.parse(localStorage.getItem("calibration"));
         // console.log("Found calibration data from localstorage: ", calibrationData);
+        setAccuracy(calibrationData.accuracy);
+        console.log(calibrationData.accuracy);
         setCalibrationGETLoading(false);
         setCalibrationSkip(true);
       }
@@ -142,6 +169,7 @@ const CalibrationPage = () => {
         webgazer.params.videoViewerWidth = 1920;
         webgazer.params.videoViewerHeight = 1080;
         webgazer.params.moveTickSize = 25;
+        webgazer.params.storingPoints = true; // Stop storing the prediction points
 
         webgazer.clearData();
 
@@ -162,22 +190,51 @@ const CalibrationPage = () => {
   const handleCalibrationClick = async(index) => {
     if (calibrationStatus) {
       var reset = false;
+
+      const newClickCounts = [...clickCounts];
+      if (newClickCounts[index] < 3) {
+        newClickCounts[index] += 1;
+        setClickCounts(newClickCounts);
+        setTotalClicks(totalClicks + 1);
+      }
+
       if (totalClicks >= 72) {
+
         reset = true;
         webgazer.stopCalibration();
+
+        // turn off calibration grid points
+        const calibrationGrid = document.getElementById("calibrationGrid");
+        calibrationGrid.style.display = "none";
+
+        // turn on countdown number at centre of screen
+        const countdownDiv = document.getElementById("countdown");
+        countdownDiv.style.display = "block";
+
+        // obtain calibration area box
+        const calibrationArea = document.getElementById("calibrationArea");
+        const calibrationArea_rect = calibrationArea.getBoundingClientRect();
+
+        setAccuracy(await calcAccuracy(calibrationArea_rect, countdownDiv)); // calculate accuracy of calibration
+
         webgazer.end();
         webgazer.params.showGazeDot = false;
 
         calibrationData = webgazer.getRegressionData();
 
-        // console.log(calibrationData);
-
+        try {
         localStorage.setItem("calibration", JSON.stringify(calibrationData));
+        } catch(error)
+        {
+          console.error("Failed to save calibration data to localStorage:", error);
+          localStorage.removeItem("calibration");
+        }
+
         setCalibrationLive(false);
 
         const date = Date.now(); // Get current timestamp when calibration data is sent
 
-        const bodyContents = { data: calibrationData,  timestamp: date };
+        const bodyContents = { data: calibrationData,  timestamp: date, accuracy: accuracy };
 
         // Send calibration data to the backend
         const response = await reauthenticatingFetch("POST", `http://localhost:8000/api/user/calibrate/`, bodyContents)
@@ -188,13 +245,6 @@ const CalibrationPage = () => {
           console.log(response.message);
 
         setCalibrationSkip(true);
-      }
-
-      const newClickCounts = [...clickCounts];
-      if (newClickCounts[index] < 3) {
-        newClickCounts[index] += 1;
-        setClickCounts(newClickCounts);
-        setTotalClicks(totalClicks + 1);
       }
 
       // reset circle colours back to unfilled
@@ -297,15 +347,27 @@ const CalibrationPage = () => {
           userSelect: "none"
         }}
       >
-        <Typography variant="h5" style={{ marginBottom: "20px" }}>
-          Calibration data ready. Do you want to re-calibrate?
+        <Typography variant="h5" style={{ marginBottom: "10px" }}>
+          Calibration data ready.
         </Typography>
-        <Typography variant="h7" style={{ marginBottom: "15px" }}>
-        Please re-calibrate if you've switched location or devices since your last calibration.
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" style={{ marginBottom: "20px", marginRight: "20px"}}>
+            Last calibration date:  <span style={{ fontWeight: 'bold' }}>{calibrationDate}</span>
+          </Typography>
+          <Typography variant="h6" style={{ marginBottom: "20px" }}>
+            Accuracy: <span style={{ fontWeight: 'bold', color: accuracy < 50 ? 'red' : (accuracy >= 75 ? 'green' : 'orange') }}>{accuracy}%</span>
+          </Typography>
+        </Box>
+        <Typography variant="h5" style={{ marginBottom: "10px" }}>
+        Do you want to re-calibrate?
         </Typography>
-        {/* <Typography variant="h6" style={{ marginBottom: "20px" }}>
-          Last calibration date:
-        </Typography> */}
+        <Typography variant="h7" style={{ marginBottom: "20px" }}>
+            {accuracy >= 75 ? (
+                <>Please re-calibrate if you've <span style={{ fontWeight: 'bold' }}>switched location or devices</span> since your last calibration</>
+            ) : (
+                <>We recommend you to <span style={{ fontWeight: 'bold' }}>improve the accuracy</span> of your calibration</>
+            )}
+        </Typography>
         <Button onClick={restartCalibration} variant="outlined" sx={{mb: "20px"}}><span style={{ fontWeight: 'bold' }}>Yes</span></Button>
         <Button onClick={finishCalibration} variant="contained">No,&nbsp;<span style={{ fontWeight: 'bold' }}> continue to text reading</span></Button>
       </div>
@@ -321,10 +383,11 @@ const CalibrationPage = () => {
         justifyContent: "center",
         height: "100vh",
         backgroundColor: "#f9f9f9",
-        userSelect: "none"
+        userSelect: "none",
+        paddingTop: "35px"
       }}
     >
-      <div
+      {/* <div
         style={{
           textAlign: "center",
           marginBottom: "30px",
@@ -337,12 +400,13 @@ const CalibrationPage = () => {
           To calibrate the eye tracker, please click each circle, while looking
           at it, until filled.
         </Typography>
-      </div>
+      </div> */}
 
       <div
+        id = "calibrationArea"
         style={{
           width: "100%",
-          height: "70vh",
+          height: "85vh",
           border: "2px dashed #06760D",
           display: "flex",
           justifyContent: "center",
@@ -351,7 +415,9 @@ const CalibrationPage = () => {
           boxSizing: "border-box",
         }}
       >
+        <Typography id="countdown" variant="h3" sx={{display: "none"}}>5</Typography>
         <div
+          id = "calibrationGrid"
           style={{
             display: "grid",
             gridTemplateRows: "repeat(3, 1fr)",
