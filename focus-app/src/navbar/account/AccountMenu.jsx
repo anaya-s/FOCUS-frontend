@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
 import Menu from "@mui/material/Menu";
@@ -13,10 +13,11 @@ import { Typography } from "@mui/material";
 
 import AuthContext from "../../context/AuthContext";
 import { useNavigation } from "../../utils/navigation";
-
+import { reauthenticatingFetch } from "../../utils/api";
 
 export default function AccountMenu() {
   const [anchorEl, setAnchorEl] = useState(null); 
+  const [username, setUsername] = useState("");
   const open = Boolean(anchorEl);
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -27,6 +28,24 @@ export default function AccountMenu() {
 
   const { logoutUser } = useContext(AuthContext);
   const { toDashboard, toProfile, toSettings } = useNavigation();
+
+  useEffect(() => {
+    const fetchUsername = async () => {
+try {
+      const responseMsg = await reauthenticatingFetch("GET", "http://localhost:8000/api/user/profile/");
+
+      if (responseMsg.error) {
+        console.error("Failed to fetch profile data:", responseMsg.error);
+      } else {
+        setUsername(responseMsg.username); // Update state with username
+      }
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+    }
+  };
+
+    fetchUsername();
+  }, []);
 
   return (
     <>
@@ -40,7 +59,9 @@ export default function AccountMenu() {
             aria-haspopup="true"
             aria-expanded={open ? "true" : undefined}
           >
-            <Avatar sx={{ width: 32, height: 32 }}>M</Avatar>
+            <Avatar sx={{ width: 32, height: 32 }}>
+              {username.charAt(0).toUpperCase() || "?"} 
+            </Avatar>
           </IconButton>
         </Tooltip>
       </Box>
