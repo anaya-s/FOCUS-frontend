@@ -37,7 +37,7 @@ const NavBar = () => {
 
   return (
     <div style={barStyle}>
-      <Button onClick={toHome}>F.O.C.U.S</Button>
+      <Button onClick={toHome} sx={{fontWeight: "bold", pl: "10px", pr: "10px", fontSize: "25px"}}>FOCUS</Button>
       <div style={navStyle}>
         <Button style={buttonStyle} onClick={toAbout}>
           About

@@ -9,7 +9,7 @@ import Footer from "./home/Footer";
 import NotFound from "./utils/NotFound";
 import NotAuthorized from "./utils/NotAuthorized";
 import AboutUs from "./navbar/products/AboutUs";
-import TextReaderPage from "./text_reader/TextReader"
+import TextReaderPage from "./text_reader/TextReader";
 import CalibrationPage from "./calibration/Calibration";
 import ProtectedRoute from "./utils/ProtectedRoute";
 // Named export
@@ -34,23 +34,40 @@ function App() {
             <Route path="error/403" element={<NotAuthorized />} />
             <Route path="/about" element={<AboutUs />} />
 
-            <Route path="/account" element={<UserAccount />}>
-              <Route path="dashboard" element={<DashboardOverall />} />
-              <Route path="profile" element={<UserProfile />} />
-              <Route path="settings" element={<UserSettings />} />
-            </Route>
-
-
-            <Route path="error/404" element={<NotFound />} />
-            <Route path="error/403" element={<NotAuthorized />} />
             <Route
-              path="/dashboard" 
+              path="/account"
               element={
                 <ProtectedRoute>
-                  <TextReaderPage />  
+                  <UserAccount />
                 </ProtectedRoute>
               }
-            />
+            >
+                <Route
+                  path="dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardOverall />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="profile"
+                  element={
+                    <ProtectedRoute>
+                      <UserProfile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <ProtectedRoute>
+                      <UserSettings />
+                    </ProtectedRoute>
+                  }
+                />
+            </Route>
+            
             <Route
               path="/calibrate"
               element={
