@@ -10,13 +10,12 @@ const pageStyle = {
   height: "100vh"
 };
 
-const AboutUs = () => {
-
+const PrivacyPolicy = () => {
   return (
     <div style={pageStyle}>
-    <Typography variant="h3">About Us</Typography> 
-  </div>
+      <Typography variant="h3">Privacy Policy</Typography>
+    </div>
   );
 };
 
-export default AboutUs;
+export default PrivacyPolicy;

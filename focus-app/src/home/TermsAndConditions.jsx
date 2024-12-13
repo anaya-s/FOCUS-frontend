@@ -6,17 +6,16 @@ const pageStyle = {
   justifyContent: "flex-start",
   alignItems: "center",
   textAlign: "center",
-  paddingTop: "120px",
+  paddingTop: "120px", // Add padding to the top
   height: "100vh"
 };
 
-const AboutUs = () => {
-
+const TermsAndConditions = () => {
   return (
     <div style={pageStyle}>
-    <Typography variant="h3">About Us</Typography> 
-  </div>
+      <Typography variant="h3">Terms and Conditions</Typography>
+    </div>
   );
 };
 
-export default AboutUs;
+export default TermsAndConditions;

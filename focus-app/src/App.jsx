@@ -9,6 +9,9 @@ import Footer from "./home/Footer";
 import NotFound from "./utils/NotFound";
 import NotAuthorized from "./utils/NotAuthorized";
 import AboutUs from "./navbar/products/AboutUs";
+import OurProducts from "./navbar/products/OurProducts";
+import TermsAndConditions from "./home/TermsAndConditions";
+import PrivacyPolicy from "./home/PrivacyPolicy";
 import TextReaderPage from "./text_reader/TextReader";
 import CalibrationPage from "./calibration/Calibration";
 import ProtectedRoute from "./utils/ProtectedRoute";
@@ -33,6 +36,9 @@ function App() {
             <Route path="error/404" element={<NotFound />} />
             <Route path="error/403" element={<NotAuthorized />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route path="/products" element={<OurProducts />} />
+            <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
             <Route
               path="/account"
@@ -67,7 +73,7 @@ function App() {
                   }
                 />
             </Route>
-            
+
             <Route
               path="/calibrate"
               element={
