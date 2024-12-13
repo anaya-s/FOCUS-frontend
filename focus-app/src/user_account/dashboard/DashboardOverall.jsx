@@ -18,8 +18,9 @@ const dashboardStyle = {
 const DashboardOverall = () => {
 
   useEffect(() => {
-    // Re-enable scrolling if disabled by any other page
-    document.body.style.overflow = 'auto';
+    document.body.style.overflow = 'auto'; // re-enable scrolling if disabled by any other page
+
+    window.scrollTo({ top: 0}); // auto-scroll to the top
   }, []);
 
   return (

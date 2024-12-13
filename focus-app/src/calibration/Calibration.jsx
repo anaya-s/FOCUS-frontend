@@ -59,8 +59,7 @@ const CalibrationPage = () => {
 
   useEffect(() => {
 
-    // Scroll automatically to top of page
-    window.scrollTo({ top: 0, behavior: "smooth" }); // Auto-scroll to the top with smooth animation
+    window.scrollTo({ top: 0 }); // auto-scroll to the top
 
     // Disable scrolling
     document.body.style.overflow = 'hidden';

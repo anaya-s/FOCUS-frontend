@@ -1,5 +1,6 @@
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import { useNavigation } from "../../utils/navigation";
 
 const pageStyle = {
   display: "flex",
@@ -24,6 +25,9 @@ const imageStyle = {
 };
 
 const PageOne = () => {
+
+  const { toOurProducts, toRegister } = useNavigation();
+
   return (
     <div style={pageStyle}>
       <div style={contentStyle}>
@@ -36,10 +40,11 @@ const PageOne = () => {
           variant="contained"
           color="primary"
           sx={{ borderRadius: "20px" }} 
+          onClick={toOurProducts}
         >
           FIND OUT MORE
         </Button>
-        <Button variant="h4" sx={{ borderRadius: "20px" }}>
+        <Button variant="h4" sx={{ borderRadius: "20px" }} onClick={toRegister}>
           CREATE AN ACCOUNT
         </Button>
       </div>

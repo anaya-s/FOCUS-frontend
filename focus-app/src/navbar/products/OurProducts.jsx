@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Typography } from "@mui/material";
 
 const pageStyle = {
@@ -11,6 +12,10 @@ const pageStyle = {
 };
 
 const OurProducts = () => {
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 }); // auto-scroll to the top
+  }, []);
 
   return (
     <div style={pageStyle}>

@@ -1,5 +1,6 @@
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import { useNavigation } from "../../utils/navigation";
 
 const pageStyle = {
   display: "flex",
@@ -38,6 +39,9 @@ const imageStyle = {
 };
 
 const PageThree = () => {
+
+  const { toReadingPage } = useNavigation();
+
   return (
     <div style={pageStyle}>
       <div style={leftColumnStyle}>
@@ -48,7 +52,7 @@ const PageThree = () => {
           experience with smart highlighting and assistive tools for effortless
           reading.
         </Typography>
-        <Button style={buttonStyle} variant="contained" color="primary">
+        <Button style={buttonStyle} variant="contained" color="primary" onClick={toReadingPage}>
           Get Started
         </Button>
       </div>
