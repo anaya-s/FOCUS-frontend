@@ -33,16 +33,16 @@ const buttonStyle = {
 
 const NavBar = () => {
   let { user } = useContext(AuthContext);
-  const { toHome, toLogin, toAbout } = useNavigation();
+  const { toHome, toLogin, toAbout, toOurProducts} = useNavigation();
 
   return (
     <div style={barStyle}>
-      <Button onClick={toHome}>F.O.C.U.S</Button>
+      <Button onClick={toHome} sx={{fontWeight: "bold", pl: "10px", pr: "10px", fontSize: "25px"}}>FOCUS</Button>
       <div style={navStyle}>
         <Button style={buttonStyle} onClick={toAbout}>
           About
         </Button>
-        <Button style={buttonStyle}>Our Products</Button>
+        <Button style={buttonStyle} onClick={toOurProducts}>Our Products</Button>
         {user ? <AccountMenu /> : <Button style={buttonStyle} onClick={toLogin}> Login </Button>}
       </div>
     </div>

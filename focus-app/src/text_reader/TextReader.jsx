@@ -45,6 +45,10 @@ function TextReaderPage() {
   const { toNotAuthorized } = useNavigation();
 
   useEffect(() => {
+    window.scrollTo({ top: 0 }); // auto-scroll to the top
+  }, [isLoading]);
+
+  useEffect(() => {
     // Disable scrolling
     document.body.style.overflow = 'hidden';
 

@@ -3,11 +3,13 @@ import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Box from "@mui/material/Box";
 import PropTypes from "prop-types";
-import { BiBarChartAlt } from "react-icons/bi";
-import { BiCog } from "react-icons/bi";
-import { BiUser } from "react-icons/bi";
+import AnalyticsIcon from '@mui/icons-material/Analytics';
+import Settings from "@mui/icons-material/Settings";
+import PersonIcon from '@mui/icons-material/Person';
 
 import DashboardOverall from "./dashboard/DashboardOverall";
+import UserProfile from "./settings/UserProfile";
+import UserSettings from "./settings/UserSettings";
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -66,19 +68,19 @@ export default function UserAccount() {
         sx={{ borderRight: 1, borderColor: "divider" }}
       >
         <Tab
-          icon={<BiBarChartAlt />}
+          icon={<AnalyticsIcon />}
           iconPosition="start"
           label="Dashboard"
           {...a11yProps(0)}
         />
         <Tab
-          icon={<BiUser />}
+          icon={<PersonIcon />}
           iconPosition="start"
           label="Profile"
           {...a11yProps(1)}
         />
         <Tab
-          icon={<BiCog />}
+          icon={<Settings />}
           iconPosition="start"
           label="Settings"
           {...a11yProps(2)}
@@ -89,10 +91,10 @@ export default function UserAccount() {
         <DashboardOverall />
       </TabPanel>
       <TabPanel value={value} index={1}>
-        Item Two
+        <UserProfile />
       </TabPanel>
       <TabPanel value={value} index={2}>
-        Item Three
+        <UserSettings />
       </TabPanel>
     </Box>
   );

@@ -9,6 +9,13 @@ export function useNavigation() {
     
     // products
     toAbout: () => navigate('/about'),
+    toOurProducts: () => navigate('/products'),
+
+    // terms and conditions
+    toTermsAndConditions: () => navigate('/terms-and-conditions'),
+
+    // privacy policy
+    toPrivacyPolicy: () => navigate('/privacy-policy'),
 
     // account menu
     toDashboard: () => navigate('/account/dashboard'),

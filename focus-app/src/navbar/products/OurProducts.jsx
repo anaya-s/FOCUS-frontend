@@ -11,7 +11,7 @@ const pageStyle = {
   height: "100vh"
 };
 
-const AboutUs = () => {
+const OurProducts = () => {
 
   useEffect(() => {
     window.scrollTo({ top: 0 }); // auto-scroll to the top
@@ -19,9 +19,9 @@ const AboutUs = () => {
 
   return (
     <div style={pageStyle}>
-    <Typography variant="h3">About Us</Typography> 
+    <Typography variant="h3">Our Products</Typography> 
   </div>
   );
 };
 
-export default AboutUs;
+export default OurProducts;

@@ -23,7 +23,7 @@ const CalibrationPage = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   const [accuracy, setAccuracy] = useState(0);
-  const [calibrationDate, setCalibrationDate] = useState(formatDate(new Date(Date.now())));
+  const [calibrationTimestamp, setCalibrationTimestamp] = useState(formatTimestamp(new Date(Date.now())));
 
   const [screenInfo, setScreenInfo] = useState({
     screenWidth: window.screen.width,
@@ -35,14 +35,17 @@ const CalibrationPage = () => {
 
   const { toReadingPage } = useNavigation();
 
-  /* Temporary function to calculate date in format DD/MM/YY, this probably won't be needed if backend is sending timestamp as string */
-  function formatDate(date)
-  {
+  function formatTimestamp(timestamp) {
+    const date = new Date(timestamp);
+  
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
     const year = String(date.getFullYear()).slice(-2);
-
-    return `${day}/${month}/${year}`;
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
   }
 
   // TO DO:
@@ -56,8 +59,7 @@ const CalibrationPage = () => {
 
   useEffect(() => {
 
-    // Scroll automatically to top of page
-    window.scrollTo({ top: 0, behavior: "smooth" }); // Auto-scroll to the top with smooth animation
+    window.scrollTo({ top: 0 }); // auto-scroll to the top
 
     // Disable scrolling
     document.body.style.overflow = 'hidden';
@@ -99,10 +101,12 @@ const CalibrationPage = () => {
           {
             var data = responseMsg.calibration_values;
             setAccuracy(responseMsg.accuracy);
+            setCalibrationTimestamp(formatTimestamp(responseMsg.created_at));
             try
             {
               localStorage.setItem("calibration", JSON.stringify(data)); // store local copy of calibration data in localstorage, so no need to fetch from database in same session
               localStorage.setItem("accuracy",JSON.stringify(responseMsg.accuracy)); // also store accuracy of current calibration data for reference
+              localStorage.setItem("timestamp", JSON.stringify(responseMsg.created_at));
               // console.log("Copied from DB to localstorage");
             }
             catch (error) 
@@ -130,8 +134,10 @@ const CalibrationPage = () => {
       {
         calibrationData = JSON.parse(localStorage.getItem("calibration"));
         const accuracyValue = JSON.parse(localStorage.getItem("accuracy"));
+        const timestamp = JSON.parse(localStorage.getItem("timestamp"));
         // console.log("Found calibration data from localstorage: ", calibrationData);
         setAccuracy(accuracyValue);
+        setCalibrationTimestamp(formatTimestamp(timestamp));
 
         setCalibrationGETLoading(false);
         setCalibrationSkip(true);
@@ -172,7 +178,6 @@ const CalibrationPage = () => {
         webgazer.params.videoViewerWidth = 1920;
         webgazer.params.videoViewerHeight = 1080;
         webgazer.params.moveTickSize = 25;
-        webgazer.params.storingPoints = true; // Stop storing the prediction points
 
         webgazer.clearData();
 
@@ -201,7 +206,7 @@ const CalibrationPage = () => {
         setTotalClicks(totalClicks + 1);
       }
 
-      if (totalClicks >= 10) {
+      if (totalClicks >= 72) {
 
         reset = true;
         webgazer.stopCalibration();
@@ -227,19 +232,22 @@ const CalibrationPage = () => {
 
         calibrationData = webgazer.getRegressionData();
 
+        setCalibrationLive(false);
+
+        const date = Date.now(); // Get current timestamp when calibration data is sent
+
+        setCalibrationTimestamp(formatTimestamp(date));
+
         try {
         localStorage.setItem("calibration", JSON.stringify(calibrationData));
         localStorage.setItem("accuracy",JSON.stringify(accuracyValue)); // also store accuracy of current calibration data for reference
+        localStorage.setItem("timestamp", JSON.stringify(date));
         } catch(error)
         {
           console.error("Failed to save calibration data to localStorage:", error);
           localStorage.removeItem("calibration");
           localStorage.removeItem("accuracy");
         }
-
-        setCalibrationLive(false);
-
-        const date = Date.now(); // Get current timestamp when calibration data is sent
 
         const bodyContents = { data: calibrationData,  timestamp: date, accuracy: accuracyValue };
         console.log(bodyContents);
@@ -361,7 +369,7 @@ const CalibrationPage = () => {
         </Typography>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h6" style={{ marginBottom: "20px", marginRight: "20px"}}>
-            Last calibration date:  <span style={{ fontWeight: 'bold' }}>{calibrationDate}</span>
+            Last calibration date:  <span style={{ fontWeight: 'bold' }}>{calibrationTimestamp}</span>
           </Typography>
           <Typography variant="h6" style={{ marginBottom: "20px" }}>
             Accuracy: <span style={{ fontWeight: 'bold', color: accuracy < 50 ? 'red' : (accuracy >= 75 ? 'green' : 'orange') }}>{accuracy}%</span>

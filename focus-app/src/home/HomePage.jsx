@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import PageOne from "./pages/PageOne";
 import PageTwo from "./pages/PageTwo";
 import PageThree from "./pages/PageThree";
@@ -9,6 +10,11 @@ const containerStyle = {
   // height: '100vh'
 };
 const HomePage = () => {
+
+  useEffect(() => {
+    window.scrollTo({ top: 0 }); // auto-scroll to the top
+  }, []);
+
   return (
     <div style={containerStyle}>
       <PageOne />

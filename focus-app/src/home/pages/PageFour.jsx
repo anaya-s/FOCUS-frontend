@@ -1,5 +1,6 @@
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import { useNavigation } from "../../utils/navigation";
 
 const pageStyle = {
   display: "flex",
@@ -36,6 +37,9 @@ const imageStyle = {
 };
 
 const PageFour = () => {
+
+  const { toDashboard } = useNavigation();
+
   return (
     <div style={pageStyle}>
       <div style={leftColumnStyle}>
@@ -57,7 +61,7 @@ const PageFour = () => {
           productivity by encouraging the 20-20-20 rule, helping prevent eye
           fatigue with regular breaks.
         </Typography>
-        <Button style={buttonStyle} variant="contained" color="primary">
+        <Button style={buttonStyle} variant="contained" color="primary" onClick={toDashboard}>
           Get Started
         </Button>
       </div>

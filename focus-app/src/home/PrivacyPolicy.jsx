@@ -11,17 +11,17 @@ const pageStyle = {
   height: "100vh"
 };
 
-const AboutUs = () => {
+const PrivacyPolicy = () => {
 
-  useEffect(() => {
-    window.scrollTo({ top: 0 }); // auto-scroll to the top
-  }, []);
+    useEffect(() => {
+        window.scrollTo({ top: 0 }); // auto-scroll to the top
+      }, []);
 
   return (
     <div style={pageStyle}>
-    <Typography variant="h3">About Us</Typography> 
-  </div>
+      <Typography variant="h3">Privacy Policy</Typography>
+    </div>
   );
 };
 
-export default AboutUs;
+export default PrivacyPolicy;

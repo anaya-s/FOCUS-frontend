@@ -7,7 +7,9 @@ import ListItemIcon from "@mui/material/ListItemIcon";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import Settings from "@mui/icons-material/Settings";
+import PersonIcon from '@mui/icons-material/Person';
 import Logout from "@mui/icons-material/Logout";
 import { Typography } from "@mui/material";
 
@@ -60,7 +62,7 @@ try {
             aria-expanded={open ? "true" : undefined}
           >
             <Avatar sx={{ width: 32, height: 32 }}>
-              {username.charAt(0).toUpperCase() || "?"} 
+              {username.charAt(0).toUpperCase() || ""} 
             </Avatar>
           </IconButton>
         </Tooltip>
@@ -102,19 +104,25 @@ try {
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
-        <MenuItem onClick={toProfile}>
-          <Avatar /> Profile
-        </MenuItem>
         <MenuItem onClick={toDashboard}>
-          <Avatar /> Dashboard
+          <ListItemIcon>
+            <AnalyticsIcon fontSize="small" />
+          </ListItemIcon>
+          Dashboard
         </MenuItem>
-        <Divider />
+        <MenuItem onClick={toProfile}>
+          <ListItemIcon>
+            <PersonIcon fontSize="small" />
+          </ListItemIcon>
+          Profile
+        </MenuItem>
         <MenuItem onClick={toSettings}>
           <ListItemIcon>
             <Settings fontSize="small" />
           </ListItemIcon>
           Settings
         </MenuItem>
+        <Divider />
         <MenuItem onClick={logoutUser}>
           <ListItemIcon>
             <Logout fontSize="small" />
