@@ -4,6 +4,9 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import { Button } from "@mui/material";
 import LinearProgress from "@mui/material/LinearProgress";
+import DoneIcon from '@mui/icons-material/Done';
+import Swal from 'sweetalert2';
+
 import { useNavigation } from "../utils/navigation";
 import { reauthenticatingFetch } from "../utils/api";
 import { calcAccuracy } from "./accuracy.js";
@@ -57,6 +60,50 @@ const CalibrationPage = () => {
   // Make webpage go full screen on calibration, then exit fullscreen after
   //  Alert when trying to exit fullscreen - make sure to pause webgazer so nothing is recorded
 
+  /* Change gap between calibration points if window size changes */
+  useEffect(() => {
+    const handleResize = () => {
+      setGap(window.innerWidth / 10); // Update the gap on resize
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize); // Cleanup on unmount
+  }, []);
+
+  function closeAlertOnClick() {
+    Swal.close();
+    document.removeEventListener('click', closeAlertOnClick);
+}
+
+  useEffect(() => {
+    if(!skipCalibration && calibrationStatus)
+    {
+      document.addEventListener('click', closeAlertOnClick);
+
+      Swal.fire({
+        title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: #06760D; user-select: none">Performing Calibration</span>',
+        html: `
+        <p style="font-family: Arial, sans-serif; font-size: 18px; color: black; user-select: none">Click on each circle while looking at it until <span style="color: green; font-weight: bold;">filled</span></p>
+        <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
+          <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto; margin-top: 50px">
+          <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+            <p>Please ensure you are in a well-lit environment and there is no glare from light sources.</p>
+            <p style="margin-top: 20px;">Aim to position the <span style="color: red;">gaze dot</span> inside each circle with small mouse movements before clicking.</p>
+          </div>
+        </div>
+      `,
+        width: '40vw',
+        confirmButtonColor: "#06760D",
+        closeOnEsc: false,
+        allowOutsideClick: true,
+        closeModal: true,
+        confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>'
+      });
+
+
+    }
+  }, [skipCalibration, calibrationStatus]);
+
   useEffect(() => {
 
     window.scrollTo({ top: 0 }); // auto-scroll to the top
@@ -71,16 +118,6 @@ const CalibrationPage = () => {
   }, [performCalibration, isCalibrationGETLoading, skipCalibration]);
 
   const [gap, setGap] = useState(window.innerWidth / 10);
-
-  /* Change gap between calibration points if window size changes */
-  useEffect(() => {
-    const handleResize = () => {
-      setGap(window.innerWidth / 10); // Update the gap on resize
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize); // Cleanup on unmount
-  }, []);
 
   // Check if calibration data exists
   useEffect(() => {
@@ -290,6 +327,12 @@ const CalibrationPage = () => {
     }
   };
 
+  const addTick = (clickCount) => {
+    if (clickCount === 3) {
+      return <DoneIcon sx={{color: "white"}}/>;
+    }
+  };
+
   const restartCalibration = () => {
     calibrationData = []
     localStorage.removeItem("calibration");
@@ -404,21 +447,6 @@ const CalibrationPage = () => {
         paddingTop: "35px"
       }}
     >
-      {/* <div
-        style={{
-          textAlign: "center",
-          marginBottom: "30px",
-        }}
-      >
-        <Typography variant="h3" fontWeight="bold" sx={{mt: "100px"}}>
-          Calibration:
-        </Typography>
-        <Typography variant="h7">
-          To calibrate the eye tracker, please click each circle, while looking
-          at it, until filled.
-        </Typography>
-      </div> */}
-
       <div
         id = "calibrationArea"
         style={{
@@ -451,10 +479,15 @@ const CalibrationPage = () => {
                 borderRadius: "50%",
                 border: "3px solid #06760D",
                 backgroundColor: getColor(clickCounts[index]),
-                cursor: "pointer"
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
               onClick={() => handleCalibrationClick(index)}
-            />
+            >
+              {addTick(clickCounts[index])}
+            </div>
           ))}
         </div>
       </div>
