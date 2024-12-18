@@ -1,4 +1,4 @@
-import swal from 'sweetalert';
+import Swal from 'sweetalert2';
 import webgazer from '../webgazer/webgazer';
 /*
  * This function calculates a measurement for how precise 
@@ -66,14 +66,30 @@ function calculatePrecision(past50Array,div) {
   export async function calcAccuracy(div, timerDiv) {
     // Return a Promise that wraps the entire flow
     return new Promise((resolve, reject) => {
-      swal({
-        title: "Calculating Accuracy",
-        text: "Please proceed to stare at the middle countdown number for the next 5 seconds. This will allow us to calculate the accuracy of the gaze predictions.",
-        closeOnEsc: false,
+      Swal.fire({
+        title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: #06760D; user-select: none">Calibration Accuracy</span>',
+        html: `
+        <p style="font-family: Arial, sans-serif; font-size: 18px; color: black; user-select: none">Please proceed to stare at the middle countdown number for the <span style="font-weight: bold">next 5 seconds.</span></p>
+        <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center;  user-select: none"">
+          <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto; margin-top: 50px">
+          <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+            <p>This will allow me to calculate the accuracy of the gaze predictions.</p>
+            <p style="margin-top: 20px;">Please keep your eyes focused on the screen during this process.</p>
+          </div>
+        </div>
+      `,
+        width: '40vw',
+        confirmButtonColor: "#06760D",
+        allowEscapeKey: false,
         allowOutsideClick: false,
-        closeModal: true
-      })
-        .then(() => {
+        allowEscapeKey: false,
+        confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>',
+        willClose: () => {
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen();
+          }
+        }
+      }).then(() => {
           // Begin storing prediction points
           webgazer.params.storingPoints = true;
   
