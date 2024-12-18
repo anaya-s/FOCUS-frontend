@@ -80,10 +80,15 @@ function calculatePrecision(past50Array,div) {
       `,
         width: '40vw',
         confirmButtonColor: "#06760D",
-        closeOnEsc: false,
+        allowEscapeKey: false,
         allowOutsideClick: false,
-        closeModal: true,
-        confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>'
+        allowEscapeKey: false,
+        confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>',
+        willClose: () => {
+          if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen();
+          }
+        }
       }).then(() => {
           // Begin storing prediction points
           webgazer.params.storingPoints = true;

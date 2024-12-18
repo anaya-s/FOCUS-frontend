@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import webgazer from "../webgazer/webgazer";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
@@ -63,27 +63,72 @@ const CalibrationPage = () => {
   /* Change gap between calibration points if window size changes */
   useEffect(() => {
     const handleResize = () => {
-      setGap(window.innerWidth / 10); // Update the gap on resize
+      // update the gaps on resize
+      setGap(window.innerWidth / 11);
+      setRowGap(window.innerWidth / 6);
     };
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize); // Cleanup on unmount
   }, []);
 
+  const onFullscreenChange = useCallback((event) => {
+    if (!document.fullscreenElement) {
+
+        webgazer.end();
+
+        document.getElementById("calibrationGrid").style.display = "none";
+
+        Swal.fire({
+          title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Fullscreen Mode Required</span>',
+          html: `
+          <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
+            <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto">
+            <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+              <p>Please stay in fullscreen mode during calibration to ensure accurate eye tracking.</p>
+            </div>
+          </div>
+        `,
+          icon: 'warning',
+          iconColor: 'orange',
+          width: '40vw',
+          confirmButtonColor: "#06760D",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          confirmButtonText: '<span style="user-select: none; padding: 0">Return to Full Screen</span>',
+          willClose: async () => {
+            await webgazer.begin(true);
+            if (document.documentElement.requestFullscreen) {
+              document.documentElement.requestFullscreen();
+            }
+            document.getElementById("calibrationGrid").style.display = "grid";
+          }
+        });
+    }
+},[]);
+
   function closeAlertOnClick() {
     Swal.close();
+    document.getElementById("calibrationGrid").style.display = "grid";
     document.removeEventListener('click', closeAlertOnClick);
+
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen();
+    }
 }
 
   useEffect(() => {
-    if(!skipCalibration && calibrationStatus)
+    if(!skipCalibration & calibrationStatus)
     {
       document.addEventListener('click', closeAlertOnClick);
+
+      document.getElementById("calibrationGrid").style.display = "none";
 
       Swal.fire({
         title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: #06760D; user-select: none">Performing Calibration</span>',
         html: `
         <p style="font-family: Arial, sans-serif; font-size: 18px; color: black; user-select: none">Click on each circle while looking at it until <span style="color: green; font-weight: bold;">filled</span></p>
+        <img src="../../public/images/calibration/calibrationPoints.png" alt="Felix" style="width: 35vw">
         <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
           <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto; margin-top: 50px">
           <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
@@ -94,9 +139,8 @@ const CalibrationPage = () => {
       `,
         width: '40vw',
         confirmButtonColor: "#06760D",
-        closeOnEsc: false,
-        allowOutsideClick: true,
-        closeModal: true,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
         confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>'
       });
 
@@ -117,7 +161,8 @@ const CalibrationPage = () => {
     };
   }, [performCalibration, isCalibrationGETLoading, skipCalibration]);
 
-  const [gap, setGap] = useState(window.innerWidth / 10);
+  const [gap, setGap] = useState(window.innerWidth / 11);
+  const [rowGap, setRowGap] = useState(window.innerWidth / 6);
 
   // Check if calibration data exists
   useEffect(() => {
@@ -222,6 +267,9 @@ const CalibrationPage = () => {
 
         setCalibration(false);
         setCalibrationLive(true);
+        setCalibrationSkip(false);
+
+        document.addEventListener('fullscreenchange', onFullscreenChange);
 
       } catch (error) {
         console.error("Error initializing WebGazer:", error);
@@ -245,6 +293,8 @@ const CalibrationPage = () => {
 
       if (totalClicks >= 72) {
 
+        document.removeEventListener('fullscreenchange', onFullscreenChange);
+
         reset = true;
         webgazer.stopCalibration();
 
@@ -260,6 +310,8 @@ const CalibrationPage = () => {
         const calibrationArea = document.getElementById("calibrationArea");
         const calibrationArea_rect = calibrationArea.getBoundingClientRect();
 
+        setCalibrationLive(false);
+
         const accuracyValue = await calcAccuracy(calibrationArea_rect, countdownDiv); // calculate accuracy of calibration
 
         setAccuracy(accuracyValue);
@@ -268,8 +320,6 @@ const CalibrationPage = () => {
         webgazer.params.showGazeDot = false;
 
         calibrationData = webgazer.getRegressionData();
-
-        setCalibrationLive(false);
 
         const date = Date.now(); // Get current timestamp when calibration data is sent
 
@@ -467,7 +517,8 @@ const CalibrationPage = () => {
             display: "grid",
             gridTemplateRows: "repeat(3, 1fr)",
             gridTemplateColumns: "repeat(8, 1fr)",
-            gap: `${window.innerWidth / 10}px`
+            gap: gap + "px",
+            rowGap: rowGap + "px",
           }}
         >
           {Array.from({ length: 24 }).map((_, index) => (
