@@ -10,7 +10,19 @@ import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import LinearProgress from "@mui/material/LinearProgress";
-import { useLocation } from "react-router-dom";
+import IconButton from '@mui/material/IconButton';
+import MenuIcon from '@mui/icons-material/Menu';
+import Tooltip from "@mui/material/Tooltip";
+import { Divider, Drawer } from "@mui/material";
+import ExitToAppRoundedIcon from '@mui/icons-material/ExitToAppRounded';
+import Slider from '@mui/material/Slider';
+import FormatSizeRoundedIcon from '@mui/icons-material/FormatSizeRounded';
+import OpacityIcon from '@mui/icons-material/Opacity';
+import Brightness6RoundedIcon from '@mui/icons-material/Brightness6Rounded';
+import FormatLineSpacingRoundedIcon from '@mui/icons-material/FormatLineSpacingRounded';
+import SubjectIcon from '@mui/icons-material/Subject';
+import { Select, MenuItem, FormControl, Grid2 } from '@mui/material';
+
 import { reauthenticatingFetch } from "../utils/api";
 
 function TextReaderPage() {
@@ -30,17 +42,141 @@ function TextReaderPage() {
   const [currentLine, setCurrentLine] = useState(0); // Stores index of current line
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
 
-  const [fontSize, setFontSize] = useState(28); // Initialize font size
-
   const [fileName, setFileName] = useState("");
 
   pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
-   // Functions to change font size
-   const increaseFontSize = () => setFontSize((prevSize) => prevSize + 2); // Increase font size
-   const decreaseFontSize = () => setFontSize((prevSize) => Math.max(prevSize - 2, 10)); // Decrease font size, prevent going below 10px
+  /* Text typography parameters */
+
+  const fontOptions = [
+    { label: 'Arial', value: 'Arial, sans-serif' },
+    { label: 'Courier New', value: '"Courier New", Courier, monospace' },
+    { label: 'Georgia', value: 'Georgia, serif' },
+    { label: 'Istok Web', value: 'Istok Web, sans-serif' }, // default text font
+    { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+    { label: 'Verdana', value: 'Verdana, sans-serif' }
+    // add more font options here
+  ];
+
+  const [fontStyle, setFontStyle] = useState(fontOptions[3].value);
+  const [fontSize, setFontSize] = useState(28);
+  const [textOpacity, setTextOpacity] = useState(1);
+  const [letterSpacing, setLetterSpacing] = useState(0);
+  const [lineSpacing, setLineSpacing] = useState(2);
+  const [backgroundBrightness, setBackgroundBrightness] = useState(0);
+  const [invertTextColour, setInvertTextColour] = useState(false);
+  const [backgroundColour, setBackgroundColour] = useState([0,0,0]);
+  const [backgroundColourSelection, setBackgroundColourSelection] = useState(1);
+
+  const colourSchemeSelection = (selection) => ({
+    border: backgroundColourSelection == selection ? "3px solid #06760D" : "normal"
+  });
+  
+  const colourSchemeButton = (colour) => ({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    borderRadius: "5px",
+    border: "1px solid #ccc",
+    pt: "5px", pb: "5px",
+    width: "2vw",
+    backgroundColor: invertTextColour ? colour : "white"
+  });
+
+  const colourSchemeIconColour = (colour) => ({
+    fontSize: "30px", color: invertTextColour ? "white" : colour
+  });
+
+  const handleFontStyle = (event) => {
+    setFontStyle(event.target.value);
+  };
+
+  const handleFontSize = (event, newValue) => {
+    setFontSize(newValue);
+  };
+
+  const handleTextOpacity = (event, newValue) => {
+    setTextOpacity(newValue);
+  };
+
+  const handleBackgroundBrightness = (event, newValue) => {
+    setBackgroundBrightness(newValue);
+    if(newValue > 0.5)
+      setInvertTextColour(true);
+    else
+      setInvertTextColour(false);
+  };
+
+  const handleLetterSpacing = (event, newValue) => {
+    setLetterSpacing(newValue);
+  };
+
+  const handleLineSpacing = (event, newValue) => {
+    setLineSpacing(newValue);
+  };
+
+  const setDefaultSettings = () => {
+    setFontStyle(fontOptions[3].value);
+    setFontSize(28);
+    setTextOpacity(1);
+    setLetterSpacing(0);
+    setLineSpacing(2);
+    setBackgroundBrightness(0);
+    setInvertTextColour(false);
+    setBackgroundColour([0,0,0]);
+    setBackgroundColourSelection(1);
+  };
+
+  const handleBackgroundColour = (colour) => {
+    if(colour == 1)
+    {
+      setBackgroundColour([0,0,0]);
+      setBackgroundColourSelection(1);
+    }
+    else if(colour == 2)
+    {
+      setBackgroundColour([6,118,3]);
+      setBackgroundColourSelection(2);
+    }
+    else if(colour == 3)
+    {
+      setBackgroundColour([0,123,229]);
+      setBackgroundColourSelection(3);
+    }
+    else if(colour == 4)
+    {
+      setBackgroundColour([211,46,63]);
+      setBackgroundColourSelection(4);
+    }
+    else if(colour == 5)
+    {
+      setBackgroundColour([78,53,22]);
+      setBackgroundColourSelection(5);
+    }
+    else if(colour == 6)
+    {
+      setBackgroundColour([251,192,45]);
+      setBackgroundColourSelection(6);
+    }
+    else if(colour == 7)
+    {
+      setBackgroundColour([245,124,0]);
+      setBackgroundColourSelection(7);
+    }
+    else if(colour == 8)
+    {
+      setBackgroundColour([142,36,170]);
+      setBackgroundColourSelection(8);
+    }
+  };
 
   const intervalRef = useRef(null);
+
+  const [open, setOpen] = useState(false);
+
+  const handleDrawer = () => {
+    setOpen(!open);
+  };
 
   const { toNotAuthorized } = useNavigation();
 
@@ -220,13 +356,13 @@ function TextReaderPage() {
           userSelect: "none"
         }}
       >
-        <Typography variant="h5" style={{ marginBottom: "20px" }}>
+        <Typography variant="h5" style={{ marginBottom: "2vh" }}>
           Loading WebGazer...
         </Typography>
         <LinearProgress
           variant="determinate"
           value={loadingProgress}
-          style={{ width: "80%", marginTop: "20px" }}
+          style={{ width: "80%", marginTop: "2vh" }}
         />
       </div>
     );
@@ -377,17 +513,19 @@ function TextReaderPage() {
         key={lineIndex}
         style={{
           filter: lineIndex <= currentLine ? "none" : "blur(5px)", // Blur all lines except the current line and any previous lines
+          userSelect: lineIndex <= currentLine ? "auto" : "none",
         }}
       >
         {line.map((word, wordIndex) => (
           <span
             key={wordIndex}
             style={{
-              backgroundColor:
-                lineIndex === currentLine && wordIndex === currentWord
-                  ? "yellow"
-                  : "transparent", // highlight current word with yellow background
               margin: "5px", // Word spacing
+              opacity: lineIndex === currentLine && wordIndex === currentWord ? 1 : textOpacity,
+              color: 
+                lineIndex === currentLine && wordIndex === currentWord
+                  ? backgroundColourSelection !== 1 && backgroundColourSelection !== 5 ? "black" : invertTextColour ? "yellow" : "black"
+                  : invertTextColour ? "white" : `rgba(${backgroundColour[0]}, ${backgroundColour[1]}, ${backgroundColour[2]})`,
               fontWeight:
                 lineIndex === currentLine && wordIndex === currentWord
                   ? "bold"
@@ -404,30 +542,278 @@ function TextReaderPage() {
   };
 
   return (
-    <Box style={{marginTop: "150px", marginBottom: "120px", justifyContent: "center"}}>
+    <Box style={{marginTop: "15vh", justifyContent: "center"}}>
       <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video>
-      <Container style={{textAlign: "center"}}>
-        <Typography variant="h4">Upload a document to read</Typography>
-        <Typography variant="h6">Accepted file types: .pdf, .docx, .txt</Typography>
-        <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUpload} style={{border: "1px solid #06760D", borderRadius: "2px", padding: "5px", marginRight: "10px"}}/>
-        <Button onClick={increaseFontSize}>Increase Font Size</Button>
-        <Button onClick={decreaseFontSize}>Decrease Font Size</Button>
-        <Button onClick={sendReadingProgress}>Save Progress</Button>
-        <Typography variant="h6">Extracted text:</Typography>
-      </Container>
-      <Typography
+      <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
+        <Typography
+          sx={{
+            width: "95vw",
+            height: "85vh",
+            minWidth: "95vw",
+            minHeight: "85vh",
+            overflowY: "scroll",
+            border: "1px solid #ccc",
+            backgroundColor: `rgba(${backgroundColour[0]}, ${backgroundColour[1]}, ${backgroundColour[2]}, ${backgroundBrightness})`, // extract this out to a variable, which changes based on what colour scheme is chosen
+            fontSize: `${fontSize}px`, // can be adjusted
+            lineHeight: lineSpacing,
+            fontFamily: fontStyle,
+            letterSpacing: letterSpacing
+          }}
+        >
+          {getFormattedText()} {/* Shows parsed text from uploaded file*/}
+        </Typography>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "10px", backgroundColor: "white", mt: "-10vh", mr: open ? "2vw" : 0}}>
+          <Box sx={{backgroundColor: "white", zIndex: 1500, borderRadius: "5px", border: "1px solid #ccc", mt: "1vh"}}>
+            <Tooltip title="Typography settings" placement="left">
+              <IconButton 
+                color="inherit"
+                sx={{zIndex: 1500}}
+                onClick={handleDrawer}
+              >
+                <MenuIcon sx={{ fontSize: "30px"}}/>
+              </IconButton>
+            </Tooltip>
+            <Divider sx={{ zIndex: 1500, width: '100%', backgroundColor: 'gray' }} />
+            <Tooltip title="Back to your Drive" placement="left">
+              <IconButton 
+                  color="inherit"
+                  sx={{zIndex: 1500}}
+                >
+                <ExitToAppRoundedIcon sx={{ fontSize: "30px"}}/>
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+      </Box>
+      <Drawer
         sx={{
-          width: "100%",
-          height: "70vh",
-          overflowY: "scroll",
-          border: "1px solid #ccc",
-          backgroundColor: "#f9f9f9",
-          fontSize: `${fontSize}px`, // can be adjusted
-          lineHeight: "2"
+          width: "30vw",
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: "30vw",
+            height: "95vh",
+            marginTop: "10vh",
+            border: "1px solid #ccc",
+          },
         }}
+        variant="persistent"
+        anchor="right"
+        open={open}
       >
-        {getFormattedText()} {/* Shows parsed text from uploaded file*/}
-      </Typography>
+        {/* Drawer contents */}
+        <Box sx={{overflowY: "auto", height: "85vh", userSelect: "none"}}> 
+          <Container>
+            <Typography variant="h4" sx={{mt: "4vh"}}>Settings</Typography>
+          </Container>
+
+          {/* TEMPORARY: to upload document - to be replaced with text reading modes */}
+          <Container>
+            <Typography variant="h6" sx={{mt: "2vh"}}>Upload document (TEMPORARY)</Typography>
+            <Typography variant="h7" sx={{mt: "2vh", mb: "2vh"}}>Accepted file types: .pdf, .docx, .txt</Typography>
+            <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUpload}/>
+            <Divider sx={{width: "80%", mt: "2vh"}}/>
+          </Container>
+
+          {/* Text layout settings */}
+          <Container>
+            <Typography variant="h6" sx={{mt: "2vh"}}>Text Layout</Typography>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <Box sx={{ display: "flex", flexDirection: "column", width: '100%'}}>
+                <Typography variant="caption">
+                  Font Style
+                </Typography>
+                <FormControl variant="outlined" fullWidth>
+                  <Select
+                    value={fontStyle}
+                    onChange={handleFontStyle}
+                    fullWidth
+                    sx={{ backgroundColor: "#D9D9D9" }}
+                  >
+                    {fontOptions.map((font) => (
+                      <MenuItem key={font.value} value={font.value}>
+                        {font.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <FormatSizeRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Text Size
+                </Typography>
+                <Slider
+                  value={typeof fontSize === 'number' ? fontSize : 28}
+                  onChange={handleFontSize}
+                  min={8}
+                  max={100}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {fontSize}
+              </Typography>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <OpacityIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Text Opacity
+                </Typography>
+                <Slider
+                  value={typeof textOpacity === 'number' ? textOpacity : 1}
+                  onChange={handleTextOpacity}
+                  min={0}
+                  step={0.1}
+                  max={1}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {textOpacity*100}
+              </Typography>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw", transform: "rotate(270deg)"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Letter Spacing
+                </Typography>
+                <Slider
+                  value={typeof letterSpacing === 'number' ? letterSpacing : 2}
+                  onChange={handleLetterSpacing}
+                  min={-2}
+                  step={0.1}
+                  max={10}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {letterSpacing}
+              </Typography>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Line Spacing
+                </Typography>
+                <Slider
+                  value={typeof lineSpacing === 'number' ? lineSpacing : 2}
+                  onChange={handleLineSpacing}
+                  min={1}
+                  max={10}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {lineSpacing}
+              </Typography>
+            </Container>
+            <Divider sx={{width: "80%", mt: "2vh"}}/>
+          </Container>
+
+          {/* Background settings */}
+
+          <Container>
+            <Typography variant="h6" sx={{mt: "2vh"}}>Background</Typography>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <Brightness6RoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Brightness
+                </Typography>
+                <Slider
+                  value={typeof backgroundBrightness === 'number' ? backgroundBrightness : 1}
+                  onChange={handleBackgroundBrightness}
+                  min={0}
+                  step={0.1}
+                  max={1}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {backgroundBrightness*100}
+              </Typography>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "column", mt: "2vh", alignItems: "center"}}>
+              <Box sx={{ display: "flex", flexDirection: "column" }}>
+                <Typography variant="caption" sx={{mt: "2vh", mb: "2vh"}}>
+                  Colour scheme
+                </Typography>
+                <Grid2 container spacing={2} justifyContent="center">
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Monochrome" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}><SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon></Box></Button> {/* White - default */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Green" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(2)} onClick={() => handleBackgroundColour(2)}><Box sx={colourSchemeButton("rgb(6,118,3)")}><SubjectIcon sx={colourSchemeIconColour("rgb(6,118,3)")}></SubjectIcon></Box></Button> {/* Green */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Blue" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(3)} onClick={() => handleBackgroundColour(3)}><Box sx={colourSchemeButton("rgb(0,123,229)")}><SubjectIcon sx={colourSchemeIconColour("rgb(0,123,229)")}></SubjectIcon></Box></Button> {/* Blue */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Red" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(4)} onClick={() => handleBackgroundColour(4)}><Box sx={colourSchemeButton("rgb(211,46,63)")}><SubjectIcon sx={colourSchemeIconColour("rgb(221,46,63)")}></SubjectIcon></Box></Button> {/* Red */}
+                    </Tooltip>
+                  </Grid2>
+                </Grid2>
+                <Grid2 container spacing={2} justifyContent="center" sx={{mt: "4vh"}}>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Brown" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(5)} onClick={() => handleBackgroundColour(5)}><Box sx={colourSchemeButton("rgb(78,53,22)")}><SubjectIcon sx={colourSchemeIconColour("rgb(78,53,22)")}></SubjectIcon></Box></Button> {/* Brown */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Yellow" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(6)} onClick={() => handleBackgroundColour(6)}><Box sx={colourSchemeButton("rgb(251,192,45)")}><SubjectIcon sx={colourSchemeIconColour("rgb(251,192,45)")}></SubjectIcon></Box></Button> {/* Yellow */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Orange" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(7)} onClick={() => handleBackgroundColour(7)}><Box sx={colourSchemeButton("rgb(245,124,0)")}><SubjectIcon sx={colourSchemeIconColour("rgb(245,124,0)")}></SubjectIcon></Box></Button> {/* Orange */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Purple" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(8)} onClick={() => handleBackgroundColour(8)}><Box sx={colourSchemeButton("rgb(142,36,170)")}><SubjectIcon sx={colourSchemeIconColour("rgb(142,36,170)")}></SubjectIcon></Box></Button> {/* Purple */}
+                    </Tooltip>
+                  </Grid2>
+                </Grid2>
+              </Box>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center", justifyContent: "center"}}>
+              <Button onClick={setDefaultSettings} sx={{mt: "2vh"}}>Reset settings</Button>
+            </Container>  
+
+          </Container>
+        </Box>
+      </Drawer>
     </Box>
   );
 }
