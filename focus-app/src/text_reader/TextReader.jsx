@@ -12,7 +12,8 @@ import {
   Opacity as OpacityIcon,
   Brightness6Rounded as Brightness6RoundedIcon,
   FormatLineSpacingRounded as FormatLineSpacingRoundedIcon,
-  Subject as SubjectIcon
+  Subject as SubjectIcon,
+  SpeedRounded as SpeedRoundedIcon
 } from '@mui/icons-material';
 
 import { reauthenticatingFetch } from "../utils/api";
@@ -49,6 +50,9 @@ function TextReaderPage(file) {
     { label: 'Verdana', value: 'Verdana, sans-serif' }
     // add more font options here
   ];
+
+
+  const highlightSpeed = useRef(2);
 
   const [fontStyle, setFontStyle] = useState(fontOptions[3].value);
   const [fontSize, setFontSize] = useState(28);
@@ -117,6 +121,7 @@ function TextReaderPage(file) {
     setInvertTextColour(false);
     setBackgroundColour([0,0,0]);
     setBackgroundColourSelection(1);
+    highlightSpeed.current = 2;
   };
 
   const handleBackgroundColour = (colour) => {
@@ -160,6 +165,10 @@ function TextReaderPage(file) {
       setBackgroundColour([142,36,170]);
       setBackgroundColourSelection(8);
     }
+  };
+
+  const handleHighlightSpeed = (event, newValue) => {
+    highlightSpeed.current = newValue;
   };
 
   const intervalRef = useRef(null);
@@ -382,7 +391,7 @@ function TextReaderPage(file) {
         for (let wordNo = currentWord; wordNo < lines[lineNo].length; wordNo++) {
           setCurrentLine(lineNo);
           setCurrentWord(wordNo);
-          await new Promise((resolve) => setTimeout(resolve, 500)); // set time interval
+          await new Promise((resolve) => setTimeout(resolve, 1000/highlightSpeed.current)); // set time interval
         }
       }
     }
@@ -517,7 +526,38 @@ function TextReaderPage(file) {
             <Typography variant="h6" sx={{mt: "2vh"}}>Upload document (TEMPORARY)</Typography>
             <Typography variant="h7" sx={{mt: "2vh", mb: "2vh"}}>Accepted file types: .pdf, .docx, .txt</Typography>
             <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUpload}/>
-            <Divider sx={{width: "80%", mt: "2vh"}}/>
+            <Divider sx={{width: "80%", mt: "4vh"}}/>
+          </Container>
+
+          {/* Reading mode settings */}
+
+          {/* Speed reading */}
+
+          <Container>
+            <Typography variant="h6" sx={{mt: "2vh"}}>Reading Mode</Typography>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+                <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                  <Typography variant="caption">
+                    Highlighting speed
+                  </Typography>
+                  <Slider
+                    value={typeof highlightSpeed.current === 'number' ? highlightSpeed.current : 2}
+                    onChange={handleHighlightSpeed}
+                    min={1}
+                    step={0.1}
+                    max={10}
+                    sx={{ width: "15vw" }}
+                  />
+                </Box>
+                <Typography variant="h7"
+                  sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+                >
+                  {highlightSpeed.current*10}
+                </Typography>
+            </Container>
+            <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>
 
           {/* Text layout settings */}
@@ -631,7 +671,7 @@ function TextReaderPage(file) {
                 {lineSpacing*10}
               </Typography>
             </Container>
-            <Divider sx={{width: "80%", mt: "2vh"}}/>
+            <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>
 
           {/* Background settings */}
