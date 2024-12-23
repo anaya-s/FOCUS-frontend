@@ -1,31 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "../utils/navigation";
 import webgazer from "../webgazer/webgazer.js";
-import * as pdfjsLib from "pdfjs-dist/webpack"; // For parsing .pdf files
-import mammoth from "mammoth"; // For parsing .docx files
 
 /* MaterialUI Imports */
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import Container from "@mui/material/Container";
-import Box from "@mui/material/Box";
-import LinearProgress from "@mui/material/LinearProgress";
-import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
-import Tooltip from "@mui/material/Tooltip";
-import { Divider, Drawer } from "@mui/material";
-import ExitToAppRoundedIcon from '@mui/icons-material/ExitToAppRounded';
-import Slider from '@mui/material/Slider';
-import FormatSizeRoundedIcon from '@mui/icons-material/FormatSizeRounded';
-import OpacityIcon from '@mui/icons-material/Opacity';
-import Brightness6RoundedIcon from '@mui/icons-material/Brightness6Rounded';
-import FormatLineSpacingRoundedIcon from '@mui/icons-material/FormatLineSpacingRounded';
-import SubjectIcon from '@mui/icons-material/Subject';
-import { Select, MenuItem, FormControl, Grid2 } from '@mui/material';
+import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2 } from "@mui/material";
+
+import {
+  Menu as MenuIcon,
+  ExitToAppRounded as ExitToAppRoundedIcon,
+  FormatSizeRounded as FormatSizeRoundedIcon,
+  Opacity as OpacityIcon,
+  Brightness6Rounded as Brightness6RoundedIcon,
+  FormatLineSpacingRounded as FormatLineSpacingRoundedIcon,
+  Subject as SubjectIcon
+} from '@mui/icons-material';
 
 import { reauthenticatingFetch } from "../utils/api";
 
-function TextReaderPage() {
+import { handlePdfFile, handleDocxFile, handleTxtFile } from "./textParsing";
+
+function TextReaderPage(file) {
   const videoRef = useRef(null);
   const socket = useRef(null);
   const [stream, setStream] = useState(null);
@@ -44,8 +38,6 @@ function TextReaderPage() {
 
   const [fileName, setFileName] = useState("");
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
-
   /* Text typography parameters */
 
   const fontOptions = [
@@ -60,7 +52,7 @@ function TextReaderPage() {
 
   const [fontStyle, setFontStyle] = useState(fontOptions[3].value);
   const [fontSize, setFontSize] = useState(28);
-  const [textOpacity, setTextOpacity] = useState(1);
+  const [textOpacity, setTextOpacity] = useState(0.5);
   const [letterSpacing, setLetterSpacing] = useState(0);
   const [lineSpacing, setLineSpacing] = useState(2);
   const [backgroundBrightness, setBackgroundBrightness] = useState(0);
@@ -118,7 +110,7 @@ function TextReaderPage() {
   const setDefaultSettings = () => {
     setFontStyle(fontOptions[3].value);
     setFontSize(28);
-    setTextOpacity(1);
+    setTextOpacity(0.5);
     setLetterSpacing(0);
     setLineSpacing(2);
     setBackgroundBrightness(0);
@@ -368,26 +360,6 @@ function TextReaderPage() {
     );
   }
 
-  /* Function which handles the uploading of files, detecting whether the file types are valid */
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    setFileName(file.name);
-    if (file) {
-      if (file.type === "application/pdf") {
-        // Check for .pdf file type
-        await handlePdfFile(file);
-      } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-        // Check for .docx file type
-        await handleDocxFile(file);
-      } else if (file.type === "text/plain") {
-        // Check for .txt file type
-        await handleTxtFile(file);
-      } else {
-        alert("Please upload a valid PDF, DOCX, or TXT file.");
-      }
-    }
-  };
-
   const sendReadingProgress = async () => {
 
     const bodyContents = { fileName: fileName,  lineNumber: currentLine };
@@ -403,99 +375,9 @@ function TextReaderPage() {
     }
 }
 
-  /* Function which parses the text within PDF files */
-  const handlePdfFile = async (file) => {
-    const reader = new FileReader();
-
-    reader.onload = async (event) => {
-      const typedArray = new Uint8Array(event.target.result);
-      const pdf = await pdfjsLib.getDocument(typedArray).promise;
-
-      let extractedTextArray = [];
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i); // get current page
-        const textContent = await page.getTextContent(); // get all text content
-
-        let currentLineArray = []; // stores list of words
-        let lastY = null; // y-coordinate of current line, if it changes from this, it indicates that new line is being parsed
-
-        /* Parse each item in the text contents of the PDF */
-        textContent.items.forEach((item) => {
-          /* Reset for every new line */
-          if (lastY !== null && item.transform[5] !== lastY) {
-            extractedTextArray.push(currentLineArray);
-            currentLineArray = [];
-          }
-
-          /* Split each line into separate words and add it to the line array */
-          const words = item.str.trim().split(/\s+/);
-          words.forEach((word) => {
-            if (word) currentLineArray.push(word);
-          });
-
-          lastY = item.transform[5]; // store y-coordinate of current line
-        });
-
-        /* Add the last line */
-        if (currentLineArray.length > 0)
-          extractedTextArray.push(currentLineArray);
-      }
-
-      setTextArray(extractedTextArray); // set 2D array (lines, words) to be displayed and highlighted later on
-      sendReadingProgress();
-      iterateWords(extractedTextArray); // TEMPORARY: start automatic highlighting of words
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
-  /* Function which parses the text within DOCX files */
-  const handleDocxFile = async (file) => {
-    const reader = new FileReader();
-
-    reader.onload = async (event) => {
-      const arrayBuffer = event.target.result;
-      const result = await mammoth.extractRawText({ arrayBuffer });
-
-      let extractedTextArray = [];
-      result.value.split("\n").forEach((line) => {
-        const trimmedLine = line.trim(); // removes any whitespaces and newlines in current line
-
-        /* Ignore lines that are empty or contain only whitespace */
-        if (trimmedLine) {
-          const words = trimmedLine.split(/\s+/);
-          extractedTextArray.push(words);
-        }
-      });
-
-      setTextArray(extractedTextArray); // set 2D array (lines, words) to be displayed and highlighted later on
-      sendReadingProgress();
-      iterateWords(extractedTextArray); // TEMPORARY: start automatic highlighting of words
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
-  /* Function which parses the text within TXT files */
-  const handleTxtFile = async (file) => {
-    const reader = new FileReader();
-
-    reader.onload = (event) => {
-      const result = event.target.result;
-      const extractedTextArray = result
-        .split("\n")
-        .map((line) => line.trim().split(/\s+/).filter(Boolean)); // split text into lines and words
-
-      setTextArray(extractedTextArray); // set 2D array (lines, words) to be displayed and highlighted later on
-      sendReadingProgress();
-      iterateWords(extractedTextArray); // TEMPORARY: start automatic highlighting of words
-    };
-
-    reader.readAsText(file); // Read the file as text
-  };
-
   /* TEMPORARY function that iterates through each element in 2D array (every word in every line)*/
   const iterateWords = async (lines) => {
-    if (!textArray.length) {
+    if (lines.length) {
       for (let lineNo = currentLine; lineNo < lines.length; lineNo++) {
         for (let wordNo = currentWord; wordNo < lines[lineNo].length; wordNo++) {
           setCurrentLine(lineNo);
@@ -506,7 +388,31 @@ function TextReaderPage() {
     }
   };
 
-  /* Function which manages the highlighting of words whilst reading */
+  /* Function which handles the uploading of files, detecting whether the file types are valid */
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    setFileName(file.name);
+    var parsedText = [];
+    if (file) {
+      if (file.type === "application/pdf") {
+        // Check for .pdf file type
+        parsedText = await handlePdfFile(file);
+      } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        // Check for .docx file type
+        parsedText = await handleDocxFile(file);
+      } else if (file.type === "text/plain") {
+        // Check for .txt file type
+        parsedText = await handleTxtFile(file);
+      } else {
+        alert("Please upload a valid PDF, DOCX, or TXT file.");
+      }
+    }
+
+    setTextArray(parsedText);
+    iterateWords(parsedText); // run this if speed reading mode is enabled
+  };
+
+  /* Function which manages the highlighting of words whilst reading - for speed reading mode */
   const getFormattedText = () => {
     return textArray.map((line, lineIndex) => (
       <div
@@ -560,7 +466,7 @@ function TextReaderPage() {
             letterSpacing: letterSpacing
           }}
         >
-          {getFormattedText()} {/* Shows parsed text from uploaded file*/}
+          {getFormattedText()} {/* Shows parsed text from uploaded file - speed reading mode*/}
         </Typography>
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "10px", backgroundColor: "white", mt: "-10vh", mr: open ? "2vw" : 0}}>
           <Box sx={{backgroundColor: "white", zIndex: 1500, borderRadius: "5px", border: "1px solid #ccc", mt: "1vh"}}>
@@ -640,7 +546,7 @@ function TextReaderPage() {
               </Box>
             </Container>
 
-            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <FormatSizeRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                 <Typography variant="caption">
@@ -661,7 +567,7 @@ function TextReaderPage() {
               </Typography>
             </Container>
 
-            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <OpacityIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                 <Typography variant="caption">
@@ -683,7 +589,7 @@ function TextReaderPage() {
               </Typography>
             </Container>
 
-            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw", transform: "rotate(270deg)"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                 <Typography variant="caption">
@@ -701,11 +607,11 @@ function TextReaderPage() {
               <Typography variant="h7"
                 sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
               >
-                {letterSpacing}
+                {letterSpacing*10}
               </Typography>
             </Container>
 
-            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                 <Typography variant="caption">
@@ -722,7 +628,7 @@ function TextReaderPage() {
               <Typography variant="h7"
                 sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
               >
-                {lineSpacing}
+                {lineSpacing*10}
               </Typography>
             </Container>
             <Divider sx={{width: "80%", mt: "2vh"}}/>
@@ -733,7 +639,7 @@ function TextReaderPage() {
           <Container>
             <Typography variant="h6" sx={{mt: "2vh"}}>Background</Typography>
 
-            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <Brightness6RoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                 <Typography variant="caption">
@@ -760,7 +666,7 @@ function TextReaderPage() {
                 <Typography variant="caption" sx={{mt: "2vh", mb: "2vh"}}>
                   Colour scheme
                 </Typography>
-                <Grid2 container spacing={2} justifyContent="center">
+                <Grid2 container spacing={4} justifyContent="center" width="100%">
                   <Grid2 item xs={4}>
                     <Tooltip title="Monochrome" placement="top">
                       <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}><SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon></Box></Button> {/* White - default */}
@@ -781,8 +687,6 @@ function TextReaderPage() {
                       <Button variant="outlined" sx={colourSchemeSelection(4)} onClick={() => handleBackgroundColour(4)}><Box sx={colourSchemeButton("rgb(211,46,63)")}><SubjectIcon sx={colourSchemeIconColour("rgb(221,46,63)")}></SubjectIcon></Box></Button> {/* Red */}
                     </Tooltip>
                   </Grid2>
-                </Grid2>
-                <Grid2 container spacing={2} justifyContent="center" sx={{mt: "4vh"}}>
                   <Grid2 item xs={4}>
                     <Tooltip title="Brown" placement="top">
                       <Button variant="outlined" sx={colourSchemeSelection(5)} onClick={() => handleBackgroundColour(5)}><Box sx={colourSchemeButton("rgb(78,53,22)")}><SubjectIcon sx={colourSchemeIconColour("rgb(78,53,22)")}></SubjectIcon></Box></Button> {/* Brown */}
