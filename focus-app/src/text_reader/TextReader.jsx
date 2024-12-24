@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "../utils/navigation";
 import webgazer from "../webgazer/webgazer.js";
 
+import { handleFileUpload, sendReadingProgress, SpeedReading } from "./SpeedReading";
+
 /* MaterialUI Imports */
 import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2 } from "@mui/material";
 
@@ -16,11 +18,7 @@ import {
   SpeedRounded as SpeedRoundedIcon
 } from '@mui/icons-material';
 
-import { reauthenticatingFetch } from "../utils/api";
-
-import { handlePdfFile, handleDocxFile, handleTxtFile } from "./textParsing";
-
-function TextReaderPage(file) {
+function TextReaderPage(file) { // use this file parameter here, obtained from drive, to pass to handleFileUpload, instead of using an input button on this page
   const videoRef = useRef(null);
   const socket = useRef(null);
   const [stream, setStream] = useState(null);
@@ -31,13 +29,14 @@ function TextReaderPage(file) {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoading, setWebgazerLoading] = useState(true);
 
-  /* File handling */
-  const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
-
-  const [currentLine, setCurrentLine] = useState(0); // Stores index of current line
-  const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
-
-  const [fileName, setFileName] = useState("");
+  /* Reading mode index
+    1 - Normal reading
+    2 - RSVP
+    3 - Speed reading (word highlighting)
+    4 - Line by line unblurring
+    5 - Natural Language Processing (NLP) assistance
+  */
+  const [readingMode, setReadingMode] = useState(3);
 
   /* Text typography parameters */
 
@@ -51,21 +50,18 @@ function TextReaderPage(file) {
     // add more font options here
   ];
 
-
-  const highlightSpeed = useRef(2);
-
-  const [fontStyle, setFontStyle] = useState(fontOptions[3].value);
-  const [fontSize, setFontSize] = useState(28);
-  const [textOpacity, setTextOpacity] = useState(0.5);
-  const [letterSpacing, setLetterSpacing] = useState(0);
-  const [lineSpacing, setLineSpacing] = useState(2);
-  const [backgroundBrightness, setBackgroundBrightness] = useState(0);
-  const [invertTextColour, setInvertTextColour] = useState(false);
-  const [backgroundColour, setBackgroundColour] = useState([0,0,0]);
-  const [backgroundColourSelection, setBackgroundColourSelection] = useState(1);
+  const fontStyleRef = useRef(fontOptions[3].value);
+  const fontSizeRef = useRef(28);
+  const textOpacityRef = useRef(0.5);
+  const letterSpacingRef = useRef(0);
+  const lineSpacingRef = useRef(2);
+  const backgroundBrightnessRef = useRef(0);
+  const invertTextColourRef = useRef(false);
+  const backgroundColourRef = useRef([0, 0, 0]);
+  const backgroundColourSelectionRef = useRef(1);
 
   const colourSchemeSelection = (selection) => ({
-    border: backgroundColourSelection == selection ? "3px solid #06760D" : "normal"
+    border: backgroundColourSelectionRef.current == selection ? "3px solid #06760D" : "normal"
   });
   
   const colourSchemeButton = (colour) => ({
@@ -76,99 +72,111 @@ function TextReaderPage(file) {
     border: "1px solid #ccc",
     pt: "5px", pb: "5px",
     width: "2vw",
-    backgroundColor: invertTextColour ? colour : "white"
+    backgroundColor: invertTextColourRef.current ? colour : "white"
   });
 
   const colourSchemeIconColour = (colour) => ({
-    fontSize: "30px", color: invertTextColour ? "white" : colour
+    fontSize: "30px", color: invertTextColourRef.current ? "white" : colour
   });
 
   const handleFontStyle = (event) => {
-    setFontStyle(event.target.value);
+    fontStyleRef.current = event.target.value;
   };
 
-  const handleFontSize = (event, newValue) => {
-    setFontSize(newValue);
+  const handleFontSize = (event) => {
+    fontSizeRef.current = event.target.value;
   };
 
-  const handleTextOpacity = (event, newValue) => {
-    setTextOpacity(newValue);
+  const handleTextOpacity = (event) => {
+    textOpacityRef.current = event.target.value;
   };
 
-  const handleBackgroundBrightness = (event, newValue) => {
-    setBackgroundBrightness(newValue);
-    if(newValue > 0.5)
-      setInvertTextColour(true);
+  const handleBackgroundBrightness = (event) => {
+    backgroundBrightnessRef.current = event.target.value;
+    if(event.target.value > 0.5)
+      invertTextColourRef.current = true;
     else
-      setInvertTextColour(false);
+      invertTextColourRef.current = false;
   };
 
-  const handleLetterSpacing = (event, newValue) => {
-    setLetterSpacing(newValue);
+  const handleLetterSpacing = (event) => {
+    letterSpacingRef.current = event.target.value;
   };
 
-  const handleLineSpacing = (event, newValue) => {
-    setLineSpacing(newValue);
+  const handleLineSpacing = (event) => {
+    lineSpacingRef.current = event.target.value;
   };
 
   const setDefaultSettings = () => {
-    setFontStyle(fontOptions[3].value);
-    setFontSize(28);
-    setTextOpacity(0.5);
-    setLetterSpacing(0);
-    setLineSpacing(2);
-    setBackgroundBrightness(0);
-    setInvertTextColour(false);
-    setBackgroundColour([0,0,0]);
-    setBackgroundColourSelection(1);
-    highlightSpeed.current = 2;
+    fontStyleRef.current = fontOptions[3].value;
+    fontSizeRef.current = 28;
+    textOpacityRef.current = 0.5;
+    letterSpacingRef.current = 0;
+    lineSpacingRef.current = 2;
+    backgroundBrightnessRef.current = 0;
+    invertTextColourRef.current = false;
+    backgroundColourRef.current = [0,0,0];
+    backgroundColourSelectionRef.current = 1;
+    highlightSpeedRef.current = 2;
   };
 
   const handleBackgroundColour = (colour) => {
     if(colour == 1)
     {
-      setBackgroundColour([0,0,0]);
-      setBackgroundColourSelection(1);
+      backgroundColourRef.current = [0,0,0];
+      backgroundColourSelectionRef.current = 1;
     }
     else if(colour == 2)
     {
-      setBackgroundColour([6,118,3]);
-      setBackgroundColourSelection(2);
+      backgroundColourRef.current = [6,118,3];
+      backgroundColourSelectionRef.current = 2;
     }
     else if(colour == 3)
     {
-      setBackgroundColour([0,123,229]);
-      setBackgroundColourSelection(3);
+      backgroundColourRef.current = [0,123,229];
+      backgroundColourSelectionRef.current = 3;
     }
     else if(colour == 4)
     {
-      setBackgroundColour([211,46,63]);
-      setBackgroundColourSelection(4);
+      backgroundColourRef.current = [211,46,63];
+      backgroundColourSelectionRef.current = 4; 
     }
     else if(colour == 5)
     {
-      setBackgroundColour([78,53,22]);
-      setBackgroundColourSelection(5);
+      backgroundColourRef.current = [78,53,22];
+      backgroundColourSelectionRef.current = 5;
     }
     else if(colour == 6)
     {
-      setBackgroundColour([251,192,45]);
-      setBackgroundColourSelection(6);
+      backgroundColourRef.current = [251,192,45];
+      backgroundColourSelectionRef.current = 6;
     }
     else if(colour == 7)
     {
-      setBackgroundColour([245,124,0]);
-      setBackgroundColourSelection(7);
+      backgroundColourRef.current = [245,124,0];
+      backgroundColourSelectionRef.current = 7;
     }
     else if(colour == 8)
     {
-      setBackgroundColour([142,36,170]);
-      setBackgroundColourSelection(8);
+      backgroundColourRef.current = [142,36,170];
+      backgroundColourSelectionRef.current = 8;
     }
   };
 
+  /* Reading mode parameters */
+
+  const highlightSpeedRef = useRef(2);
+
+
+  const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef]);
+
+
   const handleHighlightSpeed = (event, newValue) => {
-    highlightSpeed.current = newValue;
+    highlightSpeedRef.current = newValue;
+  };
+
+  const handleReadingModeSelection = (mode) => () => {
+    setReadingMode(mode);
   };
 
   const intervalRef = useRef(null);
@@ -194,6 +202,14 @@ function TextReaderPage(file) {
       document.body.style.overflow = 'auto';
     };
   }, []);
+
+  const handleFileUploadWrapper = (e) => {
+    handleFileUpload(e.target.files[0]);
+  }
+
+  const readingModeButtonSelection = (mode) => ({
+    border: readingMode == mode ? "3px solid #06760D" : "normal"
+  });
 
   // Webgazer initialisation
   useEffect(() => {
@@ -369,114 +385,11 @@ function TextReaderPage(file) {
     );
   }
 
-  const sendReadingProgress = async () => {
-
-    const bodyContents = { fileName: fileName,  lineNumber: currentLine };
-    console.log(bodyContents);
-      
-    const response = await reauthenticatingFetch("POST", `http://localhost:8000/api/user/reading-progress/`, bodyContents);
-
-    if(response.error)
-        console.log(response.error);
-    else
-    {
-      // the response should contain the line number of previous session, if exists, otherwise set current line number to 0
-    }
-}
-
-  /* TEMPORARY function that iterates through each element in 2D array (every word in every line)*/
-  const iterateWords = async (lines) => {
-    if (lines.length) {
-      for (let lineNo = currentLine; lineNo < lines.length; lineNo++) {
-        for (let wordNo = currentWord; wordNo < lines[lineNo].length; wordNo++) {
-          setCurrentLine(lineNo);
-          setCurrentWord(wordNo);
-          await new Promise((resolve) => setTimeout(resolve, 1000/highlightSpeed.current)); // set time interval
-        }
-      }
-    }
-  };
-
-  /* Function which handles the uploading of files, detecting whether the file types are valid */
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    setFileName(file.name);
-    var parsedText = [];
-    if (file) {
-      if (file.type === "application/pdf") {
-        // Check for .pdf file type
-        parsedText = await handlePdfFile(file);
-      } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-        // Check for .docx file type
-        parsedText = await handleDocxFile(file);
-      } else if (file.type === "text/plain") {
-        // Check for .txt file type
-        parsedText = await handleTxtFile(file);
-      } else {
-        alert("Please upload a valid PDF, DOCX, or TXT file.");
-      }
-    }
-
-    setTextArray(parsedText);
-    iterateWords(parsedText); // run this if speed reading mode is enabled
-  };
-
-  /* Function which manages the highlighting of words whilst reading - for speed reading mode */
-  const getFormattedText = () => {
-    return textArray.map((line, lineIndex) => (
-      <div
-        key={lineIndex}
-        style={{
-          filter: lineIndex <= currentLine ? "none" : "blur(5px)", // Blur all lines except the current line and any previous lines
-          userSelect: lineIndex <= currentLine ? "auto" : "none",
-        }}
-      >
-        {line.map((word, wordIndex) => (
-          <span
-            key={wordIndex}
-            style={{
-              margin: "5px", // Word spacing
-              opacity: lineIndex === currentLine && wordIndex === currentWord ? 1 : textOpacity,
-              color: 
-                lineIndex === currentLine && wordIndex === currentWord
-                  ? backgroundColourSelection !== 1 && backgroundColourSelection !== 5 ? "black" : invertTextColour ? "yellow" : "black"
-                  : invertTextColour ? "white" : `rgba(${backgroundColour[0]}, ${backgroundColour[1]}, ${backgroundColour[2]})`,
-              fontWeight:
-                lineIndex === currentLine && wordIndex === currentWord
-                  ? "bold"
-                  : "normal", // bolden text of current word
-            }}
-          >
-            {/* Add spacing between each word and line */}
-            {word}
-            {wordIndex < line.length - 1 ? " " : ""}
-          </span>
-        ))}
-      </div>
-    ));
-  };
-
   return (
     <Box style={{marginTop: "15vh", justifyContent: "center"}}>
       <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video>
       <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
-        <Typography
-          sx={{
-            width: "95vw",
-            height: "85vh",
-            minWidth: "95vw",
-            minHeight: "85vh",
-            overflowY: "scroll",
-            border: "1px solid #ccc",
-            backgroundColor: `rgba(${backgroundColour[0]}, ${backgroundColour[1]}, ${backgroundColour[2]}, ${backgroundBrightness})`, // extract this out to a variable, which changes based on what colour scheme is chosen
-            fontSize: `${fontSize}px`, // can be adjusted
-            lineHeight: lineSpacing,
-            fontFamily: fontStyle,
-            letterSpacing: letterSpacing
-          }}
-        >
-          {getFormattedText()} {/* Shows parsed text from uploaded file - speed reading mode*/}
-        </Typography>
+        <SpeedReading textSettings={speedReadingSettings}/>
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "10px", backgroundColor: "white", mt: "-10vh", mr: open ? "2vw" : 0}}>
           <Box sx={{backgroundColor: "white", zIndex: 1500, borderRadius: "5px", border: "1px solid #ccc", mt: "1vh"}}>
             <Tooltip title="Typography settings" placement="left">
@@ -525,25 +438,59 @@ function TextReaderPage(file) {
           <Container>
             <Typography variant="h6" sx={{mt: "2vh"}}>Upload document (TEMPORARY)</Typography>
             <Typography variant="h7" sx={{mt: "2vh", mb: "2vh"}}>Accepted file types: .pdf, .docx, .txt</Typography>
-            <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUpload}/>
+            <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUploadWrapper}/>
             <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>
 
-          {/* Reading mode settings */}
-
-          {/* Speed reading */}
+          {/* Reading mode settings - display specific settings based on selected mode*/}
 
           <Container>
             <Typography variant="h6" sx={{mt: "2vh"}}>Reading Mode</Typography>
-
             <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <Box sx={{ display: "flex", flexDirection: "column" }}>
+                <Grid2 container spacing={0.5} justifyContent="center" width="100%">
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 1 - Normal Reading" placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(1)} onClick={handleReadingModeSelection(1)}><Box>1</Box></Button> {/* Reading Mode 1 - default */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 2 - Speed Reading (RSVP)" placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(2)} onClick={handleReadingModeSelection(2)}><Box>2</Box></Button> {/* Reading Mode 2 */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 3 - Speed Reading (Highlighting) " placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(3)} onClick={handleReadingModeSelection(3)}><Box>3</Box></Button> {/* Reading Mode 3 */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 4 - Line-by-line unblurring" placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(4)} onClick={handleReadingModeSelection(4)}><Box>4</Box></Button> {/* Reading Mode 4 */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 5 - NLP" placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(5)} onClick={handleReadingModeSelection(5)}><Box>5</Box></Button> {/* Reading Mode 5 */}
+                    </Tooltip>
+                  </Grid2>
+                </Grid2>
+              </Box>
+            </Container>
+
+            { readingMode === 1 ? (
+              <Typography variant="h7" sx={{mt: "2vh"}}>Normal Reading mode - not implemented yet</Typography> //Replace with specific settings for Reading Mode 1
+            ): readingMode === 2 ? (
+              <Typography variant="h7" sx={{mt: "2vh"}}>Speed reading (RSVP) - not implemented yet</Typography> //Replace with specific settings for Reading Mode 2
+            ): readingMode === 3 ? (
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
                 <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                   <Typography variant="caption">
                     Highlighting speed
                   </Typography>
                   <Slider
-                    value={typeof highlightSpeed.current === 'number' ? highlightSpeed.current : 2}
+                    value={typeof highlightSpeedRef.current === 'number' ? highlightSpeedRef.current : 2}
                     onChange={handleHighlightSpeed}
                     min={1}
                     step={0.1}
@@ -554,9 +501,14 @@ function TextReaderPage(file) {
                 <Typography variant="h7"
                   sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
                 >
-                  {highlightSpeed.current*10}
+                  {highlightSpeedRef.current*10}
                 </Typography>
             </Container>
+            ): readingMode === 4 ? (
+            <Typography variant="h7" sx={{mt: "2vh"}}>Line by line unblurring - not implemented yet</Typography> //Replace with specific settings for Reading Mode 4
+            ):
+            <Typography variant="h7" sx={{mt: "2vh"}}>NLP Reading - not implemented yet</Typography> //Replace with specific settings for Reading Mode 5
+            }
             <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>
 
@@ -571,7 +523,7 @@ function TextReaderPage(file) {
                 </Typography>
                 <FormControl variant="outlined" fullWidth>
                   <Select
-                    value={fontStyle}
+                    value={fontStyleRef.current}
                     onChange={handleFontStyle}
                     fullWidth
                     sx={{ backgroundColor: "#D9D9D9" }}
@@ -593,7 +545,7 @@ function TextReaderPage(file) {
                   Text Size
                 </Typography>
                 <Slider
-                  value={typeof fontSize === 'number' ? fontSize : 28}
+                  value={typeof fontSizeRef.current === 'number' ? fontSizeRef.current : 28}
                   onChange={handleFontSize}
                   min={8}
                   max={100}
@@ -603,7 +555,7 @@ function TextReaderPage(file) {
               <Typography variant="h7"
                 sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
               >
-                {fontSize}
+                {fontSizeRef.current}
               </Typography>
             </Container>
 
@@ -614,9 +566,9 @@ function TextReaderPage(file) {
                   Text Opacity
                 </Typography>
                 <Slider
-                  value={typeof textOpacity === 'number' ? textOpacity : 1}
+                  value={typeof textOpacityRef.current === 'number' ? textOpacityRef.current : 1}
                   onChange={handleTextOpacity}
-                  min={0}
+                  min={0.1}
                   step={0.1}
                   max={1}
                   sx={{ width: "15vw" }}
@@ -625,7 +577,7 @@ function TextReaderPage(file) {
               <Typography variant="h7"
                 sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
               >
-                {textOpacity*100}
+                {textOpacityRef.current*100}
               </Typography>
             </Container>
 
@@ -636,7 +588,7 @@ function TextReaderPage(file) {
                   Letter Spacing
                 </Typography>
                 <Slider
-                  value={typeof letterSpacing === 'number' ? letterSpacing : 2}
+                  value={typeof letterSpacingRef.current === 'number' ? letterSpacingRef.current : 2}
                   onChange={handleLetterSpacing}
                   min={-2}
                   step={0.1}
@@ -647,7 +599,7 @@ function TextReaderPage(file) {
               <Typography variant="h7"
                 sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
               >
-                {letterSpacing*10}
+                {letterSpacingRef.current*10}
               </Typography>
             </Container>
 
@@ -658,7 +610,7 @@ function TextReaderPage(file) {
                   Line Spacing
                 </Typography>
                 <Slider
-                  value={typeof lineSpacing === 'number' ? lineSpacing : 2}
+                  value={typeof lineSpacingRef.current === 'number' ? lineSpacingRef.current : 2}
                   onChange={handleLineSpacing}
                   min={1}
                   max={10}
@@ -668,7 +620,7 @@ function TextReaderPage(file) {
               <Typography variant="h7"
                 sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
               >
-                {lineSpacing*10}
+                {lineSpacingRef.current*10}
               </Typography>
             </Container>
             <Divider sx={{width: "80%", mt: "4vh"}}/>
@@ -686,7 +638,7 @@ function TextReaderPage(file) {
                   Brightness
                 </Typography>
                 <Slider
-                  value={typeof backgroundBrightness === 'number' ? backgroundBrightness : 1}
+                  value={typeof backgroundBrightnessRef.current === 'number' ? backgroundBrightnessRef.current : 1}
                   onChange={handleBackgroundBrightness}
                   min={0}
                   step={0.1}
@@ -697,7 +649,7 @@ function TextReaderPage(file) {
               <Typography variant="h7"
                 sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
               >
-                {backgroundBrightness*100}
+                {backgroundBrightnessRef.current*100}
               </Typography>
             </Container>
 
@@ -706,7 +658,7 @@ function TextReaderPage(file) {
                 <Typography variant="caption" sx={{mt: "2vh", mb: "2vh"}}>
                   Colour scheme
                 </Typography>
-                <Grid2 container spacing={4} justifyContent="center" width="100%">
+                <Grid2 container spacing={2} justifyContent="center" width="100%">
                   <Grid2 item xs={4}>
                     <Tooltip title="Monochrome" placement="top">
                       <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}><SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon></Box></Button> {/* White - default */}
