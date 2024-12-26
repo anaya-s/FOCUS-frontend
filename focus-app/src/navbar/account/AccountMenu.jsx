@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useContext, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
 import Menu from "@mui/material/Menu";
@@ -6,13 +6,20 @@ import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
-import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
+import AnalyticsIcon from '@mui/icons-material/Analytics';
 import Settings from "@mui/icons-material/Settings";
+import PersonIcon from '@mui/icons-material/Person';
 import Logout from "@mui/icons-material/Logout";
+import { Typography } from "@mui/material";
+
+import AuthContext from "../../context/AuthContext";
+import { useNavigation } from "../../utils/navigation";
+import { reauthenticatingFetch } from "../../utils/api";
 
 export default function AccountMenu() {
   const [anchorEl, setAnchorEl] = useState(null); 
+  const [username, setUsername] = useState("");
   const open = Boolean(anchorEl);
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -20,11 +27,31 @@ export default function AccountMenu() {
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  const { logoutUser } = useContext(AuthContext);
+  const { toDashboard, toProfile, toSettings } = useNavigation();
+
+  useEffect(() => {
+    const fetchUsername = async () => {
+try {
+      const responseMsg = await reauthenticatingFetch("GET", "http://localhost:8000/api/user/profile/");
+
+      if (responseMsg.error) {
+        console.error("Failed to fetch profile data:", responseMsg.error);
+      } else {
+        setUsername(responseMsg.username); // Update state with username
+      }
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+    }
+  };
+
+    fetchUsername();
+  }, []);
+
   return (
     <>
       <Box sx={{ display: "flex", alignItems: "center", textAlign: "center" }}> 
-        {/* <Typography sx={{ minWidth: 100 }}>Contact</Typography>
-        <Typography sx={{ minWidth: 100 }}>Profile</Typography> */}
         <Tooltip title="Account settings">
           <IconButton
             onClick={handleClick}
@@ -34,7 +61,9 @@ export default function AccountMenu() {
             aria-haspopup="true"
             aria-expanded={open ? "true" : undefined}
           >
-            <Avatar sx={{ width: 32, height: 32 }}>M</Avatar>
+            <Avatar sx={{ width: 32, height: 32 }}>
+              {username.charAt(0).toUpperCase() || ""} 
+            </Avatar>
           </IconButton>
         </Tooltip>
       </Box>
@@ -75,20 +104,26 @@ export default function AccountMenu() {
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
-        <MenuItem onClick={handleClose}>
-          <Avatar /> Profile
+        <MenuItem onClick={toDashboard}>
+          <ListItemIcon>
+            <AnalyticsIcon fontSize="small" />
+          </ListItemIcon>
+          Dashboard
         </MenuItem>
-        <MenuItem onClick={handleClose}>
-          <Avatar /> My account
+        <MenuItem onClick={toProfile}>
+          <ListItemIcon>
+            <PersonIcon fontSize="small" />
+          </ListItemIcon>
+          Profile
         </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleClose}>
+        <MenuItem onClick={toSettings}>
           <ListItemIcon>
             <Settings fontSize="small" />
           </ListItemIcon>
           Settings
         </MenuItem>
-        <MenuItem onClick={handleClose}>
+        <Divider />
+        <MenuItem onClick={logoutUser}>
           <ListItemIcon>
             <Logout fontSize="small" />
           </ListItemIcon>

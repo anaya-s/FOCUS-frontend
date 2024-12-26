@@ -7,13 +7,21 @@ import Register from "./login/Register";
 import NavBar from "./navbar/NavBar";
 import Footer from "./home/Footer";
 import NotFound from "./utils/NotFound";
+import NotAuthorized from "./utils/NotAuthorized";
 import AboutUs from "./navbar/products/AboutUs";
-import Temp from "./text_reader/Temp"
-import Calibration from "./calibration/Calibration"
 import DocumentDrivePage from "./document_drive/drive";
+import OurProducts from "./navbar/products/OurProducts";
+import TermsAndConditions from "./home/TermsAndConditions";
+import PrivacyPolicy from "./home/PrivacyPolicy";
+import TextReaderPage from "./text_reader/TextReader";
+import CalibrationPage from "./calibration/Calibration";
 import ProtectedRoute from "./utils/ProtectedRoute";
 // Named export
 import { AuthProvider } from "./context/AuthContext";
+import DashboardOverall from "./user_account/dashboard/DashboardOverall";
+import UserAccount from "./user_account/UserAccount";
+import UserProfile from "./user_account/settings/UserProfile";
+import UserSettings from "./user_account/settings/UserSettings";
 
 function App() {
   return (
@@ -26,8 +34,12 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<Register />} />
             <Route path="/reset-password" element={<ResetPass />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="error/404" element={<NotFound />} />
+            <Route path="error/403" element={<NotAuthorized />} />
             <Route path="/about" element={<AboutUs />} />
+            <Route path="/products" element={<OurProducts />} />
+            <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route 
               path="/drive"
               element={
@@ -37,18 +49,52 @@ function App() {
               }     
             />
             <Route
-              path="/dashboard"
+              path="/account"
               element={
                 <ProtectedRoute>
-                  <Temp />
+                  <UserAccount />
                 </ProtectedRoute>
               }
-            />
+            >
+                <Route
+                  path="dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardOverall />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="profile"
+                  element={
+                    <ProtectedRoute>
+                      <UserProfile />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="settings"
+                  element={
+                    <ProtectedRoute>
+                      <UserSettings />
+                    </ProtectedRoute>
+                  }
+                />
+            </Route>
+
             <Route
               path="/calibrate"
               element={
                 <ProtectedRoute>
-                  <Calibration />
+                  <CalibrationPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reading"
+              element={
+                <ProtectedRoute>
+                  <TextReaderPage />
                 </ProtectedRoute>
               }
             />

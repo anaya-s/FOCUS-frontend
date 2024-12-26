@@ -1,8 +1,9 @@
 import { useContext } from "react";
 import Button from "@mui/material/Button";
-import { useNavigation } from '../utils/navigation';
+import { useNavigation } from "../utils/navigation";
 import AccountMenu from "./account/AccountMenu";
 import AuthContext from "../context/AuthContext";
+import zIndex from "@mui/material/styles/zIndex";
 
 const barStyle = {
   display: "flex",
@@ -13,7 +14,7 @@ const barStyle = {
   top: "0",
   left: "0",
   borderBottom: "1px solid",
-  zIndex: "1400"
+  zIndex: 10
 };
 
 const navStyle = {
@@ -31,31 +32,18 @@ const buttonStyle = {
 };
 
 const NavBar = () => {
-  let { user, logoutUser } = useContext(AuthContext);
-  const {toHome, toLogin, toAbout, toDashboard} = useNavigation();
-  
-  const text = user ? "Logout" : "Login";
-  const handleUser = user ? logoutUser : toLogin;
+  let { user } = useContext(AuthContext);
+  const { toHome, toLogin, toAbout, toOurProducts} = useNavigation();
 
   return (
     <div style={barStyle}>
-      <Button onClick={toHome}>F.O.C.U.S</Button>
+      <Button onClick={toHome} sx={{fontWeight: "bold", pl: "10px", pr: "10px", fontSize: "25px"}}>FOCUS</Button>
       <div style={navStyle}>
-        {user && <Button style={buttonStyle} onClick={toDashboard}>Dashboard</Button>}
-        <Button 
-          style={buttonStyle}
-          onClick={toAbout}
-          >About</Button>
-        <Button style={buttonStyle}>Our Products</Button>
-        {/* <AccountMenu /> */}
-        <Button
-          onClick={handleUser}
-          style={buttonStyle}
-          variant="contained"
-          color="primary"
-        >
-          {text}
-        </Button> 
+        <Button style={buttonStyle} onClick={toAbout}>
+          About
+        </Button>
+        <Button style={buttonStyle} onClick={toOurProducts}>Our Products</Button>
+        {user ? <AccountMenu /> : <Button style={buttonStyle} onClick={toLogin}> Login </Button>}
       </div>
     </div>
   );
