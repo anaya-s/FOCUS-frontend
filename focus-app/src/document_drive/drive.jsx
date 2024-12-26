@@ -112,6 +112,12 @@ function DocumentDrivePage() {
     }
   };
 
+  const handleEnterKeySearches = (e) => {
+    if (e.key === 'Enter') {
+      showSearches(searchQuery);
+    }
+  };
+
   const changeStarredStatus = (index) => {
     documentTiles[index].isStarred = !documentTiles[index].isStarred;
 
@@ -407,6 +413,7 @@ function DocumentDrivePage() {
           variant="outlined"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
+          onKeyDown={handleEnterKeySearches}
           sx={{
             display: "flex",
             alignContent: "center",
@@ -417,16 +424,32 @@ function DocumentDrivePage() {
             mb: 6,
             "& .MuiOutlinedInput-root": { borderRadius: "9999px" },
           }}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconButton onClick={() => showSearches(searchQuery)}>
-                  <SearchIcon />
-                </IconButton>
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => showSearches(searchQuery)}>
+                    <SearchIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }
           }}
         />
+
+        <Box sx={{display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2}}>
+          <Typography variant="h4" sx={{ml: "2vw"}} gutterBottom> <span style={{fontWeight: "bold"}}> { allDocButtonState ? "All documents" : recentButtonState ? "Recently opened" : "Your favourites"}</span></Typography>
+
+          {/* IDK if we are going to convert the tiles into list as well, maybe for later. If so, need to add buttons to switch between both layouts */}
+          {/* <Box sx={{display: "flex", alignItems: "center", mr: "2vw"}}>
+            <Typography variant="h6" sx={{mr: "10vw"}} gutterBottom> <span style={{fontWeight: "bold"}}> Total documents: {documentTiles.length} </span></Typography>
+
+            <Typography variant="h6" sx={{mr: "10vw"}} gutterBottom> <span style={{fontWeight: "bold"}}> Total documents: {documentTiles.length} </span></Typography>
+          </Box> */}
+
+          <Typography variant="h6" sx={{mr: "2vw"}} gutterBottom> <span style={{fontWeight: "bold"}}> Total documents: {documentTiles.length} </span></Typography>
+
+        </Box>
 
         <Grid2
           container
