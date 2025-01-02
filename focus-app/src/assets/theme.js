@@ -36,6 +36,22 @@ const theme = createTheme({
     },
 
   },
+  components: {
+    MuiDivider: { /* For text inbewteen MUI divider lines */
+      styleOverrides: {
+        wrapper: {
+          fontFamily: '"Istok Web", sans-serif',
+        },
+      },
+    },
+    MuiDrawer: {
+      styleOverrides: {
+        paper: {
+          backgroundColor: '#f5f5f5',
+        },
+      },
+    },
+  },
   palette: {
     primary: {
       main: '#06760D', 

@@ -9,6 +9,7 @@ import Footer from "./home/Footer";
 import NotFound from "./utils/NotFound";
 import NotAuthorized from "./utils/NotAuthorized";
 import AboutUs from "./navbar/products/AboutUs";
+import DocumentDrivePage from "./document_drive/drive";
 import OurProducts from "./navbar/products/OurProducts";
 import TermsAndConditions from "./home/TermsAndConditions";
 import PrivacyPolicy from "./home/PrivacyPolicy";
@@ -39,7 +40,14 @@ function App() {
             <Route path="/products" element={<OurProducts />} />
             <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-
+            <Route 
+              path="/drive"
+              element={
+                <ProtectedRoute>
+                  <DocumentDrivePage />
+                </ProtectedRoute>
+              }     
+            />
             <Route
               path="/account"
               element={
