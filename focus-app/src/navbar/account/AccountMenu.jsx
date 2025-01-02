@@ -73,6 +73,7 @@ try {
         open={open}
         onClose={handleClose}
         onClick={handleClose}
+        sx = {{ zIndex: 1600 }}
         slotProps={{
           paper: {
             elevation: 0,

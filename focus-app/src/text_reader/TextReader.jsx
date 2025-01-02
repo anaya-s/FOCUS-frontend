@@ -1,19 +1,24 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "../utils/navigation";
 import webgazer from "../webgazer/webgazer.js";
-import * as pdfjsLib from "pdfjs-dist/webpack"; // For parsing .pdf files
-import mammoth from "mammoth"; // For parsing .docx files
+
+import { handleFileUpload, sendReadingProgress, SpeedReading } from "./SpeedReading";
 
 /* MaterialUI Imports */
-import Button from "@mui/material/Button";
-import Typography from "@mui/material/Typography";
-import Container from "@mui/material/Container";
-import Box from "@mui/material/Box";
-import LinearProgress from "@mui/material/LinearProgress";
-import { useLocation } from "react-router-dom";
-import { reauthenticatingFetch } from "../utils/api";
+import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2 } from "@mui/material";
 
-function TextReaderPage() {
+import {
+  Menu as MenuIcon,
+  ExitToAppRounded as ExitToAppRoundedIcon,
+  FormatSizeRounded as FormatSizeRoundedIcon,
+  Opacity as OpacityIcon,
+  Brightness6Rounded as Brightness6RoundedIcon,
+  FormatLineSpacingRounded as FormatLineSpacingRoundedIcon,
+  Subject as SubjectIcon,
+  SpeedRounded as SpeedRoundedIcon
+} from '@mui/icons-material';
+
+function TextReaderPage(file) { // use this file parameter here, obtained from drive, to pass to handleFileUpload, instead of using an input button on this page
   const videoRef = useRef(null);
   const socket = useRef(null);
   const [stream, setStream] = useState(null);
@@ -24,23 +29,163 @@ function TextReaderPage() {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoading, setWebgazerLoading] = useState(true);
 
-  /* File handling */
-  const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
+  /* Reading mode index
+    1 - Normal reading
+    2 - RSVP
+    3 - Speed reading (word highlighting)
+    4 - Line by line unblurring
+    5 - Natural Language Processing (NLP) assistance
+  */
+  const [readingMode, setReadingMode] = useState(3);
 
-  const [currentLine, setCurrentLine] = useState(0); // Stores index of current line
-  const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
+  /* Text typography parameters */
 
-  const [fontSize, setFontSize] = useState(28); // Initialize font size
+  const fontOptions = [
+    { label: 'Arial', value: 'Arial, sans-serif' },
+    { label: 'Courier New', value: '"Courier New", Courier, monospace' },
+    { label: 'Georgia', value: 'Georgia, serif' },
+    { label: 'Istok Web', value: 'Istok Web, sans-serif' }, // default text font
+    { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
+    { label: 'Verdana', value: 'Verdana, sans-serif' }
+    // add more font options here
+  ];
 
-  const [fileName, setFileName] = useState("");
+  const fontStyleRef = useRef(fontOptions[3].value);
+  const fontSizeRef = useRef(28);
+  const textOpacityRef = useRef(0.5);
+  const letterSpacingRef = useRef(0);
+  const lineSpacingRef = useRef(2);
+  const backgroundBrightnessRef = useRef(0);
+  const invertTextColourRef = useRef(false);
+  const backgroundColourRef = useRef([0, 0, 0]);
+  const backgroundColourSelectionRef = useRef(1);
 
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+  const colourSchemeSelection = (selection) => ({
+    border: backgroundColourSelectionRef.current == selection ? "3px solid #06760D" : "normal"
+  });
+  
+  const colourSchemeButton = (colour) => ({
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    borderRadius: "5px",
+    border: "1px solid #ccc",
+    pt: "5px", pb: "5px",
+    width: "2vw",
+    backgroundColor: invertTextColourRef.current ? colour : "white"
+  });
 
-   // Functions to change font size
-   const increaseFontSize = () => setFontSize((prevSize) => prevSize + 2); // Increase font size
-   const decreaseFontSize = () => setFontSize((prevSize) => Math.max(prevSize - 2, 10)); // Decrease font size, prevent going below 10px
+  const colourSchemeIconColour = (colour) => ({
+    fontSize: "30px", color: invertTextColourRef.current ? "white" : colour
+  });
+
+  const handleFontStyle = (event) => {
+    fontStyleRef.current = event.target.value;
+  };
+
+  const handleFontSize = (event) => {
+    fontSizeRef.current = event.target.value;
+  };
+
+  const handleTextOpacity = (event) => {
+    textOpacityRef.current = event.target.value;
+  };
+
+  const handleBackgroundBrightness = (event) => {
+    backgroundBrightnessRef.current = event.target.value;
+    if(event.target.value > 0.5)
+      invertTextColourRef.current = true;
+    else
+      invertTextColourRef.current = false;
+  };
+
+  const handleLetterSpacing = (event) => {
+    letterSpacingRef.current = event.target.value;
+  };
+
+  const handleLineSpacing = (event) => {
+    lineSpacingRef.current = event.target.value;
+  };
+
+  const setDefaultSettings = () => {
+    fontStyleRef.current = fontOptions[3].value;
+    fontSizeRef.current = 28;
+    textOpacityRef.current = 0.5;
+    letterSpacingRef.current = 0;
+    lineSpacingRef.current = 2;
+    backgroundBrightnessRef.current = 0;
+    invertTextColourRef.current = false;
+    backgroundColourRef.current = [0,0,0];
+    backgroundColourSelectionRef.current = 1;
+    highlightSpeedRef.current = 2;
+  };
+
+  const handleBackgroundColour = (colour) => {
+    if(colour == 1)
+    {
+      backgroundColourRef.current = [0,0,0];
+      backgroundColourSelectionRef.current = 1;
+    }
+    else if(colour == 2)
+    {
+      backgroundColourRef.current = [6,118,3];
+      backgroundColourSelectionRef.current = 2;
+    }
+    else if(colour == 3)
+    {
+      backgroundColourRef.current = [0,123,229];
+      backgroundColourSelectionRef.current = 3;
+    }
+    else if(colour == 4)
+    {
+      backgroundColourRef.current = [211,46,63];
+      backgroundColourSelectionRef.current = 4; 
+    }
+    else if(colour == 5)
+    {
+      backgroundColourRef.current = [78,53,22];
+      backgroundColourSelectionRef.current = 5;
+    }
+    else if(colour == 6)
+    {
+      backgroundColourRef.current = [251,192,45];
+      backgroundColourSelectionRef.current = 6;
+    }
+    else if(colour == 7)
+    {
+      backgroundColourRef.current = [245,124,0];
+      backgroundColourSelectionRef.current = 7;
+    }
+    else if(colour == 8)
+    {
+      backgroundColourRef.current = [142,36,170];
+      backgroundColourSelectionRef.current = 8;
+    }
+  };
+
+  /* Reading mode parameters */
+
+  const highlightSpeedRef = useRef(2);
+
+
+  const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef]);
+
+
+  const handleHighlightSpeed = (event, newValue) => {
+    highlightSpeedRef.current = newValue;
+  };
+
+  const handleReadingModeSelection = (mode) => () => {
+    setReadingMode(mode);
+  };
 
   const intervalRef = useRef(null);
+
+  const [open, setOpen] = useState(false);
+
+  const handleDrawer = () => {
+    setOpen(!open);
+  };
 
   const { toNotAuthorized } = useNavigation();
 
@@ -57,6 +202,14 @@ function TextReaderPage() {
       document.body.style.overflow = 'auto';
     };
   }, []);
+
+  const handleFileUploadWrapper = (e) => {
+    handleFileUpload(e.target.files[0]);
+  }
+
+  const readingModeButtonSelection = (mode) => ({
+    border: readingMode == mode ? "3px solid #06760D" : "normal"
+  });
 
   // Webgazer initialisation
   useEffect(() => {
@@ -220,214 +373,343 @@ function TextReaderPage() {
           userSelect: "none"
         }}
       >
-        <Typography variant="h5" style={{ marginBottom: "20px" }}>
+        <Typography variant="h5" style={{ marginBottom: "2vh" }}>
           Loading WebGazer...
         </Typography>
         <LinearProgress
           variant="determinate"
           value={loadingProgress}
-          style={{ width: "80%", marginTop: "20px" }}
+          style={{ width: "80%", marginTop: "2vh" }}
         />
       </div>
     );
   }
 
-  /* Function which handles the uploading of files, detecting whether the file types are valid */
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    setFileName(file.name);
-    if (file) {
-      if (file.type === "application/pdf") {
-        // Check for .pdf file type
-        await handlePdfFile(file);
-      } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-        // Check for .docx file type
-        await handleDocxFile(file);
-      } else if (file.type === "text/plain") {
-        // Check for .txt file type
-        await handleTxtFile(file);
-      } else {
-        alert("Please upload a valid PDF, DOCX, or TXT file.");
-      }
-    }
-  };
-
-  const sendReadingProgress = async () => {
-
-    const bodyContents = { fileName: fileName,  lineNumber: currentLine };
-    console.log(bodyContents);
-      
-    const response = await reauthenticatingFetch("POST", `http://localhost:8000/api/user/reading-progress/`, bodyContents);
-
-    if(response.error)
-        console.log(response.error);
-    else
-    {
-      // the response should contain the line number of previous session, if exists, otherwise set current line number to 0
-    }
-}
-
-  /* Function which parses the text within PDF files */
-  const handlePdfFile = async (file) => {
-    const reader = new FileReader();
-
-    reader.onload = async (event) => {
-      const typedArray = new Uint8Array(event.target.result);
-      const pdf = await pdfjsLib.getDocument(typedArray).promise;
-
-      let extractedTextArray = [];
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i); // get current page
-        const textContent = await page.getTextContent(); // get all text content
-
-        let currentLineArray = []; // stores list of words
-        let lastY = null; // y-coordinate of current line, if it changes from this, it indicates that new line is being parsed
-
-        /* Parse each item in the text contents of the PDF */
-        textContent.items.forEach((item) => {
-          /* Reset for every new line */
-          if (lastY !== null && item.transform[5] !== lastY) {
-            extractedTextArray.push(currentLineArray);
-            currentLineArray = [];
-          }
-
-          /* Split each line into separate words and add it to the line array */
-          const words = item.str.trim().split(/\s+/);
-          words.forEach((word) => {
-            if (word) currentLineArray.push(word);
-          });
-
-          lastY = item.transform[5]; // store y-coordinate of current line
-        });
-
-        /* Add the last line */
-        if (currentLineArray.length > 0)
-          extractedTextArray.push(currentLineArray);
-      }
-
-      setTextArray(extractedTextArray); // set 2D array (lines, words) to be displayed and highlighted later on
-      sendReadingProgress();
-      iterateWords(extractedTextArray); // TEMPORARY: start automatic highlighting of words
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
-  /* Function which parses the text within DOCX files */
-  const handleDocxFile = async (file) => {
-    const reader = new FileReader();
-
-    reader.onload = async (event) => {
-      const arrayBuffer = event.target.result;
-      const result = await mammoth.extractRawText({ arrayBuffer });
-
-      let extractedTextArray = [];
-      result.value.split("\n").forEach((line) => {
-        const trimmedLine = line.trim(); // removes any whitespaces and newlines in current line
-
-        /* Ignore lines that are empty or contain only whitespace */
-        if (trimmedLine) {
-          const words = trimmedLine.split(/\s+/);
-          extractedTextArray.push(words);
-        }
-      });
-
-      setTextArray(extractedTextArray); // set 2D array (lines, words) to be displayed and highlighted later on
-      sendReadingProgress();
-      iterateWords(extractedTextArray); // TEMPORARY: start automatic highlighting of words
-    };
-    reader.readAsArrayBuffer(file);
-  };
-
-  /* Function which parses the text within TXT files */
-  const handleTxtFile = async (file) => {
-    const reader = new FileReader();
-
-    reader.onload = (event) => {
-      const result = event.target.result;
-      const extractedTextArray = result
-        .split("\n")
-        .map((line) => line.trim().split(/\s+/).filter(Boolean)); // split text into lines and words
-
-      setTextArray(extractedTextArray); // set 2D array (lines, words) to be displayed and highlighted later on
-      sendReadingProgress();
-      iterateWords(extractedTextArray); // TEMPORARY: start automatic highlighting of words
-    };
-
-    reader.readAsText(file); // Read the file as text
-  };
-
-  /* TEMPORARY function that iterates through each element in 2D array (every word in every line)*/
-  const iterateWords = async (lines) => {
-    if (!textArray.length) {
-      for (let lineNo = currentLine; lineNo < lines.length; lineNo++) {
-        for (let wordNo = currentWord; wordNo < lines[lineNo].length; wordNo++) {
-          setCurrentLine(lineNo);
-          setCurrentWord(wordNo);
-          await new Promise((resolve) => setTimeout(resolve, 500)); // set time interval
-        }
-      }
-    }
-  };
-
-  /* Function which manages the highlighting of words whilst reading */
-  const getFormattedText = () => {
-    return textArray.map((line, lineIndex) => (
-      <div
-        key={lineIndex}
-        style={{
-          filter: lineIndex <= currentLine ? "none" : "blur(5px)", // Blur all lines except the current line and any previous lines
-        }}
-      >
-        {line.map((word, wordIndex) => (
-          <span
-            key={wordIndex}
-            style={{
-              backgroundColor:
-                lineIndex === currentLine && wordIndex === currentWord
-                  ? "yellow"
-                  : "transparent", // highlight current word with yellow background
-              margin: "5px", // Word spacing
-              fontWeight:
-                lineIndex === currentLine && wordIndex === currentWord
-                  ? "bold"
-                  : "normal", // bolden text of current word
-            }}
-          >
-            {/* Add spacing between each word and line */}
-            {word}
-            {wordIndex < line.length - 1 ? " " : ""}
-          </span>
-        ))}
-      </div>
-    ));
-  };
-
   return (
-    <Box style={{marginTop: "150px", marginBottom: "120px", justifyContent: "center"}}>
+    <Box style={{marginTop: "15vh", justifyContent: "center"}}>
       <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video>
-      <Container style={{textAlign: "center"}}>
-        <Typography variant="h4">Upload a document to read</Typography>
-        <Typography variant="h6">Accepted file types: .pdf, .docx, .txt</Typography>
-        <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUpload} style={{border: "1px solid #06760D", borderRadius: "2px", padding: "5px", marginRight: "10px"}}/>
-        <Button onClick={increaseFontSize}>Increase Font Size</Button>
-        <Button onClick={decreaseFontSize}>Decrease Font Size</Button>
-        <Button onClick={sendReadingProgress}>Save Progress</Button>
-        <Typography variant="h6">Extracted text:</Typography>
-      </Container>
-      <Typography
+      <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
+        <SpeedReading textSettings={speedReadingSettings}/>
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "10px", backgroundColor: "white", mt: "-10vh", mr: open ? "2vw" : 0}}>
+          <Box sx={{backgroundColor: "white", zIndex: 1500, borderRadius: "5px", border: "1px solid #ccc", mt: "1vh"}}>
+            <Tooltip title="Typography settings" placement="left">
+              <IconButton 
+                color="inherit"
+                sx={{zIndex: 1500}}
+                onClick={handleDrawer}
+              >
+                <MenuIcon sx={{ fontSize: "30px"}}/>
+              </IconButton>
+            </Tooltip>
+            <Divider sx={{ zIndex: 1500, width: '100%', backgroundColor: 'gray' }} />
+            <Tooltip title="Back to your Drive" placement="left">
+              <IconButton 
+                  color="inherit"
+                  sx={{zIndex: 1500}}
+                >
+                <ExitToAppRoundedIcon sx={{ fontSize: "30px"}}/>
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+      </Box>
+      <Drawer
         sx={{
-          width: "100%",
-          height: "70vh",
-          overflowY: "scroll",
-          border: "1px solid #ccc",
-          backgroundColor: "#f9f9f9",
-          fontSize: `${fontSize}px`, // can be adjusted
-          lineHeight: "2"
+          width: "30vw",
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: "30vw",
+            height: "95vh",
+            marginTop: "10vh",
+            border: "1px solid #ccc",
+          },
         }}
+        variant="persistent"
+        anchor="right"
+        open={open}
       >
-        {getFormattedText()} {/* Shows parsed text from uploaded file*/}
-      </Typography>
+        {/* Drawer contents */}
+        <Box sx={{overflowY: "auto", height: "85vh", userSelect: "none"}}> 
+          <Container>
+            <Typography variant="h4" sx={{mt: "4vh"}}>Settings</Typography>
+          </Container>
+
+          {/* TEMPORARY: to upload document - to be replaced with text reading modes */}
+          <Container>
+            <Typography variant="h6" sx={{mt: "2vh"}}>Upload document (TEMPORARY)</Typography>
+            <Typography variant="h7" sx={{mt: "2vh", mb: "2vh"}}>Accepted file types: .pdf, .docx, .txt</Typography>
+            <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUploadWrapper}/>
+            <Divider sx={{width: "80%", mt: "4vh"}}/>
+          </Container>
+
+          {/* Reading mode settings - display specific settings based on selected mode*/}
+
+          <Container>
+            <Typography variant="h6" sx={{mt: "2vh"}}>Reading Mode</Typography>
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <Box sx={{ display: "flex", flexDirection: "column" }}>
+                <Grid2 container spacing={0.5} justifyContent="center" width="100%">
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 1 - Normal Reading" placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(1)} onClick={handleReadingModeSelection(1)}><Box>1</Box></Button> {/* Reading Mode 1 - default */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 2 - Speed Reading (RSVP)" placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(2)} onClick={handleReadingModeSelection(2)}><Box>2</Box></Button> {/* Reading Mode 2 */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 3 - Speed Reading (Highlighting) " placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(3)} onClick={handleReadingModeSelection(3)}><Box>3</Box></Button> {/* Reading Mode 3 */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 4 - Line-by-line unblurring" placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(4)} onClick={handleReadingModeSelection(4)}><Box>4</Box></Button> {/* Reading Mode 4 */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Reading Mode 5 - NLP" placement="top">
+                      <Button variant="outlined" sx={readingModeButtonSelection(5)} onClick={handleReadingModeSelection(5)}><Box>5</Box></Button> {/* Reading Mode 5 */}
+                    </Tooltip>
+                  </Grid2>
+                </Grid2>
+              </Box>
+            </Container>
+
+            { readingMode === 1 ? (
+              <Typography variant="h7" sx={{mt: "2vh"}}>Normal Reading mode - not implemented yet</Typography> //Replace with specific settings for Reading Mode 1
+            ): readingMode === 2 ? (
+              <Typography variant="h7" sx={{mt: "2vh"}}>Speed reading (RSVP) - not implemented yet</Typography> //Replace with specific settings for Reading Mode 2
+            ): readingMode === 3 ? (
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+              <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+                <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                  <Typography variant="caption">
+                    Highlighting speed
+                  </Typography>
+                  <Slider
+                    value={typeof highlightSpeedRef.current === 'number' ? highlightSpeedRef.current : 2}
+                    onChange={handleHighlightSpeed}
+                    min={1}
+                    step={0.1}
+                    max={10}
+                    sx={{ width: "15vw" }}
+                  />
+                </Box>
+                <Typography variant="h7"
+                  sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+                >
+                  {highlightSpeedRef.current*10}
+                </Typography>
+            </Container>
+            ): readingMode === 4 ? (
+            <Typography variant="h7" sx={{mt: "2vh"}}>Line by line unblurring - not implemented yet</Typography> //Replace with specific settings for Reading Mode 4
+            ):
+            <Typography variant="h7" sx={{mt: "2vh"}}>NLP Reading - not implemented yet</Typography> //Replace with specific settings for Reading Mode 5
+            }
+            <Divider sx={{width: "80%", mt: "4vh"}}/>
+          </Container>
+
+          {/* Text layout settings */}
+          <Container>
+            <Typography variant="h6" sx={{mt: "2vh"}}>Text Layout</Typography>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <Box sx={{ display: "flex", flexDirection: "column", width: '100%'}}>
+                <Typography variant="caption">
+                  Font Style
+                </Typography>
+                <FormControl variant="outlined" fullWidth>
+                  <Select
+                    value={fontStyleRef.current}
+                    onChange={handleFontStyle}
+                    fullWidth
+                    sx={{ backgroundColor: "#D9D9D9" }}
+                  >
+                    {fontOptions.map((font) => (
+                      <MenuItem key={font.value} value={font.value}>
+                        {font.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+              <FormatSizeRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Text Size
+                </Typography>
+                <Slider
+                  value={typeof fontSizeRef.current === 'number' ? fontSizeRef.current : 28}
+                  onChange={handleFontSize}
+                  min={8}
+                  max={100}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {fontSizeRef.current}
+              </Typography>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+              <OpacityIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Text Opacity
+                </Typography>
+                <Slider
+                  value={typeof textOpacityRef.current === 'number' ? textOpacityRef.current : 1}
+                  onChange={handleTextOpacity}
+                  min={0.1}
+                  step={0.1}
+                  max={1}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {textOpacityRef.current*100}
+              </Typography>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+              <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw", transform: "rotate(270deg)"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Letter Spacing
+                </Typography>
+                <Slider
+                  value={typeof letterSpacingRef.current === 'number' ? letterSpacingRef.current : 2}
+                  onChange={handleLetterSpacing}
+                  min={-2}
+                  step={0.1}
+                  max={10}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {letterSpacingRef.current*10}
+              </Typography>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+              <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Line Spacing
+                </Typography>
+                <Slider
+                  value={typeof lineSpacingRef.current === 'number' ? lineSpacingRef.current : 2}
+                  onChange={handleLineSpacing}
+                  min={1}
+                  max={10}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {lineSpacingRef.current*10}
+              </Typography>
+            </Container>
+            <Divider sx={{width: "80%", mt: "4vh"}}/>
+          </Container>
+
+          {/* Background settings */}
+
+          <Container>
+            <Typography variant="h6" sx={{mt: "2vh"}}>Background</Typography>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+              <Brightness6RoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Brightness
+                </Typography>
+                <Slider
+                  value={typeof backgroundBrightnessRef.current === 'number' ? backgroundBrightnessRef.current : 1}
+                  onChange={handleBackgroundBrightness}
+                  min={0}
+                  step={0.1}
+                  max={1}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {backgroundBrightnessRef.current*100}
+              </Typography>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "column", mt: "2vh", alignItems: "center"}}>
+              <Box sx={{ display: "flex", flexDirection: "column" }}>
+                <Typography variant="caption" sx={{mt: "2vh", mb: "2vh"}}>
+                  Colour scheme
+                </Typography>
+                <Grid2 container spacing={2} justifyContent="center" width="100%">
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Monochrome" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}><SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon></Box></Button> {/* White - default */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Green" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(2)} onClick={() => handleBackgroundColour(2)}><Box sx={colourSchemeButton("rgb(6,118,3)")}><SubjectIcon sx={colourSchemeIconColour("rgb(6,118,3)")}></SubjectIcon></Box></Button> {/* Green */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Blue" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(3)} onClick={() => handleBackgroundColour(3)}><Box sx={colourSchemeButton("rgb(0,123,229)")}><SubjectIcon sx={colourSchemeIconColour("rgb(0,123,229)")}></SubjectIcon></Box></Button> {/* Blue */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Red" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(4)} onClick={() => handleBackgroundColour(4)}><Box sx={colourSchemeButton("rgb(211,46,63)")}><SubjectIcon sx={colourSchemeIconColour("rgb(221,46,63)")}></SubjectIcon></Box></Button> {/* Red */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Brown" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(5)} onClick={() => handleBackgroundColour(5)}><Box sx={colourSchemeButton("rgb(78,53,22)")}><SubjectIcon sx={colourSchemeIconColour("rgb(78,53,22)")}></SubjectIcon></Box></Button> {/* Brown */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Yellow" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(6)} onClick={() => handleBackgroundColour(6)}><Box sx={colourSchemeButton("rgb(251,192,45)")}><SubjectIcon sx={colourSchemeIconColour("rgb(251,192,45)")}></SubjectIcon></Box></Button> {/* Yellow */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Orange" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(7)} onClick={() => handleBackgroundColour(7)}><Box sx={colourSchemeButton("rgb(245,124,0)")}><SubjectIcon sx={colourSchemeIconColour("rgb(245,124,0)")}></SubjectIcon></Box></Button> {/* Orange */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Purple" placement="top">
+                      <Button variant="outlined" sx={colourSchemeSelection(8)} onClick={() => handleBackgroundColour(8)}><Box sx={colourSchemeButton("rgb(142,36,170)")}><SubjectIcon sx={colourSchemeIconColour("rgb(142,36,170)")}></SubjectIcon></Box></Button> {/* Purple */}
+                    </Tooltip>
+                  </Grid2>
+                </Grid2>
+              </Box>
+            </Container>
+
+            <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center", justifyContent: "center"}}>
+              <Button onClick={setDefaultSettings} sx={{mt: "2vh"}}>Reset settings</Button>
+            </Container>  
+
+          </Container>
+        </Box>
+      </Drawer>
     </Box>
   );
 }
