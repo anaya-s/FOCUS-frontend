@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import HomePage from "./home/HomePage";
 import LoginPage from "./login/LoginPage";
 import ResetPass from "./login/ResetPass";
+import Onboarding from "./onboarding/OnboardingPage";
 import Register from "./login/Register";
 import NavBar from "./navbar/NavBar";
 import Footer from "./home/Footer";
@@ -34,6 +35,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<Register />} />
             <Route path="/reset-password" element={<ResetPass />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="error/404" element={<NotFound />} />
             <Route path="error/403" element={<NotAuthorized />} />
             <Route path="/about" element={<AboutUs />} />

@@ -10,34 +10,33 @@ const theme = createTheme({
     },
     h2: {
       fontFamily: '"Istok Web", sans-serif',
-      fontweight: 1000,
+      fontWeight: 1000,
     },
     h3: {
       fontFamily: '"Istok Web", sans-serif',
       color: '#06760D',
-      fontweight: 500,
+      fontWeight: 500,
     },
     h5: {
       fontFamily: '"Istok Web", sans-serif',
       color: '#06760D',
-      fontweight: 10000,
+      fontWeight: 10000,
     },
     h6: {
       fontFamily: '"Istok Web", sans-serif',
       color: '000000',
-      fontweight: 500,
+      fontWeight: 500,
     },
     h7: {
       fontFamily: '"Istok Web", sans-serif',
-      fontweight: 1700,
+      fontWeight: 1700,
     },
     body1: {
       fontSize: '1rem',
     },
-
   },
   components: {
-    MuiDivider: { /* For text inbewteen MUI divider lines */
+    MuiDivider: {
       styleOverrides: {
         wrapper: {
           fontFamily: '"Istok Web", sans-serif',
