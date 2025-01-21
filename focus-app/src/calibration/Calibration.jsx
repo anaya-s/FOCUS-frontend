@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import webgazer from "../webgazer/webgazer";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
@@ -27,6 +28,9 @@ const CalibrationPage = () => {
 
   const [accuracy, setAccuracy] = useState(0);
   const [calibrationTimestamp, setCalibrationTimestamp] = useState(formatTimestamp(new Date(Date.now())));
+
+  const location = useLocation();
+  const { file, parsedText } = location.state || {};
 
   const [screenInfo, setScreenInfo] = useState({
     screenWidth: window.screen.width,
@@ -57,9 +61,6 @@ const CalibrationPage = () => {
   // Get screen resolution - DONE
   // Send it with calibration data
 
-  // Make webpage go full screen on calibration, then exit fullscreen after
-  //  Alert when trying to exit fullscreen - make sure to pause webgazer so nothing is recorded
-
   /* Change gap between calibration points if window size changes */
   useEffect(() => {
     const handleResize = () => {
@@ -70,6 +71,20 @@ const CalibrationPage = () => {
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize); // Cleanup on unmount
+  }, []);
+
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .custom-swal-container {
+        z-index: 1500; /* Set the desired z-index */
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
   }, []);
 
   const onFullscreenChange = useCallback((event) => {
@@ -96,6 +111,9 @@ const CalibrationPage = () => {
           allowOutsideClick: false,
           allowEscapeKey: false,
           confirmButtonText: '<span style="user-select: none; padding: 0">Return to Full Screen</span>',
+          customClass: {
+            container: 'custom-swal-container', // Apply the custom class
+          },
           willClose: async () => {
             await webgazer.begin(true);
             if (document.documentElement.requestFullscreen) {
@@ -141,7 +159,10 @@ const CalibrationPage = () => {
         confirmButtonColor: "#06760D",
         allowOutsideClick: false,
         allowEscapeKey: false,
-        confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>'
+        confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>',
+        customClass: {
+          container: 'custom-swal-container', // Apply the custom class
+        },
       });
 
 
@@ -395,7 +416,8 @@ const CalibrationPage = () => {
 
   const finishCalibration = () => {
     // Move to next webpage
-    toReadingPage();
+    console.log(file);
+    toReadingPage(file, parsedText);
   };
 
   if (isCalibrationGETLoading) {

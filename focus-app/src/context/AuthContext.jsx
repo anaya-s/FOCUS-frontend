@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
   );
   let [isAuthorized, setIsAuthorized] = useState(null);
 
-  const { toHome, toCalibration } = useNavigation();
+  const { toHome, toDrive } = useNavigation();
 
   let loginUser = async (email,password) => {
     let response = await fetch("http://127.0.0.1:8000/api/token/", {
@@ -40,7 +40,7 @@ export const AuthProvider = ({ children }) => {
       setAuthTokens(data);
       setUser(jwtDecode(data.access));
       localStorage.setItem("authTokens", JSON.stringify(data));
-      toCalibration();
+      toDrive();
     } else {
       alert("Credentials do not match");
     }

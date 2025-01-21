@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "../utils/navigation";
+import { useLocation } from 'react-router-dom';
+
 import webgazer from "../webgazer/webgazer.js";
 
-import { handleFileUpload, sendReadingProgress, SpeedReading } from "./SpeedReading";
+import NormalReading from "./NormalReading";
+import { sendReadingProgress, SpeedReading } from "./SpeedReading";
 
 /* MaterialUI Imports */
-import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2 } from "@mui/material";
+import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField } from "@mui/material";
 
 import {
   Menu as MenuIcon,
@@ -15,10 +18,15 @@ import {
   Brightness6Rounded as Brightness6RoundedIcon,
   FormatLineSpacingRounded as FormatLineSpacingRoundedIcon,
   Subject as SubjectIcon,
-  SpeedRounded as SpeedRoundedIcon
+  SpeedRounded as SpeedRoundedIcon,
+  SkipPreviousRounded as SkipPreviousRoundedIcon,
+  PlayArrowRounded as PlayArrowRoundedIcon,
+  PauseRounded as PauseRoundedIcon,
+  ArticleTwoTone as ArticleTwoToneIcon,
+  ZoomInRounded as ZoomInRoundedIcon
 } from '@mui/icons-material';
 
-function TextReaderPage(file) { // use this file parameter here, obtained from drive, to pass to handleFileUpload, instead of using an input button on this page
+function TextReaderPage() { 
   const videoRef = useRef(null);
   const socket = useRef(null);
   const [stream, setStream] = useState(null);
@@ -28,6 +36,11 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
   
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isLoading, setWebgazerLoading] = useState(true);
+
+  const location = useLocation();
+  const { file, parsedText } = location.state || {};
+  const fileNameRef = useRef(file.name);
+  const parsedTextRef = useRef(parsedText);
 
   /* Reading mode index
     1 - Normal reading
@@ -60,6 +73,11 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
   const backgroundColourRef = useRef([0, 0, 0]);
   const backgroundColourSelectionRef = useRef(1);
 
+  const pdfScaleRef = useRef(1);
+  const pdfCurrentPageRef = useRef(1);
+  const pdfTotalPagesRef = useRef(1);
+  const pdfSetPageRef = useRef(false);
+
   const colourSchemeSelection = (selection) => ({
     border: backgroundColourSelectionRef.current == selection ? "3px solid #06760D" : "normal"
   });
@@ -72,7 +90,7 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
     border: "1px solid #ccc",
     pt: "5px", pb: "5px",
     width: "2vw",
-    backgroundColor: invertTextColourRef.current ? colour : "white"
+    backgroundColor: readingMode !== 1 ? invertTextColourRef.current ? colour : "white" : colour
   });
 
   const colourSchemeIconColour = (colour) => ({
@@ -107,6 +125,15 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
     lineSpacingRef.current = event.target.value;
   };
 
+  const handlePdfScale = (event) => {
+    pdfScaleRef.current = event.target.value;
+  };
+
+  const handlePdfPageChange = (event) => {
+    pdfCurrentPageRef.current = event.target.value;
+    pdfSetPageRef.current = true;
+  };
+
   const setDefaultSettings = () => {
     fontStyleRef.current = fontOptions[3].value;
     fontSizeRef.current = 28;
@@ -118,6 +145,14 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
     backgroundColourRef.current = [0,0,0];
     backgroundColourSelectionRef.current = 1;
     highlightSpeedRef.current = 2;
+
+    pdfScaleRef.current = 1;
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handlePdfPageChange(e);
+    }
   };
 
   const handleBackgroundColour = (colour) => {
@@ -167,16 +202,32 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
 
   const highlightSpeedRef = useRef(2);
 
+  const pauseStatusRef = useRef(true);
+  const resetStatusRef = useRef(false);
 
-  const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef]);
+  const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef]); // Add more settings here
+  const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
 
+  const [pauseStatus, setPauseStatus] = useState(true);
 
   const handleHighlightSpeed = (event, newValue) => {
     highlightSpeedRef.current = newValue;
   };
 
   const handleReadingModeSelection = (mode) => () => {
+    pauseStatusRef.current = true;
+    setPauseStatus(pauseStatusRef.current);
     setReadingMode(mode);
+  };
+
+  const setPauseStatusValues = () => {
+    pauseStatusRef.current = !pauseStatusRef.current;
+    setPauseStatus(pauseStatusRef.current);
+  };
+
+  const resetHighlighting = () => {
+    setPauseStatusValues();
+    resetStatusRef.current = true;
   };
 
   const intervalRef = useRef(null);
@@ -187,7 +238,7 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
     setOpen(!open);
   };
 
-  const { toNotAuthorized } = useNavigation();
+  const { toNotAuthorized, toDrive } = useNavigation();
 
   useEffect(() => {
     window.scrollTo({ top: 0 }); // auto-scroll to the top
@@ -202,10 +253,6 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
       document.body.style.overflow = 'auto';
     };
   }, []);
-
-  const handleFileUploadWrapper = (e) => {
-    handleFileUpload(e.target.files[0]);
-  }
 
   const readingModeButtonSelection = (mode) => ({
     border: readingMode == mode ? "3px solid #06760D" : "normal"
@@ -389,8 +436,15 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
     <Box style={{marginTop: "15vh", justifyContent: "center"}}>
       <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video>
       <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
-        <SpeedReading textSettings={speedReadingSettings}/>
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "10px", backgroundColor: "white", mt: "-10vh", mr: open ? "2vw" : 0}}>
+        {/* Create all reading mode components here */}
+        {
+        readingMode === 1 ? <NormalReading file={file} textSettings={normalReadingSettings}/>
+        : readingMode === 2 ? <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>RSVP - Not Implemented Yet</Typography>
+        : readingMode === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
+        : readingMode === 4 ? <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>Line-by-line unblurring - Not Implemented Yet</Typography>
+        : <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>NPL Reading - Not Implemented Yet</Typography>
+        }
+        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "1.5vw", backgroundColor: "white", mt: "-7vh"}}>
           <Box sx={{backgroundColor: "white", zIndex: 1500, borderRadius: "5px", border: "1px solid #ccc", mt: "1vh"}}>
             <Tooltip title="Typography settings" placement="left">
               <IconButton 
@@ -406,6 +460,7 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
               <IconButton 
                   color="inherit"
                   sx={{zIndex: 1500}}
+                  onClick={toDrive}
                 >
                 <ExitToAppRoundedIcon sx={{ fontSize: "30px"}}/>
               </IconButton>
@@ -432,14 +487,6 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
         <Box sx={{overflowY: "auto", height: "85vh", userSelect: "none"}}> 
           <Container>
             <Typography variant="h4" sx={{mt: "4vh"}}>Settings</Typography>
-          </Container>
-
-          {/* TEMPORARY: to upload document - to be replaced with text reading modes */}
-          <Container>
-            <Typography variant="h6" sx={{mt: "2vh"}}>Upload document (TEMPORARY)</Typography>
-            <Typography variant="h7" sx={{mt: "2vh", mb: "2vh"}}>Accepted file types: .pdf, .docx, .txt</Typography>
-            <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileUploadWrapper}/>
-            <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>
 
           {/* Reading mode settings - display specific settings based on selected mode*/}
@@ -479,31 +526,88 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
             </Container>
 
             { readingMode === 1 ? (
-              <Typography variant="h7" sx={{mt: "2vh"}}>Normal Reading mode - not implemented yet</Typography> //Replace with specific settings for Reading Mode 1
+              <Box>
+                  <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+                    <ZoomInRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+                    <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                      <Typography variant="caption">
+                        Scale
+                      </Typography>
+                      <Slider
+                        value={typeof pdfScaleRef.current === 'number' ? pdfScaleRef.current : 1}
+                        onChange={handlePdfScale}
+                        min={0.5}
+                        step={0.1}
+                        max={2.0}
+                        sx={{ width: "15vw" }}
+                      />
+                    </Box>
+                    <Typography variant="h7"
+                      sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+                    >
+                      {parseInt(pdfScaleRef.current*100)}
+                    </Typography>
+                </Container>
+                <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+                  <TextField
+                    label="Page Number"
+                    type="number"
+                    value={pdfCurrentPageRef.current}
+                    onChange={(e) => pdfCurrentPageRef.current = e.target.value}
+                    onKeyDown={(e) => handleKeyPress(e)}
+                    onBlur={(e) => handlePdfPageChange(e)}
+                    slotProps={{ htmlInput: { min: 1, max: pdfTotalPagesRef.current } }}
+                    sx={{ width: '100px', mr: 2, '& .MuiInputLabel-root': {color: 'black', fontSize: "0.95rem"} }}
+                  />
+                  <Typography sx={{mr: "2vw"}}> / {pdfTotalPagesRef.current}</Typography>
+                  {/* <Button variant="contained">Go</Button> */}
+                </Container>
+              </Box>
             ): readingMode === 2 ? (
               <Typography variant="h7" sx={{mt: "2vh"}}>Speed reading (RSVP) - not implemented yet</Typography> //Replace with specific settings for Reading Mode 2
             ): readingMode === 3 ? (
-            <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
-              <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
-                <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
-                  <Typography variant="caption">
-                    Highlighting speed
-                  </Typography>
-                  <Slider
-                    value={typeof highlightSpeedRef.current === 'number' ? highlightSpeedRef.current : 2}
-                    onChange={handleHighlightSpeed}
-                    min={1}
-                    step={0.1}
-                    max={10}
-                    sx={{ width: "15vw" }}
-                  />
-                </Box>
-                <Typography variant="h7"
-                  sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
-                >
-                  {highlightSpeedRef.current*10}
+            <Box>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+              <Box sx={{ display: "flex", flexDirection: "column"}}>
+                <Typography variant="caption">
+                    Playback
                 </Typography>
+                <Grid2 container spacing={2} width="100%" sx={{mt: "1vh", alignItems: "center", justifyContent: "center"}}>
+                  <Grid2 item xs={4}>
+                    <Tooltip title={pauseStatus === true ? "Play" : "Pause"} placement="top">
+                      <Button variant={pauseStatus === true ? "contained" : "outlined"} sx={{color: pauseStatus === true ? "white" : "black"}} onClick={() => setPauseStatusValues()}>{pauseStatus === true ? <PlayArrowRoundedIcon/> : <PauseRoundedIcon/>}</Button> {/* Reading Mode 2 */}
+                    </Tooltip>
+                  </Grid2>
+                  <Grid2 item xs={4}>
+                    <Tooltip title="Start from beginning" placement="top">
+                      <Button variant="outlined" sx={{color: "black"}} onClick={() => resetHighlighting()}><SkipPreviousRoundedIcon/></Button> {/* Reading Mode 1 - default */}
+                    </Tooltip>
+                  </Grid2>
+                </Grid2>
+              </Box>
             </Container>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+                <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+                  <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                    <Typography variant="caption">
+                      Highlighting speed
+                    </Typography>
+                    <Slider
+                      value={typeof highlightSpeedRef.current === 'number' ? highlightSpeedRef.current : 2}
+                      onChange={handleHighlightSpeed}
+                      min={1}
+                      step={0.1}
+                      max={10}
+                      sx={{ width: "15vw" }}
+                    />
+                  </Box>
+                  <Typography variant="h7"
+                    sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+                  >
+                    {highlightSpeedRef.current*10}
+                  </Typography>
+              </Container>
+          </Box>
             ): readingMode === 4 ? (
             <Typography variant="h7" sx={{mt: "2vh"}}>Line by line unblurring - not implemented yet</Typography> //Replace with specific settings for Reading Mode 4
             ):
@@ -513,6 +617,7 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
           </Container>
 
           {/* Text layout settings */}
+          { readingMode !== 1 ? (
           <Container>
             <Typography variant="h6" sx={{mt: "2vh"}}>Text Layout</Typography>
 
@@ -625,6 +730,7 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
             </Container>
             <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>
+          ) : null}
 
           {/* Background settings */}
 
@@ -661,42 +767,42 @@ function TextReaderPage(file) { // use this file parameter here, obtained from d
                 <Grid2 container spacing={2} justifyContent="center" width="100%">
                   <Grid2 item xs={4}>
                     <Tooltip title="Monochrome" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}><SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon></Box></Button> {/* White - default */}
+                      <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* White - default */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Green" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(2)} onClick={() => handleBackgroundColour(2)}><Box sx={colourSchemeButton("rgb(6,118,3)")}><SubjectIcon sx={colourSchemeIconColour("rgb(6,118,3)")}></SubjectIcon></Box></Button> {/* Green */}
+                      <Button variant="outlined" sx={colourSchemeSelection(2)} onClick={() => handleBackgroundColour(2)}><Box sx={colourSchemeButton("rgb(6,118,3)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(6,118,3)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Green */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Blue" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(3)} onClick={() => handleBackgroundColour(3)}><Box sx={colourSchemeButton("rgb(0,123,229)")}><SubjectIcon sx={colourSchemeIconColour("rgb(0,123,229)")}></SubjectIcon></Box></Button> {/* Blue */}
+                      <Button variant="outlined" sx={colourSchemeSelection(3)} onClick={() => handleBackgroundColour(3)}><Box sx={colourSchemeButton("rgb(0,123,229)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(0,123,229)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Blue */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Red" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(4)} onClick={() => handleBackgroundColour(4)}><Box sx={colourSchemeButton("rgb(211,46,63)")}><SubjectIcon sx={colourSchemeIconColour("rgb(221,46,63)")}></SubjectIcon></Box></Button> {/* Red */}
+                      <Button variant="outlined" sx={colourSchemeSelection(4)} onClick={() => handleBackgroundColour(4)}><Box sx={colourSchemeButton("rgb(211,46,63)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(211,46,63)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Red */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Brown" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(5)} onClick={() => handleBackgroundColour(5)}><Box sx={colourSchemeButton("rgb(78,53,22)")}><SubjectIcon sx={colourSchemeIconColour("rgb(78,53,22)")}></SubjectIcon></Box></Button> {/* Brown */}
+                      <Button variant="outlined" sx={colourSchemeSelection(5)} onClick={() => handleBackgroundColour(5)}><Box sx={colourSchemeButton("rgb(78,53,22)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(78,53,22)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Brown */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Yellow" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(6)} onClick={() => handleBackgroundColour(6)}><Box sx={colourSchemeButton("rgb(251,192,45)")}><SubjectIcon sx={colourSchemeIconColour("rgb(251,192,45)")}></SubjectIcon></Box></Button> {/* Yellow */}
+                      <Button variant="outlined" sx={colourSchemeSelection(6)} onClick={() => handleBackgroundColour(6)}><Box sx={colourSchemeButton("rgb(251,192,45)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(251,192,45)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Yellow */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Orange" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(7)} onClick={() => handleBackgroundColour(7)}><Box sx={colourSchemeButton("rgb(245,124,0)")}><SubjectIcon sx={colourSchemeIconColour("rgb(245,124,0)")}></SubjectIcon></Box></Button> {/* Orange */}
+                      <Button variant="outlined" sx={colourSchemeSelection(7)} onClick={() => handleBackgroundColour(7)}><Box sx={colourSchemeButton("rgb(245,124,0)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(245,124,0)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Orange */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Purple" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(8)} onClick={() => handleBackgroundColour(8)}><Box sx={colourSchemeButton("rgb(142,36,170)")}><SubjectIcon sx={colourSchemeIconColour("rgb(142,36,170)")}></SubjectIcon></Box></Button> {/* Purple */}
+                      <Button variant="outlined" sx={colourSchemeSelection(8)} onClick={() => handleBackgroundColour(8)}><Box sx={colourSchemeButton("rgb(142,36,170)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(142,36,170)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Purple */}
                     </Tooltip>
                   </Grid2>
                 </Grid2>

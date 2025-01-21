@@ -84,6 +84,9 @@ function calculatePrecision(past50Array,div) {
         allowOutsideClick: false,
         allowEscapeKey: false,
         confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>',
+        customClass: {
+          container: 'custom-swal-container', // Apply the custom class
+        },
         willClose: () => {
           if (document.documentElement.requestFullscreen) {
             document.documentElement.requestFullscreen();

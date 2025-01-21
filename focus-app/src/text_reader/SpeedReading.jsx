@@ -1,17 +1,33 @@
-import { React, useState } from "react";
+import { React, useEffect, useState } from "react";
 
 import { reauthenticatingFetch } from "../utils/api";
 
-import { handlePdfFile, handleDocxFile, handleTxtFile } from "./textParsing";
+// import { handlePdfFile, handleDocxFile, handleTxtFile } from "./textParsing";
 
 import { Typography } from "@mui/material";
 
-let handleFileUpload, sendReadingProgress;
+let startSpeedReading, sendReadingProgress;
 
 export function SpeedReading({textSettings}) {
 
-
-  const [fontStyle, fontSize, textOpacity, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed] = textSettings.current;  
+  const [fontStyle, fontSize, textOpacity, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed, pauseStatus, resetStatus, documentName, parsedText] = textSettings.current;
+  
+  /* Text settings states */
+  const [backgroundColourState, setBackgroundColourState] = useState(backgroundColour);
+  const [backgroundBrightnessState, setBackgroundBrightnessState] = useState(backgroundBrightness);
+  const [fontStyleState, setFontStyleState] = useState(fontStyle);
+  const [fontSizeState, setFontSizeState] = useState(fontSize);
+  const [textOpacityState, setTextOpacityState] = useState(textOpacity);
+  const [letterSpacingState, setLetterSpacingState] = useState(letterSpacing);
+  const [lineSpacingState, setLineSpacingState] = useState(lineSpacing);
+  const [invertTextColourState, setInvertTextColourState] = useState(invertTextColour);
+  const [backgroundColourSelectionState, setBackgroundColourSelectionState] = useState(backgroundColourSelection);
+  const [highlightSpeedState, setHighlightSpeedState] = useState(highlightSpeed);
+  const [pauseStatusState, setPauseStatusState] = useState(pauseStatus);
+  const [resetStatusState, setResetStatusState] = useState(resetStatus);
+  const [documentNameState, setDocumentNameState] = useState(documentName);
+  const [parsedTextState, setParsedTextState] = useState(parsedText);
+  
 
   /* File handling */
   const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
@@ -20,6 +36,22 @@ export function SpeedReading({textSettings}) {
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
 
   const [fileName, setFileName] = useState("");
+
+  useEffect(() => {
+    if (parsedText.current) {
+      startSpeedReading(documentName.current, parsedText.current);
+    }
+  }, [parsedText]);
+
+  useEffect(() => {
+    if(resetStatus === true)
+    {
+      pauseStatus.current = true;
+      setCurrentLine(0);
+      setCurrentWord(0);
+      resetStatus.current = false;
+    }
+  }, [resetStatus]);
 
   sendReadingProgress = async () => {
     const bodyContents = { fileName: fileName, lineNumber: currentLine };
@@ -37,49 +69,48 @@ export function SpeedReading({textSettings}) {
     }
   };
 
-  /* TEMPORARY function that iterates through each element in 2D array (every word in every line)*/
-  const iterateWords = async (lines) => {
-    if (lines.length) {
-      for (let lineNo = currentLine; lineNo < lines.length; lineNo++) {
-        for (
-          let wordNo = currentWord;
-          wordNo < lines[lineNo].length;
-          wordNo++
-        ) {
-          setCurrentLine(lineNo);
-          setCurrentWord(wordNo);
-          await new Promise((resolve) =>
-            setTimeout(resolve, 1000 / highlightSpeed.current)
-          ); // set time interval
+/* Function that iterates through each element in 2D array (every word in every line) */
+const iterateWords = async (lines) => {
+  if (lines.length) {
+    for (let lineNo = currentLine; lineNo < lines.length; lineNo++) {
+      for (
+        let wordNo = currentWord;
+        wordNo < lines[lineNo].length;
+        wordNo++
+      ) {
+
+        if (pauseStatus.current) {
+          await new Promise((resolve) => {
+            const interval = setInterval(() => {
+              if (resetStatus.current) {
+                setCurrentLine(0);
+                setCurrentWord(0);
+                resetStatus.current = false;
+                lineNo = 0;
+                wordNo = 0;
+              }
+              if (!pauseStatus.current) {
+                clearInterval(interval);
+                resolve();
+              }
+            }, 100);
+          });
         }
+        setCurrentLine(lineNo);
+        setCurrentWord(wordNo);
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 / highlightSpeed.current)
+        ); // set time interval
       }
     }
-  };
+  }
+};
 
   /* Function which handles the uploading of files, detecting whether the file types are valid */
-  handleFileUpload = async (file) => {
-    setFileName(file.name);
-    var parsedText = [];
-    if (file) {
-      if (file.type === "application/pdf") {
-        // Check for .pdf file type
-        parsedText = await handlePdfFile(file);
-      } else if (
-        file.type ===
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      ) {
-        // Check for .docx file type
-        parsedText = await handleDocxFile(file);
-      } else if (file.type === "text/plain") {
-        // Check for .txt file type
-        parsedText = await handleTxtFile(file);
-      } else {
-        alert("Please upload a valid PDF, DOCX, or TXT file.");
-      }
-    }
-
-    setTextArray(parsedText);
-    iterateWords(parsedText); // run this if speed reading mode is enabled
+  startSpeedReading = async (fileName, text) => {
+    setFileName(fileName);
+    setTextArray(text);
+    iterateWords(text); // run this if speed reading mode is enabled
   };
 
   /* Function which manages the highlighting of words whilst reading - for speed reading mode */
@@ -130,9 +161,9 @@ export function SpeedReading({textSettings}) {
   return (
     <Typography
         sx={{
-            width: "95vw",
+            width: "92vw",
             height: "85vh",
-            minWidth: "95vw",
+            minWidth: "92vw",
             minHeight: "85vh",
             overflowY: "scroll",
             border: "1px solid #ccc",
@@ -148,4 +179,4 @@ export function SpeedReading({textSettings}) {
     );
 }
 
-export { handleFileUpload, sendReadingProgress };
+export { sendReadingProgress };

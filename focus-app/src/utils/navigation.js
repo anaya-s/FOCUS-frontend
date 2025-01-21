@@ -30,9 +30,10 @@ export function useNavigation() {
     toNotFound: () => navigate('error/404'),
     toNotAuthorized: () => navigate('error/403'),
 
-    toCalibration: () => navigate('/calibrate'),
-    toReadingPage: () => navigate('/reading'),
+    toCalibration: (file, parsedText) => navigate('/calibrate', { state: { file, parsedText } }),
+    toReadingPage: (file, parsedText) => navigate('/reading', { state: { file, parsedText } }),
     
+    toDrive: () => navigate('/drive'),
     
     toCustom: (path) => navigate(path), 
   };

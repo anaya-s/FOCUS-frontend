@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
+import { useNavigation } from "../utils/navigation";
 import {
   Drawer,
   Button,
@@ -27,6 +28,8 @@ import SearchIcon from "@mui/icons-material/Search";
 import DriveFileRenameOutlineRoundedIcon from "@mui/icons-material/DriveFileRenameOutlineRounded";
 import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import Swal from "sweetalert2";
+
+import { parseText } from "../text_reader/textParsing";
 
 function DocumentDrivePage() {
   /* Temporary data for document tiles - update this with real document data from backend */
@@ -75,6 +78,8 @@ function DocumentDrivePage() {
     },
   ];
 
+  const { toCalibration, toReadingPage } = useNavigation();
+
   const [fileDetails, setFileDetails] = useState(files);
 
   const sortAlphabetically = (files) =>
@@ -85,8 +90,8 @@ function DocumentDrivePage() {
 
   const filterStarred = (files) => files.filter((file) => file.isStarred);
 
-  const searchFiles = (files, query) => {
-    return files.filter((file) =>
+  const searchFiles = (query) => {
+    return fileDetails.filter((file) =>
       file.name.toLowerCase().includes(query.toLowerCase())
     );
   };
@@ -94,9 +99,7 @@ function DocumentDrivePage() {
   const [allDocButtonState, setAllDocButtonState] = useState(true);
   const [recentButtonState, setRecentButtonState] = useState(false);
   const [starredButtonState, setStarredButtonState] = useState(false);
-  const [documentTiles, setDocumentTiles] = useState(
-    sortAlphabetically(fileDetails)
-  );
+  const [documentTiles, setDocumentTiles] = useState(sortAlphabetically(fileDetails));
 
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -108,8 +111,10 @@ function DocumentDrivePage() {
       setRecentButtonState(false);
       setStarredButtonState(false);
 
-      setDocumentTiles(searchFiles(fileDetails, query));
+      setDocumentTiles(searchFiles(query));
     }
+
+    return documentTiles;
   };
 
   const handleEnterKeySearches = (e) => {
@@ -169,7 +174,7 @@ function DocumentDrivePage() {
           Swal.showValidationMessage('<span style="font-family: Isotok Web, sans-serif; font-size: 16px; color: black; user-select: none">Filename cannot be empty. Please try again.</span>');
           return false;
         }
-        if (documentTiles.some(file => file.name === newFilename + extension)) {
+        if (fileDetails.some(file => file.name === newFilename + extension)) {
           Swal.showValidationMessage('<span style="font-family: Isotok Web, sans-serif; font-size: 16px; color: black; user-select: none">A file with this name already exists. Please try again.</span>');
           return false;
         }
@@ -178,15 +183,17 @@ function DocumentDrivePage() {
     }).then((result) => {
       if (result.isConfirmed) {
         const newFilename = result.value;
-        const updatedTiles = [...documentTiles];
+        const updatedTiles = [...fileDetails];
         updatedTiles[index].name = newFilename;
         setFileDetails(sortAlphabetically(updatedTiles));
         setDocumentTiles(
           allDocButtonState
             ? sortAlphabetically(updatedTiles)
-            : recentButtonState
+          : recentButtonState
             ? sortByDate(updatedTiles)
-            : filterStarred(updatedTiles)
+          : starredButtonState
+            ? filterStarred(updatedTiles)
+          : showSearches(searchQuery)
         );
       }
     });
@@ -222,17 +229,54 @@ function DocumentDrivePage() {
       },
     }).then((result) => {
       if (result.isConfirmed) {
+        var fileNameToRemove = documentTiles[index].name;
         documentTiles.splice(index, 1);
-        setFileDetails(sortAlphabetically(documentTiles));
+        var updatedFiles = fileDetails.filter(file => file.name !== fileNameToRemove)
+        setFileDetails(updatedFiles);
         setDocumentTiles(
           allDocButtonState
-            ? sortAlphabetically(documentTiles)
-            : recentButtonState
-            ? sortByDate(documentTiles)
-            : filterStarred(documentTiles)
+            ? sortAlphabetically(updatedFiles)
+          : recentButtonState
+            ? sortByDate(updatedFiles)
+          : starredButtonState
+            ? filterStarred(updatedFiles)
+          : showSearches(searchQuery)
         );
       }
     });
+  };
+
+  // Change this to retrieve data from database instead of getting from new uploaded file
+  const handleFileSelection = async (e) => {
+
+    const file = e.target.files[0];
+    
+    // Parse the text from the file and send it the text reader page
+    const parsedText = await parseText(file);
+    
+    toCalibration(file, parsedText);
+    // OR (depending on user preferences)
+    // toReadingPage(file, parsedText);
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    
+    // Store file details and data in database
+
+    // Parse the text from the file and send it the text reader page
+    const parsedText = await parseText(file);
+    
+    toCalibration(file, parsedText);
+    // OR (depending on user preferences)
+    // toReadingPage(file, parsedText);
+  };
+
+  const fileInputRef = useRef(null);
+
+  // Function to handle button click and trigger file input click
+  const handleButtonClick = () => {
+    fileInputRef.current.click();
   };
 
   useEffect(() => {
@@ -331,6 +375,7 @@ function DocumentDrivePage() {
             variant="outlined"
             fullWidth
             startIcon={<CloudUpload sx={{ mr: 1 }} />}
+            onClick={handleButtonClick}
             sx={{
               mt: 4,
               mb: 5,
@@ -340,6 +385,13 @@ function DocumentDrivePage() {
               backgroundColor: "white",
             }}
           >
+            <input
+              type="file"
+              accept=".pdf,.docx,.txt"
+              onChange={handleFileUpload}
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+            />
             <div>
               <Typography variant="h6">Upload</Typography>
               <Typography variant="h7" color="textSecondary">
@@ -500,8 +552,19 @@ function DocumentDrivePage() {
                       : document.thumbnail
                   }
                   alt="Temp"
-                  sx={{ userSelect: "none" }}
+                  sx={{ userSelect: "none", cursor: "pointer"}}
+                  onClick={handleButtonClick} // let user choose whether to go calibration or reading pages!!! - default option can be chosen in settings
                 />
+                {/* TEMPORARY - Replace with menu asking whether to go directly to menu or calibration (depending on preferences set in settings)
+                   Also use text from database instead of new upload */}
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  onChange={handleFileSelection}
+                  ref={fileInputRef}
+                  style={{ display: 'none' }}
+                />
+                {/* END OF TEMPORARY CODE */}
                 <CardHeader
                   title={
                     <Typography variant="body2">
