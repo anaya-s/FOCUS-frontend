@@ -6,6 +6,7 @@ import webgazer from "../webgazer/webgazer.js";
 
 import NormalReading from "./NormalReading";
 import { sendReadingProgress, SpeedReading } from "./SpeedReading";
+import { sendReadingProgressRSVP, RSVP } from "./RSVP";
 
 /* MaterialUI Imports */
 import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField } from "@mui/material";
@@ -23,7 +24,8 @@ import {
   PlayArrowRounded as PlayArrowRoundedIcon,
   PauseRounded as PauseRoundedIcon,
   ArticleTwoTone as ArticleTwoToneIcon,
-  ZoomInRounded as ZoomInRoundedIcon
+  ZoomInRounded as ZoomInRoundedIcon,
+  TextIncrease as TextIncreaseIcon,
 } from '@mui/icons-material';
 
 function TextReaderPage() { 
@@ -198,20 +200,42 @@ function TextReaderPage() {
     }
   };
 
+  function findMaxWordsinLine(textArray) {
+    let maxWords = 0; // Variable to store the maximum number of words
+  
+    // Iterate through each line in the 2D array
+    for (let i = 0; i < textArray.length; i++) {
+      const wordCount = textArray[i].length; // Count the number of words in the current line
+  
+      // Update the maximum word count and line index if the current line has more words
+      if (wordCount > maxWords)
+        maxWords = wordCount;
+    }
+  
+    return maxWords;
+  }
+
   /* Reading mode parameters */
 
   const highlightSpeedRef = useRef(2);
+  const wordCountRef = useRef(1);
+  const maxWordCountRef = useRef(findMaxWordsinLine(parsedTextRef.current));
 
   const pauseStatusRef = useRef(true);
-  const resetStatusRef = useRef(false);
+  const resetStatusRef = useRef(true);
 
   const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef]); // Add more settings here
   const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const RSVPSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, maxWordCountRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
 
   const [pauseStatus, setPauseStatus] = useState(true);
 
   const handleHighlightSpeed = (event, newValue) => {
     highlightSpeedRef.current = newValue;
+  };
+
+  const handleWordCount = (event, newValue) => {
+    wordCountRef.current = newValue;
   };
 
   const handleReadingModeSelection = (mode) => () => {
@@ -226,7 +250,8 @@ function TextReaderPage() {
   };
 
   const resetHighlighting = () => {
-    setPauseStatusValues();
+    pauseStatusRef.current = true;
+    setPauseStatus(pauseStatusRef.current);
     resetStatusRef.current = true;
   };
 
@@ -273,7 +298,7 @@ function TextReaderPage() {
         }, 250);
 
         webgazer.params.showVideo = false;
-        webgazer.params.showGazeDot = true;
+        webgazer.params.showGazeDot = false;
         webgazer.params.showVideoPreview = false;
         webgazer.params.saveDataAcrossSessions = false;
         webgazer.setRegression("weightedRidge");
@@ -355,43 +380,66 @@ function TextReaderPage() {
     };
   }, [streamObtained]);
 
-  const sendVideoFrame = useCallback((xCoord, yCoord) => {
-    return new Promise((resolve, reject) => {
-    if (
-      videoRef.current &&
-      socket.current &&
-      socket.current.readyState === WebSocket.OPEN
-    ) {
-      const canvas = document.createElement("canvas");
-      canvas.width = videoRef.current.videoWidth // 640p
-      canvas.height = videoRef.current.videoHeight // 480p
-      const context = canvas.getContext("2d", { willReadFrequently: true });
-      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+  // // FIX?
+  // useEffect(() => {
+  //   if(readingMode !== 4)
+  //     document.getElementById(webgazer.params.gazeDotId).style.display = "hidden"; // hide the gaze dot if face is not detected
+  //   else
+  //     document.getElementById(webgazer.params.gazeDotId).style.display = "auto"; // hide the gaze dot if face is not detected
+  // },[readingMode]);
 
-      if(!(xCoord && yCoord))
-        document.getElementById(webgazer.params.gazeDotId).style.display = "hidden"; // hide the gaze dot if face is not detected
+  var total_frames = 0;
 
-      const timestamp = Date.now(); // Get current timestamp of current frame
-
-      const frame = canvas.toDataURL("image/jpeg");
-
-      // Store image data and timestamp in framesData array
-      setFramesData((prevFrames) => [
-        ...prevFrames,
-        { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord},
-      ]);
-
-      // Send the frame via WebSocket
-      socket.current.send(
-        JSON.stringify({
-          frame: frame,
-          timestamp: timestamp,
-          xCoordinatePx: xCoord,
-          yCoordinatePx: yCoord
-        })
-      );
-    }
-  })}, []);
+  const sendVideoFrame = useCallback(async(xCoord, yCoord) => {
+    const processFrame = () => {
+        if (
+          videoRef.current &&
+          socket.current &&
+          socket.current.readyState === WebSocket.OPEN
+        ) {
+          const canvas = document.createElement("canvas");
+          canvas.width = videoRef.current.videoWidth; // 640p
+          canvas.height = videoRef.current.videoHeight; // 480p
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+  
+          if (!(xCoord && yCoord)) {
+            document.getElementById(webgazer.params.gazeDotId).style.display = "hidden"; // hide the gaze dot if face is not detected
+          }
+  
+          const timestamp = Date.now(); // Get current timestamp of current frame
+  
+          const frame = canvas.toDataURL("image/jpeg");
+  
+          // Store image data and timestamp in framesData array
+          setFramesData((prevFrames) => [
+            ...prevFrames,
+            { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
+          ]);
+  
+          // Send the frame via WebSocket
+          socket.current.send(
+            JSON.stringify({
+              frame: frame,
+              timestamp: timestamp,
+              xCoordinatePx: xCoord,
+              yCoordinatePx: yCoord,
+            })
+          );
+  
+          total_frames += 1;
+          if (total_frames % 30 === 0) {
+            console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp);
+          }
+        }
+      
+      // Request the next frame
+      requestAnimationFrame(processFrame);
+    };
+  
+    // Start the frame processing loop
+    requestAnimationFrame(processFrame);
+  }, []);
 
   useEffect(() => {
     if (stream) {
@@ -439,7 +487,7 @@ function TextReaderPage() {
         {/* Create all reading mode components here */}
         {
         readingMode === 1 ? <NormalReading file={file} textSettings={normalReadingSettings}/>
-        : readingMode === 2 ? <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>RSVP - Not Implemented Yet</Typography>
+        : readingMode === 2 ? <RSVP textSettings={RSVPSettings}/>
         : readingMode === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
         : readingMode === 4 ? <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>Line-by-line unblurring - Not Implemented Yet</Typography>
         : <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>NPL Reading - Not Implemented Yet</Typography>
@@ -563,9 +611,7 @@ function TextReaderPage() {
                   {/* <Button variant="contained">Go</Button> */}
                 </Container>
               </Box>
-            ): readingMode === 2 ? (
-              <Typography variant="h7" sx={{mt: "2vh"}}>Speed reading (RSVP) - not implemented yet</Typography> //Replace with specific settings for Reading Mode 2
-            ): readingMode === 3 ? (
+            ): readingMode === 2 | readingMode === 3 ? (
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <Box sx={{ display: "flex", flexDirection: "column"}}>
@@ -596,7 +642,7 @@ function TextReaderPage() {
                       value={typeof highlightSpeedRef.current === 'number' ? highlightSpeedRef.current : 2}
                       onChange={handleHighlightSpeed}
                       min={1}
-                      step={0.1}
+                      step={readingMode === 1 ? 0.1 : 1}
                       max={10}
                       sx={{ width: "15vw" }}
                     />
@@ -604,9 +650,32 @@ function TextReaderPage() {
                   <Typography variant="h7"
                     sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
                   >
-                    {highlightSpeedRef.current*10}
+                    {readingMode === 1 ? highlightSpeedRef.current*10 : highlightSpeedRef.current}
                   </Typography>
               </Container>
+              { readingMode === 2 ? (
+                <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+                  <TextIncreaseIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+                    <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                      <Typography variant="caption">
+                        Word count
+                      </Typography>
+                      <Slider
+                        value={typeof wordCountRef.current === 'number' ? wordCountRef.current : 1}
+                        onChange={handleWordCount}
+                        min={1}
+                        step={1}
+                        max={maxWordCountRef.current}
+                        sx={{ width: "15vw" }}
+                      />
+                    </Box>
+                    <Typography variant="h7"
+                      sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+                    >
+                      {wordCountRef.current}
+                    </Typography>
+                </Container>
+              ) : null }
           </Box>
             ): readingMode === 4 ? (
             <Typography variant="h7" sx={{mt: "2vh"}}>Line by line unblurring - not implemented yet</Typography> //Replace with specific settings for Reading Mode 4
@@ -664,6 +733,7 @@ function TextReaderPage() {
               </Typography>
             </Container>
 
+            { readingMode !== 2 ? (
             <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <OpacityIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
@@ -685,6 +755,7 @@ function TextReaderPage() {
                 {textOpacityRef.current*100}
               </Typography>
             </Container>
+            ) : null }
 
             <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw", transform: "rotate(270deg)"}}/>
@@ -708,6 +779,7 @@ function TextReaderPage() {
               </Typography>
             </Container>
 
+            { readingMode !== 2 ? (
             <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
@@ -728,6 +800,7 @@ function TextReaderPage() {
                 {lineSpacingRef.current*10}
               </Typography>
             </Container>
+            ) : null}
             <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>
           ) : null}

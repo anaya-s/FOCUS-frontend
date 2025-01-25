@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf'; // For rendering PDF files
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { Box, TextField, Button, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -21,37 +21,39 @@ function NormalReading({ file, textSettings }) {
     pdfCurrentPage.current = 1;
   };
 
-// Intersection Observer to track the visible page
-useEffect(() => {
-  const threshold = pdfScale.current >= 1.3 ? 0.4 : 0.7; // Adjust threshold based on pdfScale
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const visiblePageNumber = Number(entry.target.dataset.pageNumber);
-          setPageNumber(visiblePageNumber);
-          previousPageNumber.current = visiblePageNumber; // Update the previous valid page number
-          pdfCurrentPage.current = visiblePageNumber;
-        }
-      });
-    },
-    {
-      root: boxRef.current,
-      rootMargin: '0px',
-      threshold: threshold,
-    }
-  );
+  // Intersection Observer to track the visible page
+  useEffect(() => {
+    const threshold = pdfScale.current >= 1.3 ? 0.4 : 0.7; // Adjust threshold based on pdfScale
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const visiblePageNumber = Number(entry.target.dataset.pageNumber);
+            setPageNumber(visiblePageNumber);
+            previousPageNumber.current = visiblePageNumber; // Update the previous valid page number
+            pdfCurrentPage.current = visiblePageNumber;
+          }
+        });
+      },
+      {
+        root: boxRef.current,
+        rootMargin: '0px',
+        threshold: threshold,
+      }
+    );
 
-  pageRefs.current.forEach(pageRef => {
-    if (pageRef) observer.observe(pageRef);
-  });
-
-  return () => {
-    pageRefs.current.forEach(pageRef => {
-      if (pageRef) observer.unobserve(pageRef);
+    // Reverse the order of pageRefs before observing
+    const reversedPageRefs = [...pageRefs.current].reverse();
+    reversedPageRefs.forEach(pageRef => {
+      if (pageRef) observer.observe(pageRef);
     });
-  };
-}, [pdfScale.current, numPages]);
+
+    return () => {
+      reversedPageRefs.forEach(pageRef => {
+        if (pageRef) observer.unobserve(pageRef);
+      });
+    };
+  }, [pdfScale.current, numPages]);
 
   useEffect(() => {
     if(pdfSetPage.current) {
@@ -83,20 +85,6 @@ useEffect(() => {
 
   return (
     <Box>
-      {/* Move this to Settings slider in TextReader */}
-      {/* <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-        <TextField
-          label="Page Number"
-          type="number"
-          value={pageNumber}
-          onChange={(e) => setPageNumber(e.target.value)}
-          onBlur={handlePageChange}
-          inputProps={{ min: 1, max: numPages }}
-          sx={{ width: '100px', mr: 2 }}
-        />
-        <Typography sx={{mr: "2vw"}}> / {numPages}</Typography>
-        <Button variant="contained" onClick={handlePageChange}>Go</Button>
-      </Box> */}
       <Box sx={{
         width: "92vw",
         height: "85vh",

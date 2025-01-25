@@ -4,30 +4,13 @@ import { reauthenticatingFetch } from "../utils/api";
 
 // import { handlePdfFile, handleDocxFile, handleTxtFile } from "./textParsing";
 
-import { Typography } from "@mui/material";
+import { Typography, Box } from "@mui/material";
 
 let startSpeedReading, sendReadingProgress;
 
 export function SpeedReading({textSettings}) {
 
   const [fontStyle, fontSize, textOpacity, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed, pauseStatus, resetStatus, documentName, parsedText] = textSettings.current;
-  
-  /* Text settings states */
-  const [backgroundColourState, setBackgroundColourState] = useState(backgroundColour);
-  const [backgroundBrightnessState, setBackgroundBrightnessState] = useState(backgroundBrightness);
-  const [fontStyleState, setFontStyleState] = useState(fontStyle);
-  const [fontSizeState, setFontSizeState] = useState(fontSize);
-  const [textOpacityState, setTextOpacityState] = useState(textOpacity);
-  const [letterSpacingState, setLetterSpacingState] = useState(letterSpacing);
-  const [lineSpacingState, setLineSpacingState] = useState(lineSpacing);
-  const [invertTextColourState, setInvertTextColourState] = useState(invertTextColour);
-  const [backgroundColourSelectionState, setBackgroundColourSelectionState] = useState(backgroundColourSelection);
-  const [highlightSpeedState, setHighlightSpeedState] = useState(highlightSpeed);
-  const [pauseStatusState, setPauseStatusState] = useState(pauseStatus);
-  const [resetStatusState, setResetStatusState] = useState(resetStatus);
-  const [documentNameState, setDocumentNameState] = useState(documentName);
-  const [parsedTextState, setParsedTextState] = useState(parsedText);
-  
 
   /* File handling */
   const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
@@ -44,14 +27,20 @@ export function SpeedReading({textSettings}) {
   }, [parsedText]);
 
   useEffect(() => {
-    if(resetStatus === true)
+    if(resetStatus.current === true)
     {
-      pauseStatus.current = true;
-      setCurrentLine(0);
-      setCurrentWord(0);
-      resetStatus.current = false;
+        setCurrentWord(0);
+        setCurrentLine(0);
+        resetStatus.current = false;
     }
-  }, [resetStatus]);
+  }, [resetStatus.current]);
+
+  useEffect(() => {
+    if(pauseStatus.current === false)
+    {
+      iterateWords(textArray);
+    }
+  }, [pauseStatus.current]);
 
   sendReadingProgress = async () => {
     const bodyContents = { fileName: fileName, lineNumber: currentLine };
@@ -80,21 +69,7 @@ const iterateWords = async (lines) => {
       ) {
 
         if (pauseStatus.current) {
-          await new Promise((resolve) => {
-            const interval = setInterval(() => {
-              if (resetStatus.current) {
-                setCurrentLine(0);
-                setCurrentWord(0);
-                resetStatus.current = false;
-                lineNo = 0;
-                wordNo = 0;
-              }
-              if (!pauseStatus.current) {
-                clearInterval(interval);
-                resolve();
-              }
-            }, 100);
-          });
+          break;
         }
         setCurrentLine(lineNo);
         setCurrentWord(wordNo);
@@ -110,7 +85,7 @@ const iterateWords = async (lines) => {
   startSpeedReading = async (fileName, text) => {
     setFileName(fileName);
     setTextArray(text);
-    iterateWords(text); // run this if speed reading mode is enabled
+    pauseStatus.current = true;
   };
 
   /* Function which manages the highlighting of words whilst reading - for speed reading mode */
@@ -174,7 +149,17 @@ const iterateWords = async (lines) => {
             letterSpacing: letterSpacing.current
         }}
         >
-            {getFormattedText()} {/* Shows parsed text from uploaded file - speed reading mode*/}
+            {textArray.length === 0 ? (
+        <Box display="flex" flexDirection="column" justifyContent="space-between" alignItems="center">
+          <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No text available to display.</Typography>
+          <Typography variant="h7"sx={{ marginBottom: "2vh"}}>This may be the case if your document:</Typography>
+          <Typography variant="h6"sx={{ marginBottom: "2vh"}}>• Only contains image/graphics (e.g. handwritten text)</Typography>
+          <Typography variant="h6"sx={{ marginBottom: "2vh"}}>• Is an empty document</Typography>
+          <Typography variant="h7"sx={{ marginBottom: "2vh"}}>Please try another reading mode.</Typography>
+        </Box>
+      ) : (
+        getFormattedText()
+      )}
         </Typography>
     );
 }
