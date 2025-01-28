@@ -7,9 +7,10 @@ import webgazer from "../webgazer/webgazer.js";
 import NormalReading from "./NormalReading";
 import { sendReadingProgress, SpeedReading } from "./SpeedReading";
 import { sendReadingProgressRSVP, RSVP } from "./RSVP";
+import { sendReadingProgressLineUnblur, LineUnblur } from "./LineUnblur";
 
 /* MaterialUI Imports */
-import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField } from "@mui/material";
+import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox } from "@mui/material";
 
 import {
   Menu as MenuIcon,
@@ -29,10 +30,10 @@ import {
 } from '@mui/icons-material';
 
 function TextReaderPage() { 
-  const videoRef = useRef(null);
+  // const videoRef = useRef(null);
   const socket = useRef(null);
-  const [stream, setStream] = useState(null);
-  const [streamObtained, setStreamStatus] = useState(false);
+  // const [stream, setStream] = useState(null);
+  // const [streamObtained, setStreamStatus] = useState(false);
   const [connectionOpen, setStatusConn] = useState(false);
   const [framesData, setFramesData] = useState([]);
   
@@ -141,12 +142,28 @@ function TextReaderPage() {
     fontSizeRef.current = 28;
     textOpacityRef.current = 0.5;
     letterSpacingRef.current = 0;
+
+    if(readingMode === 4)
+      lineSpacingRef.current = 7;
+    else
     lineSpacingRef.current = 2;
+
     backgroundBrightnessRef.current = 0;
     invertTextColourRef.current = false;
     backgroundColourRef.current = [0,0,0];
     backgroundColourSelectionRef.current = 1;
-    highlightSpeedRef.current = 2;
+
+    if(readingMode === 2)
+      highlightSpeedRef.current = 5;
+    else
+      highlightSpeedRef.current = 2;
+
+    wordCountRef.current = 1;
+    
+    setPrevLineUnblur(false);
+    prevLineUnblurRef.current = false;
+    setAutoScroll(true);
+    autoScrollRef.current = false;
 
     pdfScaleRef.current = 1;
   };
@@ -220,13 +237,20 @@ function TextReaderPage() {
   const highlightSpeedRef = useRef(2);
   const wordCountRef = useRef(1);
   const maxWordCountRef = useRef(findMaxWordsinLine(parsedTextRef.current));
+  const [yCoord, setYCoord] = useState(0);
+  const yCoordRef = useRef(yCoord);
+  const [prevLineUnblur, setPrevLineUnblur] = useState(false);
+  const prevLineUnblurRef = useRef(prevLineUnblur);
+  const [autoScroll, setAutoScroll] = useState(true);
+  const autoScrollRef = useRef(autoScroll);
 
   const pauseStatusRef = useRef(true);
   const resetStatusRef = useRef(true);
 
-  const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef]); // Add more settings here
+  const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef]);
   const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
-  const RSVPSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, maxWordCountRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
 
   const [pauseStatus, setPauseStatus] = useState(true);
 
@@ -255,6 +279,21 @@ function TextReaderPage() {
     resetStatusRef.current = true;
   };
 
+  const handleYCoord = (yCoord) => {
+    yCoordRef.current = yCoord;
+    setYCoord(yCoordRef.current);
+  };
+  
+  const handlePrevLineUnblur = () => {
+    prevLineUnblurRef.current = !prevLineUnblurRef.current;
+    setPrevLineUnblur(prevLineUnblurRef.current);
+  };
+
+  const handleAutoScroll = () => {
+    autoScrollRef.current = !autoScrollRef.current;
+    setAutoScroll(autoScrollRef.current);
+  };
+
   const intervalRef = useRef(null);
 
   const [open, setOpen] = useState(false);
@@ -264,6 +303,18 @@ function TextReaderPage() {
   };
 
   const { toNotAuthorized, toDrive } = useNavigation();
+
+  useEffect(() => {
+    if(readingMode === 4)
+      lineSpacingRef.current = 7;
+    else
+      lineSpacingRef.current = 2;
+
+      if(readingMode === 2)
+        highlightSpeedRef.current = 5;
+      else
+        highlightSpeedRef.current = 2;
+  }, [readingMode]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 }); // auto-scroll to the top
@@ -287,7 +338,6 @@ function TextReaderPage() {
   useEffect(() => {
     const initializeWebGazer = async () => {
       setWebgazerLoading(true);
-      try {
         const loadingInterval = setInterval(() => {
           setLoadingProgress((prevProgress) => {
             if (prevProgress >= 100) {
@@ -298,9 +348,10 @@ function TextReaderPage() {
         }, 250);
 
         webgazer.params.showVideo = false;
-        webgazer.params.showGazeDot = false;
+        webgazer.params.showGazeDot = true;
         webgazer.params.showVideoPreview = false;
         webgazer.params.saveDataAcrossSessions = false;
+        webgazer.params.showFaceOverlay = false;
         webgazer.setRegression("weightedRidge");
 
         // change moveTickSize, videoViewerWidth and videoViewerHeight for accuracy
@@ -326,37 +377,35 @@ function TextReaderPage() {
         }
 
         /* Fetch the video stream from Webgazer */
-        const intervalId = setInterval(() => {
-          const stream = webgazer.getVideoStream();
-          if (stream !== null) {
-            setStream(stream);
-            setStreamStatus(true);
-            videoRef.current.srcObject = stream;
-            clearInterval(intervalId); // Stop checking once stream is available
-          }
-        }, 500);
+      //   const intervalId = setInterval(() => {
+      //     const stream = webgazer.getVideoStream();
+      //     if (stream !== null) {
+      //       setStream(stream);
+      //       setStreamStatus(true);
+      //       videoRef.current.srcObject = stream;
+      //       clearInterval(intervalId); // Stop checking once stream is available
+      //     }
+      //   }, 500);
 
-      } catch (error) {
-        console.error("Error initializing WebGazer:", error);
-      }
+      // } catch (error) {
+      //   console.error("Error initializing WebGazer:", error);
+      // }
 
       setWebgazerLoading(false);
+      clearInterval(loadingInterval);
+      console.log("WebGazer initialized successfully");
     };
 
     initializeWebGazer();
 
-    // Cleanup when component unmounts
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
   }, []);
 
   useEffect(() => {
-    if (stream && !socket.current) {
+    if (!socket.current && !isLoading) {
       const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
       socket.current = new WebSocket(`ws://localhost:8000/ws/video/?token=${token}`);
+
+      console.log("Connecting to WebSocket...");
 
       socket.current.onopen = () => setStatusConn(true);
       socket.current.onclose = () => {
@@ -371,14 +420,12 @@ function TextReaderPage() {
         socket.current.close();
         socket.current = null;
       }
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
+
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [streamObtained]);
+  }, [isLoading]);
 
   // // FIX?
   // useEffect(() => {
@@ -389,71 +436,66 @@ function TextReaderPage() {
   // },[readingMode]);
 
   var total_frames = 0;
+  var previous_frame = 0;
+  var previous_time = 0;
 
-  const sendVideoFrame = useCallback(async(xCoord, yCoord) => {
-    const processFrame = () => {
-        if (
-          videoRef.current &&
-          socket.current &&
-          socket.current.readyState === WebSocket.OPEN
-        ) {
-          const canvas = document.createElement("canvas");
-          canvas.width = videoRef.current.videoWidth; // 640p
-          canvas.height = videoRef.current.videoHeight; // 480p
-          const context = canvas.getContext("2d", { willReadFrequently: true });
-          context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-  
-          if (!(xCoord && yCoord)) {
-            document.getElementById(webgazer.params.gazeDotId).style.display = "hidden"; // hide the gaze dot if face is not detected
-          }
-  
-          const timestamp = Date.now(); // Get current timestamp of current frame
-  
-          const frame = canvas.toDataURL("image/jpeg");
-  
-          // Store image data and timestamp in framesData array
-          setFramesData((prevFrames) => [
-            ...prevFrames,
-            { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
-          ]);
-  
-          // Send the frame via WebSocket
-          socket.current.send(
-            JSON.stringify({
-              frame: frame,
-              timestamp: timestamp,
-              xCoordinatePx: xCoord,
-              yCoordinatePx: yCoord,
-            })
-          );
-  
-          total_frames += 1;
-          if (total_frames % 30 === 0) {
-            console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp);
-          }
-        }
-      
-      // Request the next frame
-      requestAnimationFrame(processFrame);
-    };
-  
-    // Start the frame processing loop
-    requestAnimationFrame(processFrame);
-  }, []);
+// Initialize state for previous frame data URL
+const previousFrameDataUrl = useRef(null);
 
-  useEffect(() => {
-    if (stream) {
+const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
+  if (socket.current && socket.current.readyState === WebSocket.OPEN) {
+    const timestamp = Date.now(); // Get current timestamp of current frame
+    const frame = canvas.toDataURL("image/jpeg");
 
-      webgazer.setGazeListener(async(data) => { /* Start gaze coordinate tracker and obtain gaze coordinates */
-        if (data) {
-          webgazer.util.bound(data);
-          await sendVideoFrame(data.x,data.y); // Send coordinates data with frame
-        }
-        else
-          await sendVideoFrame(); // Send no coordinates with frame if face is not detected
-      });
+    // Compare current frame with the previous frame
+    if (frame !== previousFrameDataUrl.current) {
+      // Store image data and timestamp in framesData array
+      setFramesData((prevFrames) => [
+        ...prevFrames,
+        { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
+      ]);
+
+      // Send the frame via WebSocket
+      socket.current.send(
+        JSON.stringify({
+          frame: frame,
+          timestamp: timestamp,
+          xCoordinatePx: xCoord,
+          yCoordinatePx: yCoord,
+        })
+      );
+
+      total_frames += 1;
+      if (total_frames === 1) {
+        previous_time = timestamp;
+        previous_frame = total_frames;
+      }
+      if (total_frames % 30 === 0) {
+        window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
+        window.console.log("FPS: ", (total_frames - previous_frame) / ((timestamp - previous_time) / 1000));
+        previous_frame = total_frames;
+        previous_time = timestamp;
+      }
+
+      // Update the previous frame data URL
+      previousFrameDataUrl.current = frame;
     }
-  }, [streamObtained]);
+
+    handleYCoord(yCoord);
+  }
+}, []);
+
+useEffect(() => {
+  if (connectionOpen) {
+    webgazer.setGazeListener((data, canvas) => {
+      if (data) {
+        sendVideoFrame(data.x, data.y, canvas);
+      } else {
+        sendVideoFrame(null, null, canvas);
+      }
+    });
+  }
+}, [connectionOpen, sendVideoFrame]);
 
   if (isLoading) {
     return (
@@ -482,15 +524,15 @@ function TextReaderPage() {
 
   return (
     <Box style={{marginTop: "15vh", justifyContent: "center"}}>
-      <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video>
+      {/* <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video> */}
       <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
         {/* Create all reading mode components here */}
         {
         readingMode === 1 ? <NormalReading file={file} textSettings={normalReadingSettings}/>
         : readingMode === 2 ? <RSVP textSettings={RSVPSettings}/>
         : readingMode === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
-        : readingMode === 4 ? <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>Line-by-line unblurring - Not Implemented Yet</Typography>
-        : <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>NPL Reading - Not Implemented Yet</Typography>
+        : readingMode === 4 ? <LineUnblur textSettings={lineUnblurSettings}/>
+        : <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>NLP Reading - Not Implemented Yet</Typography>
         }
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "1.5vw", backgroundColor: "white", mt: "-7vh"}}>
           <Box sx={{backgroundColor: "white", zIndex: 1500, borderRadius: "5px", border: "1px solid #ccc", mt: "1vh"}}>
@@ -573,7 +615,7 @@ function TextReaderPage() {
               </Box>
             </Container>
 
-            { readingMode === 1 ? (
+            { readingMode === 1 ? ( // Normal render
               <Box>
                   <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
                     <ZoomInRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
@@ -611,7 +653,7 @@ function TextReaderPage() {
                   {/* <Button variant="contained">Go</Button> */}
                 </Container>
               </Box>
-            ): readingMode === 2 | readingMode === 3 ? (
+            ): readingMode === 2 | readingMode === 3 ? ( // Speed reading
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <Box sx={{ display: "flex", flexDirection: "column"}}>
@@ -677,9 +719,26 @@ function TextReaderPage() {
                 </Container>
               ) : null }
           </Box>
-            ): readingMode === 4 ? (
-            <Typography variant="h7" sx={{mt: "2vh"}}>Line by line unblurring - not implemented yet</Typography> //Replace with specific settings for Reading Mode 4
-            ):
+            ): readingMode === 4 ? ( // Line-by-line unblurring
+            <Box>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+                <Tooltip title="Reveal the lines above the highlighted one" placement="left">  
+                  <Checkbox checked={prevLineUnblur} onChange={handlePrevLineUnblur}/>
+                  <Typography variant="caption" sx={{ml: "1vw"}}>
+                    Unblur previously viewed lines
+                  </Typography>
+                </Tooltip>
+              </Container>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+                <Tooltip title="Scrolls down automatically when you look at the bottom of the text." placement="left">  
+                  <Checkbox checked={autoScroll} onChange={handleAutoScroll}/>
+                  <Typography variant="caption" sx={{ml: "1vw"}}>
+                    Auto-scroll
+                  </Typography>
+                </Tooltip>
+              </Container>
+            </Box> 
+            ): // NLP reading
             <Typography variant="h7" sx={{mt: "2vh"}}>NLP Reading - not implemented yet</Typography> //Replace with specific settings for Reading Mode 5
             }
             <Divider sx={{width: "80%", mt: "4vh"}}/>

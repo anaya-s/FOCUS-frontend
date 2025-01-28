@@ -65,8 +65,8 @@ const CalibrationPage = () => {
   useEffect(() => {
     const handleResize = () => {
       // update the gaps on resize
-      setGap(window.innerWidth / 11);
-      setRowGap(window.innerWidth / 6);
+      setGap(window.innerWidth / 12);
+      setRowGap(window.innerWidth / 5);
     };
 
     window.addEventListener("resize", handleResize);
@@ -394,7 +394,7 @@ const CalibrationPage = () => {
       case 3:
         return "#06760D";
       default:
-        return "transparent";
+        return "white";
     }
   };
 
@@ -510,26 +510,26 @@ const CalibrationPage = () => {
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
+        flexDirection: "row",
         height: "100vh",
-        backgroundColor: "#f9f9f9",
         userSelect: "none",
-        paddingTop: "35px"
+        marginTop: "15vh"
       }}
     >
       <div
         id = "calibrationArea"
         style={{
-          width: "100%",
+          width: "92vw",
           height: "85vh",
+          minWidth: "92vw",
+          minHeight: "85vh",
           border: "2px dashed #06760D",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           padding: "10px",
           boxSizing: "border-box",
+          backgroundColor: "#f9f9f9",
         }}
       >
         <Typography id="countdown" variant="h3" sx={{display: "none"}}>5</Typography>
@@ -564,6 +564,7 @@ const CalibrationPage = () => {
           ))}
         </div>
       </div>
+      <Box sx={{ ml: "1.5vw", backgroundColor: "#f9f9f9", background: 'repeating-linear-gradient(45deg, white, white 10px, #06760D 10px, #06760D 13px)', border: "2px dashed #06760D", height: "85vh", width: "8vw"}}></Box>
     </div>
   );
 };

@@ -5,7 +5,7 @@ import { Typography, Box, Button } from "@mui/material";
 let startRSVP, sendReadingProgressRSVP;
 
 export function RSVP({ textSettings }) {
-  const [fontStyle, fontSize, textOpacity, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed, wordCount, maxWordCount, pauseStatus, resetStatus, documentName, parsedText] = textSettings.current;
+  const [fontStyle, fontSize, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed, wordCount, pauseStatus, resetStatus, documentName, parsedText] = textSettings.current;
 
   const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
