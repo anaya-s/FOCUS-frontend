@@ -25,7 +25,7 @@ RUN npm run build
 FROM caddy
 
 # Create and change to the app directory.
-WORKDIR /app
+WORKDIR /focus-app
 
 # Copy Caddyfile to the container image.
 COPY Caddyfile ./
@@ -34,7 +34,7 @@ COPY Caddyfile ./
 RUN caddy fmt Caddyfile --overwrite
 
 # Copy files to the container image.
-COPY --from=build /app/dist ./dist
+COPY --from=build /focus-app/dist ./dist
 
 # Use Caddy to run/serve the app
 CMD ["caddy", "run", "--config", "Caddyfile", "--adapter", "caddyfile"]
