@@ -4,19 +4,40 @@ import Button from "@mui/material/Button";
 import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
-import Link from "@mui/material/Link";
-import { useNavigation } from "../utils/navigation";
+import { useSearchParams } from "react-router-dom";
 
-function ResetPass() {
-  const [email, setEmail] = useState("");
-  const { toLogin } = useNavigation();
-  //   const [password, setPassword] = useState("");
+function ResetPassword() {
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Sent reset link to email");
-    console.log("Email:", email);
-    // Do something to send reset link to email
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/user/reset-password/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setSuccess("Password reset successfully!");
+        setError(null);
+      } else {
+        setError(data.error || "Something went wrong");
+      }
+    } catch (err) {
+      setError("Network error, please try again later.");
+    }
   };
 
   const pageStyle = {
@@ -31,10 +52,10 @@ function ResetPass() {
     <Box style={pageStyle}>
       <Container sx={{ width: "650px", minWidth: "500px" }}>
         <Typography variant="h3" component="h1" gutterBottom>
-          Change your password
+          Reset Your Password
         </Typography>
         <Typography variant="h6" component="h1">
-          Please enter your email for a link to reset your password.
+          Enter your new password below.
         </Typography>
         <Box
           sx={{
@@ -43,23 +64,35 @@ function ResetPass() {
             border: "1px solid #ccc",
             borderRadius: 2,
             textAlign: "center",
-            alignItems: "center",
           }}
         >
           <form onSubmit={handleSubmit}>
-            <Typography textAlign={"left"} marginLeft={0.5}>
-              Email
+            <Typography textAlign="left" marginLeft={0.5}>
+              New Password
             </Typography>
             <TextField
-              // label="Email"
-              type="email"
+              type="password"
               fullWidth
               variant="outlined"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               margin="dense"
               required
             />
+            <Typography textAlign="left" marginLeft={0.5}>
+              Confirm Password
+            </Typography>
+            <TextField
+              type="password"
+              fullWidth
+              variant="outlined"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              margin="dense"
+              required
+            />
+            {error && <Typography color="error">{error}</Typography>}
+            {success && <Typography color="green">{success}</Typography>}
             <Button
               type="submit"
               fullWidth
@@ -71,19 +104,13 @@ function ResetPass() {
                 "&:hover": { backgroundColor: "darkgreen" },
               }}
             >
-              Send reset link
+              Reset Password
             </Button>
           </form>
         </Box>
-        <Typography sx={{ marginTop: 2 }} fontSize="18px">
-          Remembered your password?{" "}
-          <Link onClick={toLogin} style={{ cursor: "pointer" }}>
-            Log in
-          </Link>
-        </Typography>
       </Container>
     </Box>
   );
 }
 
-export default ResetPass;
+export default ResetPassword;

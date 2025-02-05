@@ -25,7 +25,7 @@ export function useNavigation() {
     // registration tab
     toLogin: () => navigate('/login'),
     toRegister: () => navigate('/register'),
-    toReset: () => navigate('/reset-password'),
+    toReset: () => navigate('/reset-password-request'),
     //error
     toNotFound: () => navigate('error/404'),
     toNotAuthorized: () => navigate('error/403'),

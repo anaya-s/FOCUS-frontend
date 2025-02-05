@@ -25,25 +25,31 @@ function Register() {
 
   const handleCreateUser = async (e) => {
       e.preventDefault();
+      try {
+        let response = await fetch("http://127.0.0.1:8000/api/user/register/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: email,
+            password: password,
+            email: email
+          })
+        });
+        
+        const data = await response.json();
 
-      let response = await fetch("http://127.0.0.1:8000/api/user/register/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: email,
-          password: password,
-          email: email
-        })
-      });
-  
-      if (response.status === 201) {
-        alert("Account successfully created!");
-        toLogin();
-      } else {
-        alert("Unsuccessful transaction");
+        if (response.status === 201) {
+          alert(data.message);
+          toLogin();
+        } else {
+          alert(data.error);
+        }
+      } catch(error) {
+        alert(error.message)
       }
+
   };
 
   return (
