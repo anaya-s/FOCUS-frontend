@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .  # Still need to specify the build context to set up dependencies
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app  # Mount the local directory to the container
+      - /app/node_modules  # Prevent conflicts with node_modules
+
