@@ -8,6 +8,6 @@ services:
     ports:
       - "5173:5173"
     volumes:
-      - .:/app  # Mount the local directory to the container
-      - /app/node_modules  # Prevent conflicts with node_modules
+      - .:/focus-app  # Mount the local directory to the container
+      - /focus-app/node_modules  # Prevent conflicts with node_modules
 

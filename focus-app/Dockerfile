@@ -1,19 +1,60 @@
-FROM node:20-alpine 
+# Use the Node alpine official image
+# https://hub.docker.com/_/node
+FROM node:lts-alpine AS build
 
-# Set the working directory
+# Set config
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false
+ENV NPM_CONFIG_FUND=false
+
+# Create and change to the app directory.
 WORKDIR /focus-app
 
-# Copy package.json and install dependencies
-COPY package*.json .
-RUN npm install
+# Copy the files to the container image
+COPY package*.json ./
 
-# Copy the rest of the application
-COPY . .
+# Install packages
+RUN npm ci
 
-# Build the React app
+# Copy local code to the container image.
+COPY . ./
+
+# Build the app.
 RUN npm run build
 
-# Expose the port
-EXPOSE 5173
+# Use the Caddy image
+FROM caddy
 
-CMD ["npm", "run", "dev"]
+# Create and change to the app directory.
+WORKDIR /app
+
+# Copy Caddyfile to the container image.
+COPY Caddyfile ./
+
+# Copy local code to the container image.
+RUN caddy fmt Caddyfile --overwrite
+
+# Copy files to the container image.
+COPY --from=build /app/dist ./dist
+
+# Use Caddy to run/serve the app
+CMD ["caddy", "run", "--config", "Caddyfile", "--adapter", "caddyfile"]
+
+# FROM node:20-alpine 
+
+# # Set the working directory
+# WORKDIR /focus-app
+
+# # Copy package.json and install dependencies
+# COPY package*.json .
+# RUN npm install
+
+# # Copy the rest of the application
+# COPY . .
+
+# # Build the React app
+# RUN npm run build
+
+# # Expose the port
+# EXPOSE 5173
+
+# CMD ["npm", "run", "dev"]
