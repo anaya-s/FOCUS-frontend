@@ -143,19 +143,19 @@ const iterateWords = async (lines) => {
             overflowY: "scroll",
             border: "1px solid #ccc",
             backgroundColor: `rgba(${backgroundColour.current[0]}, ${backgroundColour.current[1]}, ${backgroundColour.current[2]}, ${backgroundBrightness.current})`, // extract this out to a variable, which changes based on what colour scheme is chosen
-            fontSize: `${fontSize.current}px`, // can be adjusted
-            lineHeight: lineSpacing.current,
-            fontFamily: fontStyle.current,
-            letterSpacing: letterSpacing.current
+            fontSize: textArray.length !== 0 ? `${fontSize.current}px` : 'initial',
+            lineHeight: textArray.length !== 0 ? lineSpacing.current : 'initial',
+            fontFamily: textArray.length !== 0 ? fontStyle.current : 'initial',
+            letterSpacing: textArray.length !== 0 ? letterSpacing.current : 'initial'
         }}
         >
             {textArray.length === 0 ? (
-        <Box display="flex" flexDirection="column" justifyContent="space-between" alignItems="center">
+        <Box display="flex" flexDirection="column" justifyContent="space-between" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", borderRadius: "5px", border: "1px solid #06760D", margin: "2vh", lineHeight: "normal", fontFamily: 'Istok Web, sans-serif'}}>
           <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No text available to display.</Typography>
           <Typography variant="h7"sx={{ marginBottom: "2vh"}}>This may be the case if your document:</Typography>
           <Typography variant="h6"sx={{ marginBottom: "2vh"}}>• Only contains image/graphics (e.g. handwritten text)</Typography>
           <Typography variant="h6"sx={{ marginBottom: "2vh"}}>• Is an empty document</Typography>
-          <Typography variant="h7"sx={{ marginBottom: "2vh"}}>Please try another reading mode.</Typography>
+          <Typography variant="h7" sx={{ marginBottom: "2vh" }}>Please try Reading Mode 1 or try uploading another document.</Typography>
         </Box>
       ) : (
         getFormattedText()

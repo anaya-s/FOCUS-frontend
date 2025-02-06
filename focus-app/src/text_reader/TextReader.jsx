@@ -8,6 +8,7 @@ import NormalReading from "./NormalReading";
 import { sendReadingProgress, SpeedReading } from "./SpeedReading";
 import { sendReadingProgressRSVP, RSVP } from "./RSVP";
 import { sendReadingProgressLineUnblur, LineUnblur } from "./LineUnblur";
+import { NLP } from "./NLP";
 
 /* MaterialUI Imports */
 import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox } from "@mui/material";
@@ -27,6 +28,7 @@ import {
   ArticleTwoTone as ArticleTwoToneIcon,
   ZoomInRounded as ZoomInRoundedIcon,
   TextIncrease as TextIncreaseIcon,
+  DeblurRounded as DeblurRoundedIcon,
 } from '@mui/icons-material';
 
 function TextReaderPage() { 
@@ -80,6 +82,7 @@ function TextReaderPage() {
   const pdfCurrentPageRef = useRef(1);
   const pdfTotalPagesRef = useRef(1);
   const pdfSetPageRef = useRef(false);
+  const isPDFRef = useRef(false);
 
   const colourSchemeSelection = (selection) => ({
     border: backgroundColourSelectionRef.current == selection ? "3px solid #06760D" : "normal"
@@ -243,14 +246,19 @@ function TextReaderPage() {
   const prevLineUnblurRef = useRef(prevLineUnblur);
   const [autoScroll, setAutoScroll] = useState(true);
   const autoScrollRef = useRef(autoScroll);
+  const [autoScrollSpeed, setAutoScrollSpeed] = useState(3);
+  const autoScrollSpeedRef = useRef(autoScrollSpeed);
+  const [unblurredLines, setUnblurredLines] = useState(1);
+  const unblurredLinesRef = useRef(unblurredLines);
 
   const pauseStatusRef = useRef(true);
   const resetStatusRef = useRef(true);
 
-  const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef]);
+  const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef, isPDFRef]);
   const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
-  const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, autoScrollSpeedRef, unblurredLinesRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const nlpSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
 
   const [pauseStatus, setPauseStatus] = useState(true);
 
@@ -292,6 +300,16 @@ function TextReaderPage() {
   const handleAutoScroll = () => {
     autoScrollRef.current = !autoScrollRef.current;
     setAutoScroll(autoScrollRef.current);
+  };
+
+  const handleAutoScrollSpeed = (event) => {
+    autoScrollSpeedRef.current = event.target.value;
+    setAutoScrollSpeed(autoScrollSpeedRef.current);
+  };
+
+  const handleUnblurredLines = (event) => {
+    unblurredLinesRef.current = event.target.value;
+    setUnblurredLines(unblurredLinesRef.current);
   };
 
   const intervalRef = useRef(null);
@@ -528,11 +546,11 @@ useEffect(() => {
       <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
         {/* Create all reading mode components here */}
         {
-        readingMode === 1 ? <NormalReading file={file} textSettings={normalReadingSettings}/>
+        readingMode === 1 ? <NormalReading file={file} parsedText={parsedText} textSettings={normalReadingSettings}/>
         : readingMode === 2 ? <RSVP textSettings={RSVPSettings}/>
         : readingMode === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
         : readingMode === 4 ? <LineUnblur textSettings={lineUnblurSettings}/>
-        : <Typography sx={{width: "92vw", height: "85vh", minWidth: "92vw", minHeight: "85vh", overflowY: "scroll", border: "1px solid #ccc"}}>NLP Reading - Not Implemented Yet</Typography>
+        : <NLP textSettings={nlpSettings}/>
         }
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "1.5vw", backgroundColor: "white", mt: "-7vh"}}>
           <Box sx={{backgroundColor: "white", zIndex: 1500, borderRadius: "5px", border: "1px solid #ccc", mt: "1vh"}}>
@@ -616,6 +634,7 @@ useEffect(() => {
             </Container>
 
             { readingMode === 1 ? ( // Normal render
+            isPDFRef.current ? (
               <Box>
                   <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
                     <ZoomInRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
@@ -653,6 +672,7 @@ useEffect(() => {
                   {/* <Button variant="contained">Go</Button> */}
                 </Container>
               </Box>
+             ) : null 
             ): readingMode === 2 | readingMode === 3 ? ( // Speed reading
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
@@ -678,7 +698,7 @@ useEffect(() => {
                 <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
                   <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                     <Typography variant="caption">
-                      Highlighting speed
+                      {readingMode === 3 ? "Highlighting speed" : "Speed" }
                     </Typography>
                     <Slider
                       value={typeof highlightSpeedRef.current === 'number' ? highlightSpeedRef.current : 2}
@@ -696,32 +716,34 @@ useEffect(() => {
                   </Typography>
               </Container>
               { readingMode === 2 ? (
-                <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
-                  <TextIncreaseIcon sx={{fontSize: "30px", mr: "2vw"}}/>
-                    <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
-                      <Typography variant="caption">
-                        Word count
+                parsedText.length !== 0 ? (
+                  <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+                    <TextIncreaseIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+                      <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                        <Typography variant="caption">
+                          Word count
+                        </Typography>
+                        <Slider
+                          value={typeof wordCountRef.current === 'number' ? wordCountRef.current : 1}
+                          onChange={handleWordCount}
+                          min={1}
+                          step={1}
+                          max={maxWordCountRef.current}
+                          sx={{ width: "15vw" }}
+                        />
+                      </Box>
+                      <Typography variant="h7"
+                        sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+                      >
+                        {wordCountRef.current}
                       </Typography>
-                      <Slider
-                        value={typeof wordCountRef.current === 'number' ? wordCountRef.current : 1}
-                        onChange={handleWordCount}
-                        min={1}
-                        step={1}
-                        max={maxWordCountRef.current}
-                        sx={{ width: "15vw" }}
-                      />
-                    </Box>
-                    <Typography variant="h7"
-                      sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
-                    >
-                      {wordCountRef.current}
-                    </Typography>
-                </Container>
+                  </Container>
+                ) : null
               ) : null }
           </Box>
             ): readingMode === 4 ? ( // Line-by-line unblurring
             <Box>
-              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
                 <Tooltip title="Reveal the lines above the highlighted one" placement="left">  
                   <Checkbox checked={prevLineUnblur} onChange={handlePrevLineUnblur}/>
                   <Typography variant="caption" sx={{ml: "1vw"}}>
@@ -737,9 +759,73 @@ useEffect(() => {
                   </Typography>
                 </Tooltip>
               </Container>
+              {autoScroll ? (
+              <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+                  <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+                  <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                  <Typography variant="caption">
+                    Auto-scroll speed
+                  </Typography>
+                  <Slider
+                    value={typeof autoScrollSpeedRef.current === 'number' ? autoScrollSpeedRef.current : 3}
+                    onChange={handleAutoScrollSpeed}
+                    min={1}
+                    step={1}
+                    max={10}
+                    sx={{ width: "15vw" }}
+                  />
+                  </Box>
+                  <Typography variant="h7"
+                    sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+                  >
+                    {autoScrollSpeedRef.current}
+                  </Typography>
+              </Container>
+              ) : null}
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+              <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+              <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                <Typography variant="caption">
+                  Line Spacing
+                </Typography>
+                <Slider
+                  value={typeof lineSpacingRef.current === 'number' ? lineSpacingRef.current : 2}
+                  onChange={handleLineSpacing}
+                  min={1}
+                  max={10}
+                  sx={{ width: "15vw" }}
+                />
+              </Box>
+              <Typography variant="h7"
+                sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+              >
+                {lineSpacingRef.current*10}
+              </Typography>
+              </Container>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+                <DeblurRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
+                <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
+                  <Typography variant="caption">
+                  Unblur size
+                  </Typography>
+                  <Slider
+                    value={typeof unblurredLinesRef.current === 'number' ? unblurredLinesRef.current : 1}
+                    onChange={handleUnblurredLines}
+                    min={1}
+                    step={1}
+                    max={5}
+                    sx={{ width: "15vw" }}
+                  />
+                </Box>
+                <Typography variant="h7"
+                  sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
+                >
+                  {unblurredLinesRef.current}
+                </Typography>
+              </Container>
             </Box> 
             ): // NLP reading
-            <Typography variant="h7" sx={{mt: "2vh"}}>NLP Reading - not implemented yet</Typography> //Replace with specific settings for Reading Mode 5
+            <Typography variant="h7" sx={{mt: "2vh"}}>NLP Reading Settings - TBC</Typography> //Replace with specific settings for Reading Mode 5
             }
             <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>
@@ -838,7 +924,7 @@ useEffect(() => {
               </Typography>
             </Container>
 
-            { readingMode !== 2 ? (
+            { readingMode !== 2 && readingMode !== 4 ? (
             <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>

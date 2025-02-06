@@ -19,6 +19,8 @@ export function LineUnblur({ textSettings }) {
     yCoord,
     prevLineUnblur,
     autoScroll,
+    autoScrollSpeed,
+    unblurredLinesRef,
     pauseStatus,
     resetStatus,
     documentName,
@@ -71,8 +73,9 @@ export function LineUnblur({ textSettings }) {
       if (lineElement) {
         const rect = lineElement.getBoundingClientRect();
         if (y >= rect.top && y <= rect.bottom) {
-          setHoveredLine(i);
-          break;
+          if(i % unblurredLinesRef.current === 0)
+            setHoveredLine(i);
+            break;
         }
       }
     }
@@ -87,10 +90,10 @@ export function LineUnblur({ textSettings }) {
       const typographyElement = typographyRef.current;
       if (typographyElement) {
         const rect = typographyElement.getBoundingClientRect();
-        if (yCoord.current >= rect.bottom - 250) { // Adjust the threshold as needed
+        if (yCoord.current >= rect.bottom - 200) { // Adjust the threshold as needed
           const scrollInterval = setInterval(() => {
             typographyElement.scrollBy({
-              top: 1,
+              top: autoScrollSpeed.current,
               behavior: "auto",
             });
           }, 100);
@@ -111,23 +114,23 @@ export function LineUnblur({ textSettings }) {
         key={lineIndex}
         ref={(el) => (lineRefs.current[lineIndex] = el)} // Attach refs to each line
         style={{
-          filter: (prevLineUnblur.current ? lineIndex <= hoveredLine : lineIndex === hoveredLine) ? "none" : "blur(5px)", // Blur all lines except the current line and any previous lines
+          filter: (prevLineUnblur.current ? lineIndex <= hoveredLine + unblurredLinesRef.current - 1 : lineIndex >= hoveredLine && lineIndex < hoveredLine + unblurredLinesRef.current) ? "none" : "blur(5px)", // Blur all lines except the current line and any previous lines
           opacity:
-          lineIndex === hoveredLine
+          lineIndex >= hoveredLine && lineIndex < hoveredLine + unblurredLinesRef.current
             ? 1
             : textOpacity.current,
-            color:
-            lineIndex === hoveredLine
-              ? backgroundColourSelection.current !== 1 &&
-                backgroundColourSelection.current !== 5
-                ? "black"
-                : invertTextColour.current
-                ? "yellow"
-                : "black"
+          color:
+          lineIndex >= hoveredLine && lineIndex < hoveredLine + unblurredLinesRef.current
+            ? backgroundColourSelection.current !== 1 &&
+              backgroundColourSelection.current !== 5
+              ? "black"
               : invertTextColour.current
-              ? "white"
-              : `rgba(${backgroundColour.current[0]}, ${backgroundColour.current[1]}, ${backgroundColour.current[2]})`,
-          fontWeight: lineIndex === hoveredLine ? "bold" : "normal", // Bold the current line
+              ? "yellow"
+              : "black"
+            : invertTextColour.current
+            ? "white"
+            : `rgba(${backgroundColour.current[0]}, ${backgroundColour.current[1]}, ${backgroundColour.current[2]})`,
+          fontWeight: lineIndex >= hoveredLine && lineIndex < hoveredLine + unblurredLinesRef.current ? "bold" : "normal", // Bold the current line
           display: "flex", // Display as flex to keep words in a row
         }}
       >
@@ -157,37 +160,19 @@ export function LineUnblur({ textSettings }) {
         overflowY: "scroll",
         border: "1px solid #ccc",
         backgroundColor: `rgba(${backgroundColour.current[0]}, ${backgroundColour.current[1]}, ${backgroundColour.current[2]}, ${backgroundBrightness.current})`, // extract this out to a variable, which changes based on what colour scheme is chosen
-        fontSize: `${fontSize.current}px`, // can be adjusted
-        lineHeight: lineSpacing.current,
-        fontFamily: fontStyle.current,
-        letterSpacing: letterSpacing.current,
+        fontSize: textArray.length !== 0 ? `${fontSize.current}px` : 'initial',
+        lineHeight: textArray.length !== 0 ? lineSpacing.current : 'initial',
+        fontFamily: textArray.length !== 0 ? fontStyle.current : 'initial',
+        letterSpacing: textArray.length !== 0 ? letterSpacing.current : 'initial'
       }}
     >
       {textArray.length === 0 ? (
-        <Box
-          display="flex"
-          flexDirection="column"
-          justifyContent="space-between"
-          alignItems="center"
-        >
-          <Typography
-            variant="h3"
-            sx={{ marginBottom: "2vh", marginTop: "5vh" }}
-          >
-            No text available to display.
-          </Typography>
-          <Typography variant="h7" sx={{ marginBottom: "2vh" }}>
-            This may be the case if your document:
-          </Typography>
-          <Typography variant="h6" sx={{ marginBottom: "2vh" }}>
-            • Only contains image/graphics (e.g. handwritten text)
-          </Typography>
-          <Typography variant="h6" sx={{ marginBottom: "2vh" }}>
-            • Is an empty document
-          </Typography>
-          <Typography variant="h7" sx={{ marginBottom: "2vh" }}>
-            Please try another reading mode.
-          </Typography>
+        <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", borderRadius: "5px", border: "1px solid #06760D", margin: "2vh"}}>
+          <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No text available to display.</Typography>
+          <Typography variant="h7"sx={{ marginBottom: "2vh"}}>This may be the case if your document:</Typography>
+          <Typography variant="h6"sx={{ marginBottom: "2vh"}}>• Only contains image/graphics (e.g. handwritten text)</Typography>
+          <Typography variant="h6"sx={{ marginBottom: "2vh"}}>• Is an empty document</Typography>
+          <Typography variant="h7" sx={{ marginBottom: "2vh" }}>Please try Reading Mode 1 or try uploading another document.</Typography>
         </Box>
       ) : (
         getFormattedText()

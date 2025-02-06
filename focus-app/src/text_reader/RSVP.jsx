@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { reauthenticatingFetch } from "../utils/api";
 import { Typography, Box, Button } from "@mui/material";
 
@@ -10,6 +10,7 @@ export function RSVP({ textSettings }) {
   const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
   const [fileName, setFileName] = useState("");
+  const resetResolver = useRef(null);
 
   useEffect(() => {
     if (parsedText.current) {
@@ -20,6 +21,9 @@ export function RSVP({ textSettings }) {
   useEffect(() => {
     if(resetStatus.current === true)
     {
+        if (resetResolver.current) {
+          resetResolver.current();
+        }
         setCurrentWord(0);
         resetStatus.current = false;
     }
@@ -57,9 +61,10 @@ export function RSVP({ textSettings }) {
                 break;
             }
           setCurrentWord(currentWordIndex);
-          await new Promise((resolve) =>
-            setTimeout(resolve, 5000 / highlightSpeed.current)
-          ); // set time interval
+          await new Promise((resolve) => {
+            resetResolver.current = resolve;
+            setTimeout(resolve, 5000 / highlightSpeed.current);
+          }); // set time interval
         }
     }
   };
@@ -121,12 +126,12 @@ export function RSVP({ textSettings }) {
       }}
     >
       {textArray.length === 0 ? (
-        <Box display="flex" flexDirection="column" justifyContent="space-between" alignItems="center">
+        <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", borderRadius: "5px", border: "1px solid #06760D", margin: "2vh"}}>
           <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No text available to display.</Typography>
           <Typography variant="h7"sx={{ marginBottom: "2vh"}}>This may be the case if your document:</Typography>
           <Typography variant="h6"sx={{ marginBottom: "2vh"}}>• Only contains image/graphics (e.g. handwritten text)</Typography>
           <Typography variant="h6"sx={{ marginBottom: "2vh"}}>• Is an empty document</Typography>
-          <Typography variant="h7"sx={{ marginBottom: "2vh"}}>Please try another reading mode.</Typography>
+          <Typography variant="h7" sx={{ marginBottom: "2vh" }}>Please try Reading Mode 1 or try uploading another document.</Typography>
         </Box>
       ) : (
         getFormattedText()

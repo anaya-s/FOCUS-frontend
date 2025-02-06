@@ -16,6 +16,8 @@
     "@fontsource/jua": "^5.1.0",
     "@mui/icons-material": "^6.1.8",
     "@mui/material": "^6.1.5",
+    "compromise": "^14.14.4",
+    "jspdf": "^2.5.2",
     "jwt-decode": "^4.0.0",
     "mammoth": "^1.8.0",
     "pdfjs-dist": "^4.9.155",
