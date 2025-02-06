@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import webgazer from "../webgazer/webgazer";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
@@ -27,6 +28,9 @@ const CalibrationPage = () => {
 
   const [accuracy, setAccuracy] = useState(0);
   const [calibrationTimestamp, setCalibrationTimestamp] = useState(formatTimestamp(new Date(Date.now())));
+
+  const location = useLocation();
+  const { file, parsedText } = location.state || {};
 
   const [screenInfo, setScreenInfo] = useState({
     screenWidth: window.screen.width,
@@ -57,19 +61,30 @@ const CalibrationPage = () => {
   // Get screen resolution - DONE
   // Send it with calibration data
 
-  // Make webpage go full screen on calibration, then exit fullscreen after
-  //  Alert when trying to exit fullscreen - make sure to pause webgazer so nothing is recorded
-
   /* Change gap between calibration points if window size changes */
   useEffect(() => {
     const handleResize = () => {
       // update the gaps on resize
-      setGap(window.innerWidth / 11);
-      setRowGap(window.innerWidth / 6);
+      setGap(window.innerWidth / 12);
+      setRowGap(window.innerWidth / 5);
     };
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize); // Cleanup on unmount
+  }, []);
+
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .custom-swal-container {
+        z-index: 1500; /* Set the desired z-index */
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
   }, []);
 
   const onFullscreenChange = useCallback((event) => {
@@ -96,6 +111,9 @@ const CalibrationPage = () => {
           allowOutsideClick: false,
           allowEscapeKey: false,
           confirmButtonText: '<span style="user-select: none; padding: 0">Return to Full Screen</span>',
+          customClass: {
+            container: 'custom-swal-container', // Apply the custom class
+          },
           willClose: async () => {
             await webgazer.begin(true);
             if (document.documentElement.requestFullscreen) {
@@ -141,7 +159,10 @@ const CalibrationPage = () => {
         confirmButtonColor: "#06760D",
         allowOutsideClick: false,
         allowEscapeKey: false,
-        confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>'
+        confirmButtonText: '<span style="user-select: none; padding: 0">Start</span>',
+        customClass: {
+          container: 'custom-swal-container', // Apply the custom class
+        },
       });
 
 
@@ -373,7 +394,7 @@ const CalibrationPage = () => {
       case 3:
         return "#06760D";
       default:
-        return "transparent";
+        return "white";
     }
   };
 
@@ -395,7 +416,8 @@ const CalibrationPage = () => {
 
   const finishCalibration = () => {
     // Move to next webpage
-    toReadingPage();
+    console.log(file);
+    toReadingPage(file, parsedText);
   };
 
   if (isCalibrationGETLoading) {
@@ -488,26 +510,26 @@ const CalibrationPage = () => {
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
+        flexDirection: "row",
         height: "100vh",
-        backgroundColor: "#f9f9f9",
         userSelect: "none",
-        paddingTop: "35px"
+        marginTop: "15vh"
       }}
     >
       <div
         id = "calibrationArea"
         style={{
-          width: "100%",
+          width: "92vw",
           height: "85vh",
+          minWidth: "92vw",
+          minHeight: "85vh",
           border: "2px dashed #06760D",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
           padding: "10px",
           boxSizing: "border-box",
+          backgroundColor: "#f9f9f9",
         }}
       >
         <Typography id="countdown" variant="h3" sx={{display: "none"}}>5</Typography>
@@ -542,6 +564,7 @@ const CalibrationPage = () => {
           ))}
         </div>
       </div>
+      <Box sx={{ ml: "1.5vw", backgroundColor: "#f9f9f9", background: 'repeating-linear-gradient(45deg, white, white 10px, #06760D 10px, #06760D 13px)', border: "2px dashed #06760D", height: "85vh", width: "8vw"}}></Box>
     </div>
   );
 };

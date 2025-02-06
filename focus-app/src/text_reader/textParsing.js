@@ -1,6 +1,30 @@
 import * as pdfjsLib from "pdfjs-dist/webpack"; // For parsing .pdf files
 import mammoth from "mammoth"; // For parsing .docx files
 
+export async function parseText(file) {
+  
+    var parsedText = [];
+    if (file) {
+      if (file.type === "application/pdf") {
+        // Check for .pdf file type
+        parsedText = await handlePdfFile(file);
+      } else if (
+        file.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ) {
+        // Check for .docx file type
+        parsedText = await handleDocxFile(file);
+      } else if (file.type === "text/plain") {
+        // Check for .txt file type
+        parsedText = await handleTxtFile(file);
+      } else {
+        alert("Please upload a valid PDF, DOCX, or TXT file.");
+      }
+    }
+
+    return parsedText;
+};
+
   /* Function which parses the text within PDF files */
 export async function handlePdfFile(file) {
     const reader = new FileReader();
