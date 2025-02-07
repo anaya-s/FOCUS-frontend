@@ -467,7 +467,7 @@ function TextReaderPage() {
     const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
     socket.current = new WebSocket(`ws://localhost:8000/ws/video/?token=${token}`);
 
-    console.log("Connecting to WebSocket...");
+    // console.log("Connecting to WebSocket...");
 
     socket.current.onopen = () => {
     setRetryConnection(0);
@@ -513,13 +513,6 @@ function TextReaderPage() {
 // Initialize state for previous frame data URL
 const previousFrameDataUrl = useRef(null);
 
-const gazeListener = (data, canvas) => {
-  if (data) {
-    sendVideoFrame(data.x, data.y, canvas);
-  } else {
-    sendVideoFrame(null, null, canvas);
-  }
-};
 
 const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
   if (socket.current && socket.current.readyState === WebSocket.OPEN) {
@@ -564,11 +557,19 @@ const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
   }
   else
   {
-    console.error("WebSocket connection is not open.");
+    // console.error("WebSocket connection no longer open.");
     setStatusConn(false);
     webgazer.clearGazeListener();
   }
 }, []);
+
+const gazeListener = (data, canvas) => {
+  if (data) {
+    sendVideoFrame(data.x, data.y, canvas);
+  } else {
+    sendVideoFrame(null, null, canvas);
+  }
+};
 
 useEffect(() => {
   if (connectionOpen) {
@@ -576,8 +577,8 @@ useEffect(() => {
   }
   else
   {
-    console.log("Setting retry");
-    setRetryConnection(2);
+    if(retryConnection !== 1)
+      setRetryConnection(2);
   }
 }, [connectionOpen, sendVideoFrame]);
 
@@ -612,8 +613,8 @@ useEffect(() => {
           </Alert>
         </Collapse>
         <Collapse in={retryConnection === 1} sx={{position: "absolute", bottom: "5vh", right: "5vh", zIndex: 1500}}>
-          <Alert variant="filled" severity="warning">
-            Reconnecting...
+          <Alert variant="filled" severity="info">
+            Connecting...
           </Alert>
         </Collapse>
         <Collapse in={retryConnection === 2} sx={{position: "absolute", bottom: "5vh", right: "5vh", zIndex: 1500}}>
@@ -649,7 +650,7 @@ useEffect(() => {
               <IconButton 
                   color="inherit"
                   sx={{zIndex: 1500}}
-                  onClick={() => toDrive(0)}
+                  onClick={() => {webgazer.end(); toDrive(0);}}
                 >
                 <ExitToAppRoundedIcon sx={{ fontSize: "30px"}}/>
               </IconButton>

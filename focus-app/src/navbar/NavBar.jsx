@@ -4,6 +4,7 @@ import { useNavigation } from "../utils/navigation";
 import AccountMenu from "./account/AccountMenu";
 import AuthContext from "../context/AuthContext";
 import zIndex from "@mui/material/styles/zIndex";
+import webgazer from "../webgazer/webgazer";
 
 const barStyle = {
   display: "flex",
@@ -37,13 +38,13 @@ const NavBar = () => {
 
   return (
     <div style={barStyle}>
-      <Button onClick={toHome} sx={{fontWeight: "bold", pl: "10px", pr: "10px", fontSize: "25px"}}>FOCUS</Button>
+      <Button onClick={() => {webgazer.end(); toHome()}} sx={{fontWeight: "bold", pl: "10px", pr: "10px", fontSize: "25px"}}>FOCUS</Button>
       <div style={navStyle}>
-        <Button style={buttonStyle} onClick={toAbout}>
+        <Button style={buttonStyle} onClick={() => {webgazer.end(); toAbout()}}>
           About
         </Button>
-        <Button style={buttonStyle} onClick={toOurProducts}>Our Products</Button>
-        {user ? <AccountMenu /> : <Button style={buttonStyle} onClick={toLogin}> Login </Button>}
+        <Button style={buttonStyle} onClick={() => {webgazer.end(); toOurProducts();}}>Our Products</Button>
+        {user ? <AccountMenu /> : <Button style={buttonStyle} onClick={() => {webgazer.end(); toLogin();}}> Login </Button>}
       </div>
     </div>
   );
