@@ -56,6 +56,29 @@ function TextReaderPage() {
   */
   const [readingMode, setReadingMode] = useState(3);
 
+  const [hideSettings, setHideSettings] = useState(0);
+  /*
+  0 - hide nothing
+  1 - hide Reading Mode 1
+  2 - hide Reading Modes 2,3,4,5
+  */
+
+  useEffect(() => {
+    if (parsedText.length === 0) // Image-based PDF file
+    {
+      setReadingMode(1);
+      setHideSettings(1);
+    }
+    else
+    {
+      if(file.type !== "application/pdf") // Word or text file
+      {
+        setReadingMode(3);
+        setHideSettings(2);
+      }
+    }
+  }, []);
+
   /* Text typography parameters */
 
   const fontOptions = [
@@ -349,21 +372,15 @@ function TextReaderPage() {
   }, []);
 
   const readingModeButtonSelection = (mode) => ({
-    border: readingMode == mode ? "3px solid #06760D" : "normal"
+    border: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "1px dashed red" : readingMode == mode ? "3px solid #06760D" : "normal",
+    color: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "red" : "auto",
+    borderColor: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "red" : "auto",
   });
 
   // Webgazer initialisation
   useEffect(() => {
     const initializeWebGazer = async () => {
       setWebgazerLoading(true);
-        const loadingInterval = setInterval(() => {
-          setLoadingProgress((prevProgress) => {
-            if (prevProgress >= 100) {
-              clearInterval(loadingInterval);
-            }
-            return Math.min(prevProgress + 100, 100);
-          });
-        }, 250);
 
         webgazer.params.showVideo = false;
         webgazer.params.showGazeDot = true;
@@ -410,7 +427,6 @@ function TextReaderPage() {
       // }
 
       setWebgazerLoading(false);
-      clearInterval(loadingInterval);
       console.log("WebGazer initialized successfully");
     };
 
@@ -532,8 +548,6 @@ useEffect(() => {
           Loading WebGazer...
         </Typography>
         <LinearProgress
-          variant="determinate"
-          value={loadingProgress}
           style={{ width: "80%", marginTop: "2vh" }}
         />
       </div>
@@ -611,12 +625,12 @@ useEffect(() => {
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Reading Mode 2 - Speed Reading (RSVP)" placement="top">
-                      <Button variant="outlined" sx={readingModeButtonSelection(2)} onClick={handleReadingModeSelection(2)}><Box>2</Box></Button> {/* Reading Mode 2 */}
+                      <Button  variant="outlined" sx={readingModeButtonSelection(2)} onClick={handleReadingModeSelection(2)}><Box>2</Box></Button> {/* Reading Mode 2 */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Reading Mode 3 - Speed Reading (Highlighting) " placement="top">
-                      <Button variant="outlined" sx={readingModeButtonSelection(3)} onClick={handleReadingModeSelection(3)}><Box>3</Box></Button> {/* Reading Mode 3 */}
+                      <Button  variant="outlined" sx={readingModeButtonSelection(3)} onClick={handleReadingModeSelection(3)}><Box>3</Box></Button> {/* Reading Mode 3 */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
@@ -626,7 +640,7 @@ useEffect(() => {
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Reading Mode 5 - NLP" placement="top">
-                      <Button variant="outlined" sx={readingModeButtonSelection(5)} onClick={handleReadingModeSelection(5)}><Box>5</Box></Button> {/* Reading Mode 5 */}
+                      <Button  variant="outlined" sx={readingModeButtonSelection(5)} onClick={handleReadingModeSelection(5)}><Box>5</Box></Button> {/* Reading Mode 5 */}
                     </Tooltip>
                   </Grid2>
                 </Grid2>
@@ -760,7 +774,7 @@ useEffect(() => {
                 </Tooltip>
               </Container>
               {autoScroll ? (
-              <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
                   <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
                   <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                   <Typography variant="caption">

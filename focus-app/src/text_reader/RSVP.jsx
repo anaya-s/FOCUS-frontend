@@ -10,6 +10,7 @@ export function RSVP({ textSettings }) {
   const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
   const [fileName, setFileName] = useState("");
+  const isNotValid = useRef(false);
   const resetResolver = useRef(null);
 
   useEffect(() => {
@@ -72,13 +73,15 @@ export function RSVP({ textSettings }) {
   startRSVP = async (fileName, text) => {
     setFileName(fileName);
     setTextArray(text.flat());
+    if(textArray.length === 0)
+      isNotValid.current = true;
     pauseStatus.current = true;
   };
 
   const getFormattedText = () => {
   
     var words = "";
-    if (textArray.length === 0 || currentWord >= textArray.length)
+    if (currentWord >= textArray.length)
     {
         words = "End of text.";
         pauseStatus.current = true;
@@ -125,7 +128,7 @@ export function RSVP({ textSettings }) {
         backgroundColor: `rgba(${backgroundColour.current[0]}, ${backgroundColour.current[1]}, ${backgroundColour.current[2]}, ${backgroundBrightness.current})`
       }}
     >
-      {textArray.length === 0 ? (
+      {textArray.length === 0 && isNotValid.current === true ? (
         <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", borderRadius: "5px", border: "1px solid #06760D", margin: "2vh"}}>
           <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No text available to display.</Typography>
           <Typography variant="h7"sx={{ marginBottom: "2vh"}}>This may be the case if your document:</Typography>

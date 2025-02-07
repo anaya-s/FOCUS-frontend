@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf'; // For rendering PDF files
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { Box, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -12,6 +12,7 @@ function NormalReading({ file, textSettings }) {
   const [numPages, setNumPages] = useState(1);
   const [pageNumber, setPageNumber] = useState(1);
   const pageRefs = useRef([]);
+  const isNotValid = useRef(false);
   const boxRef = useRef(null);
   const previousPageNumber = useRef(1); // Track the previous valid page number
 
@@ -28,6 +29,7 @@ function NormalReading({ file, textSettings }) {
         isPDF.current = true;
       else
         isPDF.current = false;
+        isNotValid.current = true;
   }, [file]);
 
   // Intersection Observer to track the visible page
@@ -106,7 +108,7 @@ function NormalReading({ file, textSettings }) {
         backgroundColor: `rgba(${backgroundColour.current[0]}, ${backgroundColour.current[1]}, ${backgroundColour.current[2]}, ${backgroundBrightness.current})`,
       }} ref={boxRef}>
         {isPDF.current ? (
-        <Document file={file} onLoadSuccess={onDocumentLoadSuccess} loading={""}>
+        <Document file={file} onLoadSuccess={onDocumentLoadSuccess} loading={<CircularProgress sx={{mt: "42vh"}}/>}>
           {Array.from(new Array(numPages), (el, index) => (
             <Box
               key={`page_${index + 1}`}
@@ -119,6 +121,7 @@ function NormalReading({ file, textSettings }) {
           ))}
         </Document>
         ) : (
+        isNotValid.current ? (
         <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", borderRadius: "5px", border: "1px solid #06760D", margin: "2vh"}}>
           <Typography
             variant="h3"
@@ -133,6 +136,7 @@ function NormalReading({ file, textSettings }) {
             Please try another reading mode or upload a new PDF file.
           </Typography>
         </Box>
+        ) : null
         )}
       </Box>
     </Box>
