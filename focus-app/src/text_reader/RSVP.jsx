@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { reauthenticatingFetch } from "../utils/api";
-import { Typography, Box, Button } from "@mui/material";
+import { Typography, Box, CircularProgress } from "@mui/material";
 
 let startRSVP, sendReadingProgressRSVP;
 
@@ -81,7 +81,7 @@ export function RSVP({ textSettings }) {
   const getFormattedText = () => {
   
     var words = "";
-    if (currentWord >= textArray.length)
+    if (currentWord >= textArray.length && textArray.length !== 0)
     {
         words = "End of text.";
         pauseStatus.current = true;
@@ -108,7 +108,7 @@ export function RSVP({ textSettings }) {
           fontStyle: (textArray.length === 0 || currentWord >= textArray.length) ? "italic" : "normal"
         }}
       >
-        {words}
+        {words.length === 0 ? <CircularProgress /> : words}
       </Typography>
     );
   };

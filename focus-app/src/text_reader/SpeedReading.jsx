@@ -2,9 +2,7 @@ import { React, useEffect, useState, useRef } from "react";
 
 import { reauthenticatingFetch } from "../utils/api";
 
-// import { handlePdfFile, handleDocxFile, handleTxtFile } from "./textParsing";
-
-import { Typography, Box } from "@mui/material";
+import { Typography, Box, CircularProgress } from "@mui/material";
 
 let startSpeedReading, sendReadingProgress;
 
@@ -162,6 +160,7 @@ const iterateWords = async (lines) => {
           <Typography variant="h7" sx={{ marginBottom: "2vh" }}>Please try Reading Mode 1 or try uploading another document.</Typography>
         </Box>
       ) : (
+        textArray.length === 0 ? <CircularProgress/> :
         getFormattedText()
       )}
         </Typography>

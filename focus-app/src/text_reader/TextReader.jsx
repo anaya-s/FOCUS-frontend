@@ -11,7 +11,7 @@ import { sendReadingProgressLineUnblur, LineUnblur } from "./LineUnblur";
 import { NLP } from "./NLP";
 
 /* MaterialUI Imports */
-import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox } from "@mui/material";
+import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox, Alert, Collapse } from "@mui/material";
 
 import {
   Menu as MenuIcon,
@@ -29,6 +29,7 @@ import {
   ZoomInRounded as ZoomInRoundedIcon,
   TextIncrease as TextIncreaseIcon,
   DeblurRounded as DeblurRoundedIcon,
+  ReplayRounded as ReplayRoundedIcon,
 } from '@mui/icons-material';
 
 function TextReaderPage() { 
@@ -40,12 +41,23 @@ function TextReaderPage() {
   const [framesData, setFramesData] = useState([]);
   
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [isLoading, setWebgazerLoading] = useState(true);
+  const [isLoading, setWebgazerLoading] = useState(false);
+  const [webgazerFinished, setWebgazerFinished] = useState(false);
+
+  /*
+  Status of WebSocket connection (used for retrying connection and for showing alerts):
+  -1 - Successful connection (message cleared)
+  0 - Successful connection message
+  1 - Connecting message
+  2 - Lost connection message
+  */
+  const [retryConnection, setRetryConnection] = useState(1);
 
   const location = useLocation();
   const { file, parsedText } = location.state || {};
-  const fileNameRef = useRef(file.name);
-  const parsedTextRef = useRef(parsedText);
+  const fileRef = useRef(null);
+  const fileNameRef = useRef(null);
+  const parsedTextRef = useRef(null);
 
   /* Reading mode index
     1 - Normal reading
@@ -56,27 +68,41 @@ function TextReaderPage() {
   */
   const [readingMode, setReadingMode] = useState(3);
 
-  const [hideSettings, setHideSettings] = useState(0);
-  /*
+  /* Hide reading modes based on input document type:
   0 - hide nothing
   1 - hide Reading Mode 1
   2 - hide Reading Modes 2,3,4,5
   */
+  const [hideSettings, setHideSettings] = useState(0);
 
+  /* Check if file is uploaded correctly with its parsed text */
   useEffect(() => {
-    if (parsedText.length === 0) // Image-based PDF file
+    if(file !== undefined && parsedText !== undefined)
     {
-      setReadingMode(1);
-      setHideSettings(1);
-    }
-    else
-    {
-      if(file.type !== "application/pdf") // Word or text file
+      setWebgazerLoading(true);
+
+      fileRef.current = file;
+      fileNameRef.current = file.name;
+      parsedTextRef.current = parsedText;
+
+      maxWordCountRef.current = findMaxWordsinLine(parsedTextRef.current);
+
+      if (parsedText.length === 0) // Image-based PDF file
       {
-        setReadingMode(3);
-        setHideSettings(2);
+        setReadingMode(1);
+        setHideSettings(1);
+      }
+      else
+      {
+        if(file.type !== "application/pdf") // Word or text file
+        {
+          setReadingMode(3);
+          setHideSettings(2);
+        }
       }
     }
+    else
+      toDrive(1); // Return back to Drive page with error status
   }, []);
 
   /* Text typography parameters */
@@ -262,7 +288,7 @@ function TextReaderPage() {
 
   const highlightSpeedRef = useRef(2);
   const wordCountRef = useRef(1);
-  const maxWordCountRef = useRef(findMaxWordsinLine(parsedTextRef.current));
+  const maxWordCountRef = useRef(0);
   const [yCoord, setYCoord] = useState(0);
   const yCoordRef = useRef(yCoord);
   const [prevLineUnblur, setPrevLineUnblur] = useState(false);
@@ -380,7 +406,6 @@ function TextReaderPage() {
   // Webgazer initialisation
   useEffect(() => {
     const initializeWebGazer = async () => {
-      setWebgazerLoading(true);
 
         webgazer.params.showVideo = false;
         webgazer.params.showGazeDot = true;
@@ -427,26 +452,38 @@ function TextReaderPage() {
       // }
 
       setWebgazerLoading(false);
+      setWebgazerFinished(true);
       console.log("WebGazer initialized successfully");
     };
 
-    initializeWebGazer();
+    if(isLoading)
+      initializeWebGazer();
 
-  }, []);
+  }, [isLoading]);
+
+  // WebSocket connection
+  const connectWebSocket = async () => {
+    setRetryConnection(1);
+    const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
+    socket.current = new WebSocket(`ws://localhost:8000/ws/video/?token=${token}`);
+
+    console.log("Connecting to WebSocket...");
+
+    socket.current.onopen = () => {
+    setRetryConnection(0);
+    setStatusConn(true);
+    }
+    socket.current.onclose = () => {
+      socket.current = null;
+      setStatusConn(false);
+      setRetryConnection(2);
+    };
+    socket.current.onerror = () => {toNotAuthorized};
+  };
 
   useEffect(() => {
-    if (!socket.current && !isLoading) {
-      const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
-      socket.current = new WebSocket(`ws://localhost:8000/ws/video/?token=${token}`);
-
-      console.log("Connecting to WebSocket...");
-
-      socket.current.onopen = () => setStatusConn(true);
-      socket.current.onclose = () => {
-        socket.current = null;
-        setStatusConn(false);
-      };
-      socket.current.onerror = () => {toNotAuthorized};
+    if (!socket.current && !isLoading && webgazerFinished) {
+      connectWebSocket();
     }
 
     return () => {
@@ -475,6 +512,14 @@ function TextReaderPage() {
 
 // Initialize state for previous frame data URL
 const previousFrameDataUrl = useRef(null);
+
+const gazeListener = (data, canvas) => {
+  if (data) {
+    sendVideoFrame(data.x, data.y, canvas);
+  } else {
+    sendVideoFrame(null, null, canvas);
+  }
+};
 
 const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
   if (socket.current && socket.current.readyState === WebSocket.OPEN) {
@@ -517,17 +562,22 @@ const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
 
     handleYCoord(yCoord);
   }
+  else
+  {
+    console.error("WebSocket connection is not open.");
+    setStatusConn(false);
+    webgazer.clearGazeListener();
+  }
 }, []);
 
 useEffect(() => {
   if (connectionOpen) {
-    webgazer.setGazeListener((data, canvas) => {
-      if (data) {
-        sendVideoFrame(data.x, data.y, canvas);
-      } else {
-        sendVideoFrame(null, null, canvas);
-      }
-    });
+    webgazer.setGazeListener(gazeListener);
+  }
+  else
+  {
+    console.log("Setting retry");
+    setRetryConnection(2);
   }
 }, [connectionOpen, sendVideoFrame]);
 
@@ -556,11 +606,28 @@ useEffect(() => {
 
   return (
     <Box style={{marginTop: "15vh", justifyContent: "center"}}>
-      {/* <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video> */}
+        <Collapse in={retryConnection === 0} sx={{position: "absolute", bottom: "5vh", right: "5vh", zIndex: 1500}}>
+          <Alert variant="filled" severity="success" onClose={() => setRetryConnection(-1)}>
+            Connection to server successful.
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 1} sx={{position: "absolute", bottom: "5vh", right: "5vh", zIndex: 1500}}>
+          <Alert variant="filled" severity="warning">
+            Reconnecting...
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 2} sx={{position: "absolute", bottom: "5vh", right: "5vh", zIndex: 1500}}>
+          <Alert variant="filled" severity="error" 
+          action={
+            <IconButton onClick={() => connectWebSocket()} color="inherit" size="small"><ReplayRoundedIcon fontSize="small"/></IconButton>
+          }>
+            Connection lost. Click here to retry.
+          </Alert>
+        </Collapse>
       <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
         {/* Create all reading mode components here */}
         {
-        readingMode === 1 ? <NormalReading file={file} parsedText={parsedText} textSettings={normalReadingSettings}/>
+        readingMode === 1 ? <NormalReading file={fileRef.current} textSettings={normalReadingSettings}/>
         : readingMode === 2 ? <RSVP textSettings={RSVPSettings}/>
         : readingMode === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
         : readingMode === 4 ? <LineUnblur textSettings={lineUnblurSettings}/>
@@ -582,7 +649,7 @@ useEffect(() => {
               <IconButton 
                   color="inherit"
                   sx={{zIndex: 1500}}
-                  onClick={toDrive}
+                  onClick={() => toDrive(0)}
                 >
                 <ExitToAppRoundedIcon sx={{ fontSize: "30px"}}/>
               </IconButton>
@@ -1050,6 +1117,6 @@ useEffect(() => {
       </Drawer>
     </Box>
   );
-}
+  }
 
 export default TextReaderPage;

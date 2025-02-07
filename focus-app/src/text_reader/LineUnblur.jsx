@@ -1,6 +1,6 @@
 import { React, useEffect, useState, useRef } from "react";
 import { reauthenticatingFetch } from "../utils/api";
-import { Typography, Box } from "@mui/material";
+import { Typography, Box, CircularProgress } from "@mui/material";
 
 let startLineUnblur, sendReadingProgressLineUnblur;
 
@@ -180,6 +180,7 @@ export function LineUnblur({ textSettings }) {
           <Typography variant="h7" sx={{ marginBottom: "2vh" }}>Please try Reading Mode 1 or try uploading another document.</Typography>
         </Box>
       ) : (
+        textArray.length === 0 ? <CircularProgress/> :
         getFormattedText()
       )}
     </Typography>

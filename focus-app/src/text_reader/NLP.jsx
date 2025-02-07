@@ -1,5 +1,5 @@
 import { React, useEffect, useState, useRef } from "react";
-import { Typography, Box } from "@mui/material";
+import { Typography, Box, CircularProgress } from "@mui/material";
 import nlp from "compromise";
 
 let startNLP;
@@ -65,7 +65,7 @@ export function NLP({ textSettings }) {
 
   const extractImportantWords = (text) => {
     let doc = nlp(text);
-    let words = new Set(doc.nouns().text().split(" "));
+    let words = new Set(doc.nouns().terms().out("array"));
     // console.log(words);
     return words;
   };
@@ -161,6 +161,7 @@ export function NLP({ textSettings }) {
           </Typography>
         </Box>
       ) : (
+        textArray.length === 0 ? <CircularProgress/> :
         getFormattedText()
       )}
     </Typography>
