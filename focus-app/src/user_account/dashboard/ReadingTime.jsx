@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import { reauthenticatingFetch } from '../../utils/api';
+import config from '../../config'
+const baseURL = config.apiUrl
 
 import {
   Chart as ChartJS,
@@ -36,7 +38,7 @@ export default function ReadingTime() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const result = await reauthenticatingFetch("GET",'http://localhost:8000/api/eye/reading-times/');
+        const result = await reauthenticatingFetch("GET",`http://${baseURL}/api/eye/reading-times/`);
 
         const { sessionLabels, sessionTotals } = processData(result);
         setSessionLabels(sessionLabels);

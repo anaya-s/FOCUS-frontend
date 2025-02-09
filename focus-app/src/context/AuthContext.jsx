@@ -2,6 +2,8 @@ import { createContext, useState, useEffect, useCallback } from "react";
 import { jwtDecode } from "jwt-decode";
 import { useNavigation } from "../utils/navigation";
 import NotAuthorized from "../utils/NotAuthorized";
+import config from "../config";
+const baseURL = config.apiUrl;
 
 const AuthContext = createContext("");
 
@@ -23,7 +25,7 @@ export const AuthProvider = ({ children }) => {
   const { toHome, toDrive } = useNavigation();
 
   let loginUser = async (email,password) => {
-    let response = await fetch("http://127.0.0.1:8000/api/token/", {
+    let response = await fetch(`http://${baseURL}/api/token/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -59,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   }, [setAuthTokens, setUser, setIsAuthorized, toHome]);
 
   let updateToken = useCallback(async () => {
-    let response = await fetch("http://127.0.0.1:8000/api/token/refresh/", {
+    let response = await fetch(`http://${baseURL}/api/token/refresh/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

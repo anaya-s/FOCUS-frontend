@@ -16,6 +16,8 @@ import { Typography } from "@mui/material";
 import AuthContext from "../../context/AuthContext";
 import { useNavigation } from "../../utils/navigation";
 import { reauthenticatingFetch } from "../../utils/api";
+import config from '../../config'
+const baseURL = config.apiUrl
 
 import webgazer from "../../webgazer/webgazer";
 
@@ -36,7 +38,7 @@ export default function AccountMenu() {
   useEffect(() => {
     const fetchUsername = async () => {
 try {
-      const responseMsg = await reauthenticatingFetch("GET", "http://localhost:8000/api/user/profile/");
+      const responseMsg = await reauthenticatingFetch("GET", `http://${baseURL}/api/user/profile/`);
 
       if (responseMsg.error) {
         console.error("Failed to fetch profile data:", responseMsg.error);

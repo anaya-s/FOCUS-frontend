@@ -3,6 +3,9 @@ import { useNavigation } from "../utils/navigation";
 import { useLocation } from 'react-router-dom';
 
 import { reauthenticatingFetch } from "../utils/api";
+import config from '../config'
+const baseURL = config.apiUrl
+
 import webgazer from "../webgazer/webgazer.js";
 
 import NormalReading from "./NormalReading";
@@ -452,7 +455,7 @@ function TextReaderPage() {
           }
           else
           {
-            const responseMsg = await reauthenticatingFetch("GET",`http://localhost:8000/api/user/calibration-retrieval/`)
+            const responseMsg = await reauthenticatingFetch("GET",`http://${baseURL}/api/user/calibration-retrieval/`)
         
             if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
             {
@@ -501,7 +504,7 @@ function TextReaderPage() {
   const connectWebSocket = async () => {
     setRetryConnection(1);
     const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
-    socket.current = new WebSocket(`ws://localhost:8000/ws/video/?token=${token}`);
+    socket.current = new WebSocket(`ws://${baseURL}/ws/video/?token=${token}`);
 
     // console.log("Connecting to WebSocket...");
 
@@ -515,7 +518,7 @@ function TextReaderPage() {
       setRetryConnection(2);
     };
     socket.current.onerror = async(event) => {
-      await reauthenticatingFetch("GET", "http://localhost:8000/api/user/profile/"); // to update access token
+      await reauthenticatingFetch("GET", `http://${baseURL}/api/user/profile/`); // to update access token
       // toNotAuthorized();
     };
   };

@@ -1,13 +1,13 @@
-// import config from '../config'
+import config from '../config'
 import { ACCESS_TOKEN } from './constants';
 
-// const baseURL = config.apiUrl
+const baseURL = config.apiUrl
 
 // same function as updateToken()
 async function refreshAccessToken() {
   // Make an API call to refresh the access token
   var accessToken = JSON.parse(localStorage.getItem(ACCESS_TOKEN));
-  const response = await fetch("http://127.0.0.1:8000/api/token/refresh/", {
+  const response = await fetch(`https://${baseURL}/api/token/refresh/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json", // Ensures DRF processes the request correctly
@@ -40,6 +40,8 @@ This function automatically refreshes the access token if expired
   For POST method: pass the correct value for 'body' in JSON format  e.g. reauthenticatingFetch(method, url, body)
 */
 export const reauthenticatingFetch = async (method, url, body) => {
+
+  console.log(url);
   
   const authTokens = localStorage.getItem(ACCESS_TOKEN);
 

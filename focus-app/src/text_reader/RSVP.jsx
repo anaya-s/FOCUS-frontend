@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { reauthenticatingFetch } from "../utils/api";
+import config from '../config'
+const baseURL = config.apiUrl
+
 import { Typography, Box, CircularProgress } from "@mui/material";
 
 let startRSVP, sendReadingProgressRSVP;
@@ -43,7 +46,7 @@ export function RSVP({ textSettings }) {
 
     const response = await reauthenticatingFetch(
       "POST",
-      `http://localhost:8000/api/user/reading-progress/`,
+      `http://${baseURL}/api/user/reading-progress/`,
       bodyContents
     );
 
