@@ -150,7 +150,6 @@ export function LineUnblur({ textSettings }) {
             }}
           >
             {word}
-            {wordIndex < line.length - 1 ? " " : ""}
           </span>
         ))}
       </div>

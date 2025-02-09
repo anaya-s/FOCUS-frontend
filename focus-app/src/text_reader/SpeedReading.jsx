@@ -130,7 +130,6 @@ const iterateWords = async (lines) => {
           >
             {/* Add spacing between each word and line */}
             {word}
-            {wordIndex < line.length - 1 ? " " : ""}
           </span>
         ))}
       </div>

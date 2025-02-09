@@ -41,7 +41,7 @@ This function automatically refreshes the access token if expired
 */
 export const reauthenticatingFetch = async (method, url, body) => {
 
-  console.log(url);
+  // console.log(url); //Check if correct endpoint is being used
   
   const authTokens = localStorage.getItem(ACCESS_TOKEN);
 

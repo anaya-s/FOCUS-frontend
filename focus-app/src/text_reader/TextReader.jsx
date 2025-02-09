@@ -143,7 +143,7 @@ function TextReaderPage() {
   const fontSizeRef = useRef(28);
   const textOpacityRef = useRef(0.5);
   const letterSpacingRef = useRef(0);
-  const lineSpacingRef = useRef(2);
+  const lineSpacingRef = useRef(3);
   const backgroundBrightnessRef = useRef(0);
   const invertTextColourRef = useRef(false);
   const backgroundColourRef = useRef([0, 0, 0]);
@@ -220,7 +220,7 @@ function TextReaderPage() {
     if(readingMode === 4)
       lineSpacingRef.current = 7;
     else
-    lineSpacingRef.current = 2;
+      lineSpacingRef.current = 3;
 
     backgroundBrightnessRef.current = 0;
     invertTextColourRef.current = false;
@@ -240,6 +240,9 @@ function TextReaderPage() {
     autoScrollRef.current = false;
 
     pdfScaleRef.current = 1;
+
+    showVerbsRef.current = true;
+    showConjucationsRef.current = true;
   };
 
   const handleKeyPress = (e) => {
@@ -326,11 +329,14 @@ function TextReaderPage() {
   const pauseStatusRef = useRef(true);
   const resetStatusRef = useRef(true);
 
+  const showVerbsRef = useRef(true);
+  const showConjucationsRef = useRef(true);
+
   const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef, isPDFRef]);
   const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, autoScrollSpeedRef, unblurredLinesRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
-  const nlpSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const nlpSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, showVerbsRef, showConjucationsRef, fileNameRef, parsedTextRef]);
 
   const [pauseStatus, setPauseStatus] = useState(true);
 
@@ -972,7 +978,24 @@ useEffect(() => {
               </Container>
             </Box> 
             ): // NLP reading
-            <Typography variant="h7" sx={{mt: "2vh"}}>NLP Reading Settings - TBC</Typography> //Replace with specific settings for Reading Mode 5
+            <Box>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+                <Tooltip title="Italicise all verbs in the text" placement="left">  
+                  <Checkbox checked={showVerbsRef.current} onChange={() => {showVerbsRef.current = !showVerbsRef.current}}/>
+                  <Typography variant="caption" sx={{ml: "1vw"}}>
+                    Highlight verbs
+                  </Typography>
+                </Tooltip>
+              </Container>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+                <Tooltip title="Underline all conjucations in the text" placement="left">  
+                  <Checkbox checked={showConjucationsRef.current} onChange={() => {showConjucationsRef.current = !showConjucationsRef.current}}/>
+                  <Typography variant="caption" sx={{ml: "1vw"}}>
+                    Highlight conjucations
+                  </Typography>
+                </Tooltip>
+              </Container>
+            </Box>
             }
             <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>
