@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "../utils/navigation";
 import { useLocation } from 'react-router-dom';
 
+import { reauthenticatingFetch } from "../utils/api";
 import webgazer from "../webgazer/webgazer.js";
 
 import NormalReading from "./NormalReading";
@@ -31,6 +32,24 @@ import {
   DeblurRounded as DeblurRoundedIcon,
   ReplayRounded as ReplayRoundedIcon,
 } from '@mui/icons-material';
+
+import { styled } from '@mui/system';
+
+const FlashingButton = styled(Button)(({ theme }) => ({
+  animation: 'flash 1s infinite',
+  '@keyframes flash': {
+    '0%': {
+      backgroundColor: "transparent",
+    },
+    '50%': {
+      backgroundColor: "#FF8C00", // Dark Orange
+      color: "black"
+    },
+    '100%': {
+      backgroundColor: "transparent",
+    },
+  },
+}));
 
 function TextReaderPage() { 
   // const videoRef = useRef(null);
@@ -299,6 +318,7 @@ function TextReaderPage() {
   const autoScrollSpeedRef = useRef(autoScrollSpeed);
   const [unblurredLines, setUnblurredLines] = useState(1);
   const unblurredLinesRef = useRef(unblurredLines);
+  const [calibrationAccuracy, setCalibrationAccuracy] = useState(0);
 
   const pauseStatusRef = useRef(true);
   const resetStatusRef = useRef(true);
@@ -369,7 +389,7 @@ function TextReaderPage() {
     setOpen(!open);
   };
 
-  const { toNotAuthorized, toDrive } = useNavigation();
+  const { toNotAuthorized, toDrive, toCalibration } = useNavigation();
 
   useEffect(() => {
     if(readingMode === 4)
@@ -427,13 +447,29 @@ function TextReaderPage() {
           {
             var calibrationData = JSON.parse(localStorage.getItem("calibration"));
             webgazer.setRegressionData(calibrationData);
+            var accuracy = JSON.parse(localStorage.getItem("accuracy"));
+            setCalibrationAccuracy(accuracy);
           }
           else
-            console.log("No calibration data found in localStorage. Data already stored in WebGazer instance during calibration.");
+          {
+            const responseMsg = await reauthenticatingFetch("GET",`http://localhost:8000/api/user/calibration-retrieval/`)
+        
+            if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
+            {
+              // set accuracy to -1 to indicate that no calibration data is found
+              setCalibrationAccuracy(-1);
+            }
+            else
+            {
+              var calibrationData = responseMsg.calibration_values;
+              webgazer.setRegressionData(calibrationData);
+            }
+          }
+          
         }
         catch(error)
         {
-          console.error("Failed to load calibration data to localStorage:", error);
+          console.error("Failed to load calibration data from localStorage:", error);
         }
 
         /* Fetch the video stream from Webgazer */
@@ -473,12 +509,15 @@ function TextReaderPage() {
     setRetryConnection(0);
     setStatusConn(true);
     }
-    socket.current.onclose = () => {
+    socket.current.onclose = async(event) => {
       socket.current = null;
       setStatusConn(false);
       setRetryConnection(2);
     };
-    socket.current.onerror = () => {toNotAuthorized};
+    socket.current.onerror = async(event) => {
+      await reauthenticatingFetch("GET", "http://localhost:8000/api/user/profile/"); // to update access token
+      // toNotAuthorized();
+    };
   };
 
   useEffect(() => {
@@ -607,17 +646,26 @@ useEffect(() => {
 
   return (
     <Box style={{marginTop: "15vh", justifyContent: "center"}}>
-        <Collapse in={retryConnection === 0} sx={{position: "absolute", bottom: "5vh", right: "5vh", zIndex: 1500}}>
+        {
+          readingMode === 4 && hideSettings !== 1 ? (
+          <Collapse in={calibrationAccuracy === -1} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : "13vh", left: "5vh", zIndex: 1500}}>
+            <Alert variant="filled" severity="warning">
+              No calibration data found. Please calibrate before using this reading mode.
+            </Alert>
+          </Collapse>
+          ) : ( null )
+        }
+        <Collapse in={retryConnection === 0} sx={{position: "absolute", bottom: "5vh", left: "5vh", zIndex: 1500}}>
           <Alert variant="filled" severity="success" onClose={() => setRetryConnection(-1)}>
             Connection to server successful.
           </Alert>
         </Collapse>
-        <Collapse in={retryConnection === 1} sx={{position: "absolute", bottom: "5vh", right: "5vh", zIndex: 1500}}>
+        <Collapse in={retryConnection === 1} sx={{position: "absolute", bottom: "5vh", left: "5vh", zIndex: 1500}}>
           <Alert variant="filled" severity="info">
             Connecting...
           </Alert>
         </Collapse>
-        <Collapse in={retryConnection === 2} sx={{position: "absolute", bottom: "5vh", right: "5vh", zIndex: 1500}}>
+        <Collapse in={retryConnection === 2} sx={{position: "absolute", bottom: "5vh", left: "5vh", zIndex: 1500}}>
           <Alert variant="filled" severity="error" 
           action={
             <IconButton onClick={() => connectWebSocket()} color="inherit" size="small"><ReplayRoundedIcon fontSize="small"/></IconButton>
@@ -825,6 +873,20 @@ useEffect(() => {
           </Box>
             ): readingMode === 4 ? ( // Line-by-line unblurring
             <Box>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center", justifyContent: "center"}}>
+                <Tooltip title="Check or update calibration details" placement="left">  
+                {calibrationAccuracy === -1 && hideSettings !== 1 ? (
+                  <FlashingButton variant="outlined" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>
+                    Start calibration
+                  </FlashingButton>
+                ) : (
+                  <Button variant="contained" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>
+                    Check calibration
+                  </Button>
+                )
+                }
+                </Tooltip>
+              </Container>
               <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
                 <Tooltip title="Reveal the lines above the highlighted one" placement="left">  
                   <Checkbox checked={prevLineUnblur} onChange={handlePrevLineUnblur}/>

@@ -272,9 +272,7 @@ function DocumentDrivePage() {
     // Parse the text from the file and send it the text reader page
     const parsedText = await parseText(file);
     
-    toCalibration(file, parsedText);
-    // OR (depending on user preferences)
-    // toReadingPage(file, parsedText);
+    toReadingPage(file, parsedText);
   };
 
   const handleFileUpload = async (e) => {
@@ -285,9 +283,7 @@ function DocumentDrivePage() {
     // Parse the text from the file and send it the text reader page
     const parsedText = await parseText(file);
     
-    toCalibration(file, parsedText);
-    // OR (depending on user preferences)
-    // toReadingPage(file, parsedText);
+    toReadingPage(file, parsedText);
   };
 
   const fileInputRef = useRef(null);
