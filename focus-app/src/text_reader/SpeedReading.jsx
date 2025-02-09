@@ -1,10 +1,10 @@
-import { React, useEffect, useState } from "react";
+import { React, useEffect, useState, useRef } from "react";
 
 import { reauthenticatingFetch } from "../utils/api";
+import config from '../config'
+const baseURL = config.apiUrl
 
-// import { handlePdfFile, handleDocxFile, handleTxtFile } from "./textParsing";
-
-import { Typography, Box } from "@mui/material";
+import { Typography, Box, CircularProgress } from "@mui/material";
 
 let startSpeedReading, sendReadingProgress;
 
@@ -19,6 +19,8 @@ export function SpeedReading({textSettings}) {
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
 
   const [fileName, setFileName] = useState("");
+
+  const isNotValid = useRef(false);
 
   useEffect(() => {
     if (parsedText.current) {
@@ -48,7 +50,7 @@ export function SpeedReading({textSettings}) {
 
     const response = await reauthenticatingFetch(
       "POST",
-      `http://localhost:8000/api/user/reading-progress/`,
+      `http://${baseURL}/api/user/reading-progress/`,
       bodyContents
     );
 
@@ -85,6 +87,8 @@ const iterateWords = async (lines) => {
   startSpeedReading = async (fileName, text) => {
     setFileName(fileName);
     setTextArray(text);
+    if(textArray.length === 0)
+      isNotValid.current = true;
     pauseStatus.current = true;
   };
 
@@ -149,7 +153,7 @@ const iterateWords = async (lines) => {
             letterSpacing: textArray.length !== 0 ? letterSpacing.current : 'initial'
         }}
         >
-            {textArray.length === 0 ? (
+            {textArray.length === 0 && isNotValid.current === true ? (
         <Box display="flex" flexDirection="column" justifyContent="space-between" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", borderRadius: "5px", border: "1px solid #06760D", margin: "2vh", lineHeight: "normal", fontFamily: 'Istok Web, sans-serif'}}>
           <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No text available to display.</Typography>
           <Typography variant="h7"sx={{ marginBottom: "2vh"}}>This may be the case if your document:</Typography>
@@ -158,6 +162,7 @@ const iterateWords = async (lines) => {
           <Typography variant="h7" sx={{ marginBottom: "2vh" }}>Please try Reading Mode 1 or try uploading another document.</Typography>
         </Box>
       ) : (
+        textArray.length === 0 ? <CircularProgress/> :
         getFormattedText()
       )}
         </Typography>

@@ -1,6 +1,9 @@
 import { React, useEffect, useState, useRef } from "react";
 import { reauthenticatingFetch } from "../utils/api";
-import { Typography, Box } from "@mui/material";
+import config from '../config'
+const baseURL = config.apiUrl
+
+import { Typography, Box, CircularProgress } from "@mui/material";
 
 let startLineUnblur, sendReadingProgressLineUnblur;
 
@@ -32,6 +35,8 @@ export function LineUnblur({ textSettings }) {
   const [fileName, setFileName] = useState("");
   const [hoveredLine, setHoveredLine] = useState(null); // Stores index of hovered line
 
+  const isNotValid = useRef(false);
+
   const typographyRef = useRef(null); // Create a ref for the Typography component
   const lineRefs = useRef([]); // Create refs for each line
 
@@ -47,7 +52,7 @@ export function LineUnblur({ textSettings }) {
 
     const response = await reauthenticatingFetch(
       "POST",
-      `http://localhost:8000/api/user/reading-progress/`,
+      `http://${baseURL}/api/user/reading-progress/`,
       bodyContents
     );
 
@@ -61,6 +66,9 @@ export function LineUnblur({ textSettings }) {
   startLineUnblur = async (fileName, text) => {
     setFileName(fileName);
     setTextArray(text);
+    if(textArray.length === 0)
+      isNotValid.current = true;
+    pauseStatus.current = true;
   };
 
   /* Function to calculate the hovered line based on y-coordinate */
@@ -166,7 +174,7 @@ export function LineUnblur({ textSettings }) {
         letterSpacing: textArray.length !== 0 ? letterSpacing.current : 'initial'
       }}
     >
-      {textArray.length === 0 ? (
+      {textArray.length === 0 && isNotValid.current === true ? (
         <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", borderRadius: "5px", border: "1px solid #06760D", margin: "2vh"}}>
           <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No text available to display.</Typography>
           <Typography variant="h7"sx={{ marginBottom: "2vh"}}>This may be the case if your document:</Typography>
@@ -175,6 +183,7 @@ export function LineUnblur({ textSettings }) {
           <Typography variant="h7" sx={{ marginBottom: "2vh" }}>Please try Reading Mode 1 or try uploading another document.</Typography>
         </Box>
       ) : (
+        textArray.length === 0 ? <CircularProgress/> :
         getFormattedText()
       )}
     </Typography>

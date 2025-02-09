@@ -1,5 +1,5 @@
 import { React, useEffect, useState, useRef } from "react";
-import { Typography, Box } from "@mui/material";
+import { Typography, Box, CircularProgress } from "@mui/material";
 import nlp from "compromise";
 
 let startNLP;
@@ -12,6 +12,7 @@ export function NLP({ textSettings }) {
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
   const [fileName, setFileName] = useState("");
   const significantWords = useRef(new Set());
+  const isNotValid = useRef(false);
 
   useEffect(() => {
     if (parsedText.current) {
@@ -55,15 +56,17 @@ export function NLP({ textSettings }) {
   startNLP = async (fileName, text) => {
     setFileName(fileName);
     setTextArray(parsedText.current);
+    if(textArray.length === 0)
+      isNotValid.current = true;
     pauseStatus.current = true;
-    console.log(text.flat().join(" "));
+    // console.log(text.flat().join(" "));
     significantWords.current = extractImportantWords(text.flat().join(" "));
   };
 
   const extractImportantWords = (text) => {
     let doc = nlp(text);
-    let words = new Set(doc.nouns().text().split(" "));
-    console.log(words);
+    let words = new Set(doc.nouns().terms().out("array"));
+    // console.log(words);
     return words;
   };
 
@@ -124,7 +127,7 @@ export function NLP({ textSettings }) {
         letterSpacing: textArray.length !== 0 ? letterSpacing.current : 'initial'
       }}
     >
-      {textArray.length === 0 ? (
+      {textArray.length === 0 && isNotValid.current === true ? (
         <Box
           display="flex"
           flexDirection="column"
@@ -158,6 +161,7 @@ export function NLP({ textSettings }) {
           </Typography>
         </Box>
       ) : (
+        textArray.length === 0 ? <CircularProgress/> :
         getFormattedText()
       )}
     </Typography>

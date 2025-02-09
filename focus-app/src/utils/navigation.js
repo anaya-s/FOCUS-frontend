@@ -33,7 +33,7 @@ export function useNavigation() {
     toCalibration: (file, parsedText) => navigate('/calibrate', { state: { file, parsedText } }),
     toReadingPage: (file, parsedText) => navigate('/reading', { state: { file, parsedText } }),
     
-    toDrive: () => navigate('/drive'),
+    toDrive: (error) => navigate('/drive', { state: { error } }),
     
     toCustom: (path) => navigate(path), 
   };

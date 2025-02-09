@@ -2,6 +2,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigation } from "../utils/navigation";
 import { useLocation } from 'react-router-dom';
 
+import { reauthenticatingFetch } from "../utils/api";
+import config from '../config'
+const baseURL = config.apiUrl
+
 import webgazer from "../webgazer/webgazer.js";
 
 import NormalReading from "./NormalReading";
@@ -11,7 +15,7 @@ import { sendReadingProgressLineUnblur, LineUnblur } from "./LineUnblur";
 import { NLP } from "./NLP";
 
 /* MaterialUI Imports */
-import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox } from "@mui/material";
+import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox, Alert, Collapse } from "@mui/material";
 
 import {
   Menu as MenuIcon,
@@ -29,7 +33,26 @@ import {
   ZoomInRounded as ZoomInRoundedIcon,
   TextIncrease as TextIncreaseIcon,
   DeblurRounded as DeblurRoundedIcon,
+  ReplayRounded as ReplayRoundedIcon,
 } from '@mui/icons-material';
+
+import { styled } from '@mui/system';
+
+const FlashingButton = styled(Button)(({ theme }) => ({
+  animation: 'flash 1s infinite',
+  '@keyframes flash': {
+    '0%': {
+      backgroundColor: "transparent",
+    },
+    '50%': {
+      backgroundColor: "#FF8C00", // Dark Orange
+      color: "black"
+    },
+    '100%': {
+      backgroundColor: "transparent",
+    },
+  },
+}));
 
 function TextReaderPage() { 
   // const videoRef = useRef(null);
@@ -40,12 +63,23 @@ function TextReaderPage() {
   const [framesData, setFramesData] = useState([]);
   
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [isLoading, setWebgazerLoading] = useState(true);
+  const [isLoading, setWebgazerLoading] = useState(false);
+  const [webgazerFinished, setWebgazerFinished] = useState(false);
+
+  /*
+  Status of WebSocket connection (used for retrying connection and for showing alerts):
+  -1 - Successful connection (message cleared)
+  0 - Successful connection message
+  1 - Connecting message
+  2 - Lost connection message
+  */
+  const [retryConnection, setRetryConnection] = useState(1);
 
   const location = useLocation();
   const { file, parsedText } = location.state || {};
-  const fileNameRef = useRef(file.name);
-  const parsedTextRef = useRef(parsedText);
+  const fileRef = useRef(null);
+  const fileNameRef = useRef(null);
+  const parsedTextRef = useRef(null);
 
   /* Reading mode index
     1 - Normal reading
@@ -55,6 +89,43 @@ function TextReaderPage() {
     5 - Natural Language Processing (NLP) assistance
   */
   const [readingMode, setReadingMode] = useState(3);
+
+  /* Hide reading modes based on input document type:
+  0 - hide nothing
+  1 - hide Reading Mode 1
+  2 - hide Reading Modes 2,3,4,5
+  */
+  const [hideSettings, setHideSettings] = useState(0);
+
+  /* Check if file is uploaded correctly with its parsed text */
+  useEffect(() => {
+    if(file !== undefined && parsedText !== undefined)
+    {
+      setWebgazerLoading(true);
+
+      fileRef.current = file;
+      fileNameRef.current = file.name;
+      parsedTextRef.current = parsedText;
+
+      maxWordCountRef.current = findMaxWordsinLine(parsedTextRef.current);
+
+      if (parsedText.length === 0) // Image-based PDF file
+      {
+        setReadingMode(1);
+        setHideSettings(1);
+      }
+      else
+      {
+        if(file.type !== "application/pdf") // Word or text file
+        {
+          setReadingMode(3);
+          setHideSettings(2);
+        }
+      }
+    }
+    else
+      toDrive(1); // Return back to Drive page with error status
+  }, []);
 
   /* Text typography parameters */
 
@@ -239,7 +310,7 @@ function TextReaderPage() {
 
   const highlightSpeedRef = useRef(2);
   const wordCountRef = useRef(1);
-  const maxWordCountRef = useRef(findMaxWordsinLine(parsedTextRef.current));
+  const maxWordCountRef = useRef(0);
   const [yCoord, setYCoord] = useState(0);
   const yCoordRef = useRef(yCoord);
   const [prevLineUnblur, setPrevLineUnblur] = useState(false);
@@ -250,6 +321,7 @@ function TextReaderPage() {
   const autoScrollSpeedRef = useRef(autoScrollSpeed);
   const [unblurredLines, setUnblurredLines] = useState(1);
   const unblurredLinesRef = useRef(unblurredLines);
+  const [calibrationAccuracy, setCalibrationAccuracy] = useState(0);
 
   const pauseStatusRef = useRef(true);
   const resetStatusRef = useRef(true);
@@ -320,7 +392,7 @@ function TextReaderPage() {
     setOpen(!open);
   };
 
-  const { toNotAuthorized, toDrive } = useNavigation();
+  const { toNotAuthorized, toDrive, toCalibration } = useNavigation();
 
   useEffect(() => {
     if(readingMode === 4)
@@ -349,21 +421,14 @@ function TextReaderPage() {
   }, []);
 
   const readingModeButtonSelection = (mode) => ({
-    border: readingMode == mode ? "3px solid #06760D" : "normal"
+    border: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "1px dashed red" : readingMode == mode ? "3px solid #06760D" : "normal",
+    color: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "red" : "auto",
+    borderColor: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "red" : "auto",
   });
 
   // Webgazer initialisation
   useEffect(() => {
     const initializeWebGazer = async () => {
-      setWebgazerLoading(true);
-        const loadingInterval = setInterval(() => {
-          setLoadingProgress((prevProgress) => {
-            if (prevProgress >= 100) {
-              clearInterval(loadingInterval);
-            }
-            return Math.min(prevProgress + 100, 100);
-          });
-        }, 250);
 
         webgazer.params.showVideo = false;
         webgazer.params.showGazeDot = true;
@@ -385,13 +450,29 @@ function TextReaderPage() {
           {
             var calibrationData = JSON.parse(localStorage.getItem("calibration"));
             webgazer.setRegressionData(calibrationData);
+            var accuracy = JSON.parse(localStorage.getItem("accuracy"));
+            setCalibrationAccuracy(accuracy);
           }
           else
-            console.log("No calibration data found in localStorage. Data already stored in WebGazer instance during calibration.");
+          {
+            const responseMsg = await reauthenticatingFetch("GET",`http://${baseURL}/api/user/calibration-retrieval/`)
+        
+            if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
+            {
+              // set accuracy to -1 to indicate that no calibration data is found
+              setCalibrationAccuracy(-1);
+            }
+            else
+            {
+              var calibrationData = responseMsg.calibration_values;
+              webgazer.setRegressionData(calibrationData);
+            }
+          }
+          
         }
         catch(error)
         {
-          console.error("Failed to load calibration data to localStorage:", error);
+          console.error("Failed to load calibration data from localStorage:", error);
         }
 
         /* Fetch the video stream from Webgazer */
@@ -410,27 +491,41 @@ function TextReaderPage() {
       // }
 
       setWebgazerLoading(false);
-      clearInterval(loadingInterval);
+      setWebgazerFinished(true);
       console.log("WebGazer initialized successfully");
     };
 
-    initializeWebGazer();
+    if(isLoading)
+      initializeWebGazer();
 
-  }, []);
+  }, [isLoading]);
+
+  // WebSocket connection
+  const connectWebSocket = async () => {
+    setRetryConnection(1);
+    const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
+    socket.current = new WebSocket(`ws://${baseURL}/ws/video/?token=${token}`);
+
+    // console.log("Connecting to WebSocket...");
+
+    socket.current.onopen = () => {
+    setRetryConnection(0);
+    setStatusConn(true);
+    }
+    socket.current.onclose = async(event) => {
+      socket.current = null;
+      setStatusConn(false);
+      setRetryConnection(2);
+    };
+    socket.current.onerror = async(event) => {
+      await reauthenticatingFetch("GET", `http://${baseURL}/api/user/profile/`); // to update access token
+      // toNotAuthorized();
+    };
+  };
 
   useEffect(() => {
-    if (!socket.current && !isLoading) {
-      const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
-      socket.current = new WebSocket(`ws://localhost:8000/ws/video/?token=${token}`);
-
-      console.log("Connecting to WebSocket...");
-
-      socket.current.onopen = () => setStatusConn(true);
-      socket.current.onclose = () => {
-        socket.current = null;
-        setStatusConn(false);
-      };
-      socket.current.onerror = () => {toNotAuthorized};
+    if (!socket.current && !isLoading && webgazerFinished) {
+      connectWebSocket();
     }
 
     return () => {
@@ -459,6 +554,7 @@ function TextReaderPage() {
 
 // Initialize state for previous frame data URL
 const previousFrameDataUrl = useRef(null);
+
 
 const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
   if (socket.current && socket.current.readyState === WebSocket.OPEN) {
@@ -501,17 +597,30 @@ const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
 
     handleYCoord(yCoord);
   }
+  else
+  {
+    // console.error("WebSocket connection no longer open.");
+    setStatusConn(false);
+    webgazer.clearGazeListener();
+  }
 }, []);
+
+const gazeListener = (data, canvas) => {
+  if (data) {
+    sendVideoFrame(data.x, data.y, canvas);
+  } else {
+    sendVideoFrame(null, null, canvas);
+  }
+};
 
 useEffect(() => {
   if (connectionOpen) {
-    webgazer.setGazeListener((data, canvas) => {
-      if (data) {
-        sendVideoFrame(data.x, data.y, canvas);
-      } else {
-        sendVideoFrame(null, null, canvas);
-      }
-    });
+    webgazer.setGazeListener(gazeListener);
+  }
+  else
+  {
+    if(retryConnection !== 1)
+      setRetryConnection(2);
   }
 }, [connectionOpen, sendVideoFrame]);
 
@@ -532,8 +641,6 @@ useEffect(() => {
           Loading WebGazer...
         </Typography>
         <LinearProgress
-          variant="determinate"
-          value={loadingProgress}
           style={{ width: "80%", marginTop: "2vh" }}
         />
       </div>
@@ -542,11 +649,37 @@ useEffect(() => {
 
   return (
     <Box style={{marginTop: "15vh", justifyContent: "center"}}>
-      {/* <video ref={videoRef} autoPlay width="700" height="700" style={{display: 'none'}}></video> */}
+        {
+          readingMode === 4 && hideSettings !== 1 ? (
+          <Collapse in={calibrationAccuracy === -1} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : "13vh", left: "5vh", zIndex: 1500}}>
+            <Alert variant="filled" severity="warning">
+              No calibration data found. Please calibrate before using this reading mode.
+            </Alert>
+          </Collapse>
+          ) : ( null )
+        }
+        <Collapse in={retryConnection === 0} sx={{position: "absolute", bottom: "5vh", left: "5vh", zIndex: 1500}}>
+          <Alert variant="filled" severity="success" onClose={() => setRetryConnection(-1)}>
+            Connection to server successful.
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 1} sx={{position: "absolute", bottom: "5vh", left: "5vh", zIndex: 1500}}>
+          <Alert variant="filled" severity="info">
+            Connecting...
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 2} sx={{position: "absolute", bottom: "5vh", left: "5vh", zIndex: 1500}}>
+          <Alert variant="filled" severity="error" 
+          action={
+            <IconButton onClick={() => connectWebSocket()} color="inherit" size="small"><ReplayRoundedIcon fontSize="small"/></IconButton>
+          }>
+            Connection lost. Click here to retry.
+          </Alert>
+        </Collapse>
       <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
         {/* Create all reading mode components here */}
         {
-        readingMode === 1 ? <NormalReading file={file} parsedText={parsedText} textSettings={normalReadingSettings}/>
+        readingMode === 1 ? <NormalReading file={fileRef.current} textSettings={normalReadingSettings}/>
         : readingMode === 2 ? <RSVP textSettings={RSVPSettings}/>
         : readingMode === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
         : readingMode === 4 ? <LineUnblur textSettings={lineUnblurSettings}/>
@@ -568,7 +701,7 @@ useEffect(() => {
               <IconButton 
                   color="inherit"
                   sx={{zIndex: 1500}}
-                  onClick={toDrive}
+                  onClick={() => {webgazer.end(); toDrive(0);}}
                 >
                 <ExitToAppRoundedIcon sx={{ fontSize: "30px"}}/>
               </IconButton>
@@ -611,12 +744,12 @@ useEffect(() => {
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Reading Mode 2 - Speed Reading (RSVP)" placement="top">
-                      <Button variant="outlined" sx={readingModeButtonSelection(2)} onClick={handleReadingModeSelection(2)}><Box>2</Box></Button> {/* Reading Mode 2 */}
+                      <Button  variant="outlined" sx={readingModeButtonSelection(2)} onClick={handleReadingModeSelection(2)}><Box>2</Box></Button> {/* Reading Mode 2 */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Reading Mode 3 - Speed Reading (Highlighting) " placement="top">
-                      <Button variant="outlined" sx={readingModeButtonSelection(3)} onClick={handleReadingModeSelection(3)}><Box>3</Box></Button> {/* Reading Mode 3 */}
+                      <Button  variant="outlined" sx={readingModeButtonSelection(3)} onClick={handleReadingModeSelection(3)}><Box>3</Box></Button> {/* Reading Mode 3 */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
@@ -626,7 +759,7 @@ useEffect(() => {
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Reading Mode 5 - NLP" placement="top">
-                      <Button variant="outlined" sx={readingModeButtonSelection(5)} onClick={handleReadingModeSelection(5)}><Box>5</Box></Button> {/* Reading Mode 5 */}
+                      <Button  variant="outlined" sx={readingModeButtonSelection(5)} onClick={handleReadingModeSelection(5)}><Box>5</Box></Button> {/* Reading Mode 5 */}
                     </Tooltip>
                   </Grid2>
                 </Grid2>
@@ -743,6 +876,20 @@ useEffect(() => {
           </Box>
             ): readingMode === 4 ? ( // Line-by-line unblurring
             <Box>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center", justifyContent: "center"}}>
+                <Tooltip title="Check or update calibration details" placement="left">  
+                {calibrationAccuracy === -1 && hideSettings !== 1 ? (
+                  <FlashingButton variant="outlined" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>
+                    Start calibration
+                  </FlashingButton>
+                ) : (
+                  <Button variant="contained" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>
+                    Check calibration
+                  </Button>
+                )
+                }
+                </Tooltip>
+              </Container>
               <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
                 <Tooltip title="Reveal the lines above the highlighted one" placement="left">  
                   <Checkbox checked={prevLineUnblur} onChange={handlePrevLineUnblur}/>
@@ -760,7 +907,7 @@ useEffect(() => {
                 </Tooltip>
               </Container>
               {autoScroll ? (
-              <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
                   <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
                   <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                   <Typography variant="caption">
@@ -1036,6 +1183,6 @@ useEffect(() => {
       </Drawer>
     </Box>
   );
-}
+  }
 
 export default TextReaderPage;

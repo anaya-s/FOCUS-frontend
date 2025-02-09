@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigation } from "../utils/navigation";
+import { useLocation } from 'react-router-dom';
+
 import {
   Drawer,
   Button,
@@ -16,6 +18,8 @@ import {
   Menu,
   MenuItem,
   Tooltip,
+  Alert,
+  Collapse
 } from "@mui/material";
 import {
   CloudUpload,
@@ -102,6 +106,20 @@ function DocumentDrivePage() {
   const [documentTiles, setDocumentTiles] = useState(sortAlphabetically(fileDetails));
 
   const [searchQuery, setSearchQuery] = useState("");
+
+  const location = useLocation();
+
+  const { error } = location.state || {};
+
+  const [showAlert, setShowAlert] = useState(false);
+
+  useEffect(() => {
+    if (error === 1) {
+      setShowAlert(true);
+    } else {
+      setShowAlert(false);
+    }
+  }, []);
 
   const [menuIndex, setMenuIndex] = useState(null);
 
@@ -254,9 +272,7 @@ function DocumentDrivePage() {
     // Parse the text from the file and send it the text reader page
     const parsedText = await parseText(file);
     
-    toCalibration(file, parsedText);
-    // OR (depending on user preferences)
-    // toReadingPage(file, parsedText);
+    toReadingPage(file, parsedText);
   };
 
   const handleFileUpload = async (e) => {
@@ -267,9 +283,7 @@ function DocumentDrivePage() {
     // Parse the text from the file and send it the text reader page
     const parsedText = await parseText(file);
     
-    toCalibration(file, parsedText);
-    // OR (depending on user preferences)
-    // toReadingPage(file, parsedText);
+    toReadingPage(file, parsedText);
   };
 
   const fileInputRef = useRef(null);
@@ -452,7 +466,12 @@ function DocumentDrivePage() {
       </Drawer>
 
       {/* Main content */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3, ml: "240px", mt: 2 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, ml: "240px", mt: 2, position: "relative"}}>
+        <Collapse in={showAlert} sx={{position: "absolute", top: 0, right: 0}}>
+          <Alert variant="filled" severity="error" onClose={() => setShowAlert(false)}>
+            An error occurred while processing the document. Please try again.
+          </Alert>
+        </Collapse>
         <Typography
           variant="h2"
           gutterBottom

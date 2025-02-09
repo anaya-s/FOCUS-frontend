@@ -16,6 +16,10 @@ import { Typography } from "@mui/material";
 import AuthContext from "../../context/AuthContext";
 import { useNavigation } from "../../utils/navigation";
 import { reauthenticatingFetch } from "../../utils/api";
+import config from '../../config'
+const baseURL = config.apiUrl
+
+import webgazer from "../../webgazer/webgazer";
 
 export default function AccountMenu() {
   const [anchorEl, setAnchorEl] = useState(null); 
@@ -34,7 +38,7 @@ export default function AccountMenu() {
   useEffect(() => {
     const fetchUsername = async () => {
 try {
-      const responseMsg = await reauthenticatingFetch("GET", "http://localhost:8000/api/user/profile/");
+      const responseMsg = await reauthenticatingFetch("GET", `http://${baseURL}/api/user/profile/`);
 
       if (responseMsg.error) {
         console.error("Failed to fetch profile data:", responseMsg.error);
@@ -105,26 +109,26 @@ try {
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
-        <MenuItem onClick={toDashboard}>
+        <MenuItem onClick={() => {webgazer.end(); toDashboard();}}>
           <ListItemIcon>
             <AnalyticsIcon fontSize="small" />
           </ListItemIcon>
           Dashboard
         </MenuItem>
-        <MenuItem onClick={toProfile}>
+        <MenuItem onClick={() => {webgazer.end(); toProfile();}}>
           <ListItemIcon>
             <PersonIcon fontSize="small" />
           </ListItemIcon>
           Profile
         </MenuItem>
-        <MenuItem onClick={toSettings}>
+        <MenuItem onClick={() => {webgazer.end(); toSettings();}}>
           <ListItemIcon>
             <Settings fontSize="small" />
           </ListItemIcon>
           Settings
         </MenuItem>
         <Divider />
-        <MenuItem onClick={logoutUser}>
+        <MenuItem onClick={() => {webgazer.end(); logoutUser();}}>
           <ListItemIcon>
             <Logout fontSize="small" />
           </ListItemIcon>
