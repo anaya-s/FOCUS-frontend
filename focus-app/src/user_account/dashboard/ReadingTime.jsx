@@ -38,7 +38,7 @@ export default function ReadingTime() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const result = await reauthenticatingFetch("GET",`http://${baseURL}/api/eye/reading-times/`);
+        const result = await reauthenticatingFetch("GET",`${baseURL}/api/eye/reading-times/`);
 
         const { sessionLabels, sessionTotals } = processData(result);
         setSessionLabels(sessionLabels);

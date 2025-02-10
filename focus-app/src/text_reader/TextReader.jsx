@@ -463,7 +463,7 @@ function TextReaderPage() {
           }
           else
           {
-            const responseMsg = await reauthenticatingFetch("GET",`http://${baseURL}/api/user/calibration-retrieval/`)
+            const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
         
             if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
             {
@@ -481,6 +481,7 @@ function TextReaderPage() {
         catch(error)
         {
           console.error("Failed to load calibration data from localStorage:", error);
+          setCalibrationAccuracy(-1);
         }
 
         /* Fetch the video stream from Webgazer */
@@ -512,7 +513,9 @@ function TextReaderPage() {
   const connectWebSocket = async () => {
     setRetryConnection(1);
     const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
-    socket.current = new WebSocket(`ws://${baseURL}/ws/video/?token=${token}`);
+
+    const cleanBaseURL = baseURL.replace(/^https?:\/\//, ""); // remove 'http://' or 'https://' from baseURL when connecting using WebSocket
+    socket.current = new WebSocket(`ws://${cleanBaseURL}/ws/video/?token=${token}`);
 
     // console.log("Connecting to WebSocket...");
 
@@ -526,7 +529,9 @@ function TextReaderPage() {
       setRetryConnection(2);
     };
     socket.current.onerror = async(event) => {
-      await reauthenticatingFetch("GET", `http://${baseURL}/api/user/profile/`); // to update access token
+      await reauthenticatingFetch("GET", `${baseURL}/api/user/profile/`);
+      console.log("Reconnecting to WebSocket...");
+      connectWebSocket(); // Retry WebSocket connection after refreshing the access token using above request
       // toNotAuthorized();
     };
   };
@@ -660,9 +665,15 @@ useEffect(() => {
         {
           readingMode === 4 && hideSettings !== 1 ? (
           <Collapse in={calibrationAccuracy === -1} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : "13vh", left: "5vh", zIndex: 1500}}>
-            <Alert variant="filled" severity="warning">
-              No calibration data found. Please calibrate before using this reading mode.
-            </Alert>
+          { retryConnection === 2 ? (
+          <Alert variant="filled" severity="warning">
+            No calibration data found. Please check your connection.
+          </Alert>
+            ) : (
+          <Alert variant="filled" severity="warning">
+            No calibration data found. Please calibrate before using this reading mode.
+          </Alert>
+          )}
           </Collapse>
           ) : ( null )
         }
@@ -885,10 +896,10 @@ useEffect(() => {
             ): readingMode === 4 ? ( // Line-by-line unblurring
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center", justifyContent: "center"}}>
-                <Tooltip title="Check or update calibration details" placement="left">  
+                <Tooltip title={retryConnection !== 2 ? "Check or update calibration details" : "Check your connection before calibration"} placement="left">  
                 {calibrationAccuracy === -1 && hideSettings !== 1 ? (
-                  <FlashingButton variant="outlined" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>
-                    Start calibration
+                  <FlashingButton variant="outlined" sx={{ml: "1vw"}} onClick={retryConnection !== 2 ? () => { webgazer.end(); toCalibration(file, parsedText); } : null}>
+                    {retryConnection !== 2 ? "Start calibration" : "Check connection"}
                   </FlashingButton>
                 ) : (
                   <Button variant="contained" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>

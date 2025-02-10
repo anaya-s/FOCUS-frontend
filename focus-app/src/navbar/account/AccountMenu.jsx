@@ -38,7 +38,7 @@ export default function AccountMenu() {
   useEffect(() => {
     const fetchUsername = async () => {
 try {
-      const responseMsg = await reauthenticatingFetch("GET", `http://${baseURL}/api/user/profile/`);
+      const responseMsg = await reauthenticatingFetch("GET", `${baseURL}/api/user/profile/`);
 
       if (responseMsg.error) {
         console.error("Failed to fetch profile data:", responseMsg.error);

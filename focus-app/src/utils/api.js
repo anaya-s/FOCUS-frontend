@@ -7,7 +7,7 @@ const baseURL = config.apiUrl
 async function refreshAccessToken() {
   // Make an API call to refresh the access token
   var accessToken = JSON.parse(localStorage.getItem(ACCESS_TOKEN));
-  const response = await fetch(`https://${baseURL}/api/token/refresh/`, {
+  const response = await fetch(`${baseURL}/api/token/refresh/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json", // Ensures DRF processes the request correctly

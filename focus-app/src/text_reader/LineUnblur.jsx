@@ -52,7 +52,7 @@ export function LineUnblur({ textSettings }) {
 
     const response = await reauthenticatingFetch(
       "POST",
-      `http://${baseURL}/api/user/reading-progress/`,
+      `${baseURL}/api/user/reading-progress/`,
       bodyContents
     );
 
