@@ -143,7 +143,7 @@ function TextReaderPage() {
   const fontSizeRef = useRef(28);
   const textOpacityRef = useRef(0.5);
   const letterSpacingRef = useRef(0);
-  const lineSpacingRef = useRef(2);
+  const lineSpacingRef = useRef(3);
   const backgroundBrightnessRef = useRef(0);
   const invertTextColourRef = useRef(false);
   const backgroundColourRef = useRef([0, 0, 0]);
@@ -220,7 +220,7 @@ function TextReaderPage() {
     if(readingMode === 4)
       lineSpacingRef.current = 7;
     else
-    lineSpacingRef.current = 2;
+      lineSpacingRef.current = 3;
 
     backgroundBrightnessRef.current = 0;
     invertTextColourRef.current = false;
@@ -240,6 +240,9 @@ function TextReaderPage() {
     autoScrollRef.current = false;
 
     pdfScaleRef.current = 1;
+
+    showVerbsRef.current = true;
+    showConjucationsRef.current = true;
   };
 
   const handleKeyPress = (e) => {
@@ -326,11 +329,14 @@ function TextReaderPage() {
   const pauseStatusRef = useRef(true);
   const resetStatusRef = useRef(true);
 
+  const showVerbsRef = useRef(true);
+  const showConjucationsRef = useRef(true);
+
   const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef, isPDFRef]);
   const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, autoScrollSpeedRef, unblurredLinesRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
-  const nlpSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const nlpSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, showVerbsRef, showConjucationsRef, fileNameRef, parsedTextRef]);
 
   const [pauseStatus, setPauseStatus] = useState(true);
 
@@ -400,10 +406,12 @@ function TextReaderPage() {
     else
       lineSpacingRef.current = 2;
 
-      if(readingMode === 2)
-        highlightSpeedRef.current = 5;
-      else
-        highlightSpeedRef.current = 2;
+    if(readingMode === 2)
+      highlightSpeedRef.current = 5;
+    else
+      highlightSpeedRef.current = 2;
+
+    webgazer.hideGazeDot(readingMode);
   }, [readingMode]);
 
   useEffect(() => {
@@ -455,7 +463,7 @@ function TextReaderPage() {
           }
           else
           {
-            const responseMsg = await reauthenticatingFetch("GET",`http://${baseURL}/api/user/calibration-retrieval/`)
+            const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
         
             if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
             {
@@ -473,6 +481,7 @@ function TextReaderPage() {
         catch(error)
         {
           console.error("Failed to load calibration data from localStorage:", error);
+          setCalibrationAccuracy(-1);
         }
 
         /* Fetch the video stream from Webgazer */
@@ -504,7 +513,9 @@ function TextReaderPage() {
   const connectWebSocket = async () => {
     setRetryConnection(1);
     const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
-    socket.current = new WebSocket(`ws://${baseURL}/ws/video/?token=${token}`);
+
+    const cleanBaseURL = baseURL.replace(/^https?:\/\//, ""); // remove 'http://' or 'https://' from baseURL when connecting using WebSocket
+    socket.current = new WebSocket(`ws://${cleanBaseURL}/ws/video/?token=${token}`);
 
     // console.log("Connecting to WebSocket...");
 
@@ -518,7 +529,9 @@ function TextReaderPage() {
       setRetryConnection(2);
     };
     socket.current.onerror = async(event) => {
-      await reauthenticatingFetch("GET", `http://${baseURL}/api/user/profile/`); // to update access token
+      await reauthenticatingFetch("GET", `${baseURL}/api/user/profile/`);
+      console.log("Reconnecting to WebSocket...");
+      connectWebSocket(); // Retry WebSocket connection after refreshing the access token using above request
       // toNotAuthorized();
     };
   };
@@ -652,9 +665,15 @@ useEffect(() => {
         {
           readingMode === 4 && hideSettings !== 1 ? (
           <Collapse in={calibrationAccuracy === -1} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : "13vh", left: "5vh", zIndex: 1500}}>
-            <Alert variant="filled" severity="warning">
-              No calibration data found. Please calibrate before using this reading mode.
-            </Alert>
+          { retryConnection === 2 ? (
+          <Alert variant="filled" severity="warning">
+            No calibration data found. Please check your connection.
+          </Alert>
+            ) : (
+          <Alert variant="filled" severity="warning">
+            No calibration data found. Please calibrate before using this reading mode.
+          </Alert>
+          )}
           </Collapse>
           ) : ( null )
         }
@@ -877,10 +896,10 @@ useEffect(() => {
             ): readingMode === 4 ? ( // Line-by-line unblurring
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center", justifyContent: "center"}}>
-                <Tooltip title="Check or update calibration details" placement="left">  
+                <Tooltip title={retryConnection !== 2 ? "Check or update calibration details" : "Check your connection before calibration"} placement="left">  
                 {calibrationAccuracy === -1 && hideSettings !== 1 ? (
-                  <FlashingButton variant="outlined" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>
-                    Start calibration
+                  <FlashingButton variant="outlined" sx={{ml: "1vw"}} onClick={retryConnection !== 2 ? () => { webgazer.end(); toCalibration(file, parsedText); } : null}>
+                    {retryConnection !== 2 ? "Start calibration" : "Check connection"}
                   </FlashingButton>
                 ) : (
                   <Button variant="contained" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>
@@ -972,7 +991,24 @@ useEffect(() => {
               </Container>
             </Box> 
             ): // NLP reading
-            <Typography variant="h7" sx={{mt: "2vh"}}>NLP Reading Settings - TBC</Typography> //Replace with specific settings for Reading Mode 5
+            <Box>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
+                <Tooltip title="Italicise all verbs in the text" placement="left">  
+                  <Checkbox checked={showVerbsRef.current} onChange={() => {showVerbsRef.current = !showVerbsRef.current}}/>
+                  <Typography variant="caption" sx={{ml: "1vw"}}>
+                    Highlight verbs
+                  </Typography>
+                </Tooltip>
+              </Container>
+              <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
+                <Tooltip title="Underline all conjucations in the text" placement="left">  
+                  <Checkbox checked={showConjucationsRef.current} onChange={() => {showConjucationsRef.current = !showConjucationsRef.current}}/>
+                  <Typography variant="caption" sx={{ml: "1vw"}}>
+                    Highlight conjucations
+                  </Typography>
+                </Tooltip>
+              </Container>
+            </Box>
             }
             <Divider sx={{width: "80%", mt: "4vh"}}/>
           </Container>

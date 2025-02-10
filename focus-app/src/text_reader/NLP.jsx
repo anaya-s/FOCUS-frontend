@@ -1,17 +1,21 @@
 import { React, useEffect, useState, useRef } from "react";
 import { Typography, Box, CircularProgress } from "@mui/material";
-import nlp from "compromise";
+// import nlp from "compromise";
+import winkNLP from 'wink-nlp';
+import model from 'wink-eng-lite-web-model';
 
 let startNLP;
 
 export function NLP({ textSettings }) {
-  const [fontStyle, fontSize, textOpacity, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed, pauseStatus, resetStatus, documentName, parsedText] = textSettings.current;
+  const [fontStyle, fontSize, textOpacity, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, showVerbs, showConjucations, documentName, parsedText] = textSettings.current;
 
   const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
   const [currentLine, setCurrentLine] = useState(0); // Stores index of current line
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
   const [fileName, setFileName] = useState("");
-  const significantWords = useRef(new Set());
+  const significantNouns = useRef(new Set());
+  const significantVerbs = useRef(new Set());
+  const significantConjunctions = useRef(new Set());
   const isNotValid = useRef(false);
 
   useEffect(() => {
@@ -20,73 +24,62 @@ export function NLP({ textSettings }) {
     }
   }, [parsedText]);
 
-  useEffect(() => {
-    if (resetStatus.current === true) {
-      setCurrentWord(0);
-      setCurrentLine(0);
-      resetStatus.current = false;
-    }
-  }, [resetStatus.current]);
-
-  useEffect(() => {
-    if (pauseStatus.current === false) {
-      iterateWords(textArray);
-    }
-  }, [pauseStatus.current]);
-
-  /* Function that iterates through each element in 2D array (every word in every line) */
-  const iterateWords = async (lines) => {
-    if (lines.length) {
-      for (let lineNo = currentLine; lineNo < lines.length; lineNo++) {
-        for (let wordNo = currentWord; wordNo < lines[lineNo].length; wordNo++) {
-          if (pauseStatus.current) {
-            break;
-          }
-          setCurrentLine(lineNo);
-          setCurrentWord(wordNo);
-          await new Promise((resolve) =>
-            setTimeout(resolve, 1000 / highlightSpeed.current)
-          ); // set time interval
-        }
-      }
-    }
-  };
-
   /* Function which handles the uploading of files, detecting whether the file types are valid */
   startNLP = async (fileName, text) => {
     setFileName(fileName);
     setTextArray(parsedText.current);
     if(textArray.length === 0)
       isNotValid.current = true;
-    pauseStatus.current = true;
-    // console.log(text.flat().join(" "));
-    significantWords.current = extractImportantWords(text.flat().join(" "));
+    const result = extractImportantWords(text.flat().join(" "));
+    significantNouns.current = result.nouns;
+    significantVerbs.current = result.verbs;
+    significantConjunctions.current = result.conjunctions;
   };
 
   const extractImportantWords = (text) => {
-    let doc = nlp(text);
-    let words = new Set(doc.nouns().terms().out("array"));
-    // console.log(words);
-    return words;
-  };
+      // Using wink-nlp to filter true nouns
+      const winkDoc = winkNLP(model);
+      const winkText = winkDoc.readDoc(text);
+
+      const its = winkDoc.its;
+
+      const nouns = new Set(winkText.tokens().filter((t) => t.out(its.pos) === 'NOUN' || t.out(its.pos) === 'PROPN' || t.out(its.pos) === 'PRON' || t.out(its.pos) === 'NUM').out());
+      const verbs = new Set(winkText.tokens().filter((t) => t.out(its.pos) === 'VERB').out());
+      const conjunctions = new Set(winkText.tokens().filter((t) => t.out(its.pos) === 'CCONJ' || t.out(its.pos) === 'SCONJ').out());
+
+      // console.log(nouns);
+      // console.log(verbs);
+      // console.log(conjunctions);
+
+      return {nouns, verbs, conjunctions};
+
+    };
+    
 
   const getFormattedText = () => {
+
     return textArray.map((line, lineIndex) => (
       <div
         key={lineIndex}
       >
         {line.map((word, wordIndex) => {
-          const isSignificant = significantWords.current.has(word);
+
+          const cleanWord = word.replace(/[.,]+$/g, "").trim(); // remove trailing full stops and commas
+
+          const isNoun = significantNouns.current.has(cleanWord);
+          const isVerb = (showVerbs.current) ? significantVerbs.current.has(cleanWord) : false;
+          const isConjucation = (showConjucations.current) ? significantConjunctions.current.has(cleanWord) : false;
+
           return (
             <span
               key={wordIndex}
               style={{
                 margin: "5px",
                 opacity:
-                  isSignificant
+                  (isNoun || isVerb || isConjucation)
                     ? 1
                     : textOpacity.current,
-                color: isSignificant
+                color: (isNoun || isVerb || isConjucation)
                   ? backgroundColourSelection.current !== 1 &&
                     backgroundColourSelection.current !== 5
                     ? "black"
@@ -97,13 +90,14 @@ export function NLP({ textSettings }) {
                   ? "white"
                   : `rgba(${backgroundColour.current[0]}, ${backgroundColour.current[1]}, ${backgroundColour.current[2]})`,
                 fontWeight:
-                  isSignificant
+                  isNoun
                     ? "bold"
                     : "normal",
+                fontStyle: (isVerb) ? "italic" : "normal",
+                textDecoration: (isConjucation) ? "underline" : "none"
               }}
             >
               {word}
-              {wordIndex < line.length - 1 ? " " : ""}
             </span>
           );
         })}

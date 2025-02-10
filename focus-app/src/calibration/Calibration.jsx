@@ -193,7 +193,7 @@ const CalibrationPage = () => {
       const getCalibrationDataDB = async () => {
         try {
 
-          const responseMsg = await reauthenticatingFetch("GET",`http://l${baseURL}/api/user/calibration-retrieval/`)
+          const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
         
           if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
           {
@@ -363,7 +363,7 @@ const CalibrationPage = () => {
         console.log(bodyContents);
 
         // Send calibration data to the backend
-        const response = await reauthenticatingFetch("POST", `http://${baseURL}/api/user/calibrate/`, bodyContents)
+        const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/calibrate/`, bodyContents)
 
         if(response.error)
           console.log(response.error);

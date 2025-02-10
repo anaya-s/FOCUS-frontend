@@ -50,7 +50,7 @@ export function SpeedReading({textSettings}) {
 
     const response = await reauthenticatingFetch(
       "POST",
-      `http://${baseURL}/api/user/reading-progress/`,
+      `${baseURL}/api/user/reading-progress/`,
       bodyContents
     );
 
@@ -130,7 +130,6 @@ const iterateWords = async (lines) => {
           >
             {/* Add spacing between each word and line */}
             {word}
-            {wordIndex < line.length - 1 ? " " : ""}
           </span>
         ))}
       </div>

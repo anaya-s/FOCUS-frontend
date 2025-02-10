@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
   const { toHome, toDrive } = useNavigation();
 
   let loginUser = async (email,password) => {
-    let response = await fetch(`http://${baseURL}/api/token/`, {
+    let response = await fetch(`${baseURL}/api/token/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   }, [setAuthTokens, setUser, setIsAuthorized, toHome]);
 
   let updateToken = useCallback(async () => {
-    let response = await fetch(`http://${baseURL}/api/token/refresh/`, {
+    let response = await fetch(`${baseURL}/api/token/refresh/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
