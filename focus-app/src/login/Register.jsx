@@ -22,6 +22,7 @@ function Register() {
   const [password, setPassword] = useState("");
 
   const { toLogin } = useNavigation();
+  const { toOnboarding } = useNavigation();
 
   const handleCreateUser = async (e) => {
       e.preventDefault();
@@ -120,7 +121,10 @@ function Register() {
             />
             <Button
               type="submit"
-              onClick={handleCreateUser}
+              onClick={() => {
+                handleCreateUser(); // Call the existing function
+                toOnboarding();     // Redirect to onboarding page
+              }}
               fullWidth
               variant="contained"
               color="primary"

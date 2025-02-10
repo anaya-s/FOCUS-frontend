@@ -26,6 +26,7 @@ export function useNavigation() {
     toLogin: () => navigate('/login'),
     toRegister: () => navigate('/register'),
     toReset: () => navigate('/reset-password'),
+    toOnboarding: () => navigate('/Onboarding'),
     //error
     toNotFound: () => navigate('error/404'),
     toNotAuthorized: () => navigate('error/403'),
