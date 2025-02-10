@@ -406,10 +406,12 @@ function TextReaderPage() {
     else
       lineSpacingRef.current = 2;
 
-      if(readingMode === 2)
-        highlightSpeedRef.current = 5;
-      else
-        highlightSpeedRef.current = 2;
+    if(readingMode === 2)
+      highlightSpeedRef.current = 5;
+    else
+      highlightSpeedRef.current = 2;
+
+    webgazer.hideGazeDot(readingMode);
   }, [readingMode]);
 
   useEffect(() => {
