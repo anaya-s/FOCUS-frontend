@@ -38,6 +38,8 @@ import {
 
 import { styled } from '@mui/system';
 
+import Swal from "sweetalert2";
+
 const FlashingButton = styled(Button)(({ theme }) => ({
   animation: 'flash 1s infinite',
   '@keyframes flash': {
@@ -126,6 +128,58 @@ function TextReaderPage() {
     else
       toDrive(1); // Return back to Drive page with error status
   }, []);
+
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .custom-swal-container {
+        z-index: 1500; /* Set the desired z-index */
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  const showBreakAlert = () => {
+
+    Swal.fire({
+
+      title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Break suggested</span>',
+        html: `
+        <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
+          <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto">
+          <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+            <p>I have detected fatigue. Please take a break.</p>
+            <p style="margin-top: 20px;">Total break time: </p>
+            <p style="margin-top: 20px;">Press continue to resume reading.</p>
+          </div>
+        </div>
+      `,
+      icon: "info",
+      confirmButtonText: "OK",
+      confirmButtonColor: "#06760D",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      allowEnterKey: false,
+      showCancelButton: false,
+      showDenyButton: false,
+      showConfirmButton: true,
+      showCloseButton: false,
+      showCloseButtonOnOverlay: false,
+      showCloseButtonOnEsc: false,
+      showLoaderOnConfirm: true,
+      customClass: {
+        container: 'custom-swal-container', // Apply the custom class
+      },
+      willClose: async () => {
+        
+      }
+    });
+
+  };
 
   /* Text typography parameters */
 
@@ -552,14 +606,6 @@ function TextReaderPage() {
       }
     };
   }, [isLoading]);
-
-  // // FIX?
-  // useEffect(() => {
-  //   if(readingMode !== 4)
-  //     document.getElementById(webgazer.params.gazeDotId).style.display = "hidden"; // hide the gaze dot if face is not detected
-  //   else
-  //     document.getElementById(webgazer.params.gazeDotId).style.display = "auto"; // hide the gaze dot if face is not detected
-  // },[readingMode]);
 
   var total_frames = 0;
   var previous_frame = 0;

@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigation } from "../utils/navigation";
 import { useLocation } from 'react-router-dom';
+import webgazer from "../webgazer/webgazer";
+
+import config from '../config'
+const baseURL = config.apiUrl
 
 import {
   Drawer,
@@ -34,52 +38,53 @@ import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import Swal from "sweetalert2";
 
 import { parseText } from "../text_reader/textParsing";
+import { reauthenticatingFetch } from "../utils/api";
 
 function DocumentDrivePage() {
   /* Temporary data for document tiles - update this with real document data from backend */
   var files = [
-    {
-      name: "Document1.docx",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "1/11/2024",
-    },
-    {
-      name: "Document2.docx",
-      thumbnail: "",
-      isStarred: true,
-      lastOpened: "2/11/2024",
-    },
-    {
-      name: "ProjectBrief.pdf",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "3/11/2024",
-    },
-    {
-      name: "TechnicalReport.pdf",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "3/11/2024",
-    },
-    {
-      name: "README.txt",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "4/11/2024",
-    },
-    {
-      name: "Notes.docx",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "6/11/2024",
-    },
-    {
-      name: "DocumentName6.pdf",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "6/11/2024",
-    },
+    // {
+    //   name: "Document1.docx",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "1/11/2024",
+    // },
+    // {
+    //   name: "Document2.docx",
+    //   thumbnail: "",
+    //   isStarred: true,
+    //   lastOpened: "2/11/2024",
+    // },
+    // {
+    //   name: "ProjectBrief.pdf",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "3/11/2024",
+    // },
+    // {
+    //   name: "TechnicalReport.pdf",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "3/11/2024",
+    // },
+    // {
+    //   name: "README.txt",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "4/11/2024",
+    // },
+    // {
+    //   name: "Notes.docx",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "6/11/2024",
+    // },
+    // {
+    //   name: "DocumentName6.pdf",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "6/11/2024",
+    // },
   ];
 
   const { toCalibration, toReadingPage } = useNavigation();
@@ -111,15 +116,50 @@ function DocumentDrivePage() {
 
   const { error } = location.state || {};
 
+  /*
+  Status of connection to backend server (used for retrying connection and for showing alerts):
+    -1 - Successful connection (message cleared)
+    0 - Successful connection message
+    1 - Connecting message
+    2 - Lost connection message
+  */
+  const [retryConnection, setRetryConnection] = useState(1);
+
+  const hasFetched = useRef(false);
+
   const [showAlert, setShowAlert] = useState(false);
 
   useEffect(() => {
-    if (error === 1) {
-      setShowAlert(true);
-    } else {
-      setShowAlert(false);
+    // Retrieve data from database and set fileDetails
+    const getFiles = async () => {  
+      try {
+        const data = await reauthenticatingFetch("GET", `${baseURL}/api/user/file-list/`);
+
+        console.log(files);
+        console.log(data); 
+    
+        files = data;
+        setFileDetails(sortAlphabetically(files));
+        setDocumentTiles(sortAlphabetically(files));
+
+        setRetryConnection(0);
+    } catch (error) {
+        console.error("Error fetching files:", error);
+        setRetryConnection(2);
     }
-  }, []);
+    };
+
+    if(retryConnection === 1)
+    {
+      hasFetched.current = false;
+      getFiles();
+    }
+
+    if(retryConnection <= 0)
+      hasFetched.current = true;
+
+  }, [retryConnection]);
+
 
   const [menuIndex, setMenuIndex] = useState(null);
 
@@ -140,6 +180,41 @@ function DocumentDrivePage() {
       showSearches(searchQuery);
     }
   };
+
+  useEffect(() => {
+
+
+  }, [retryConnection]);
+
+  useEffect(() => {
+    webgazer.end(); // stop the webgazer instance when pressing back arrow from reading page
+
+    if (error === 1) {
+      setShowAlert(true);
+    } else {
+      setShowAlert(false);
+    }
+
+    const saveFilesBeforeUnload = () => {
+      // console.log(hasFetched.current);
+      if(hasFetched.current) // Only save when connection is successful and files already fetched, NOT during fetching process
+      {
+        console.log("Exitting Drive");
+        // Add API call here to save files
+        
+      }
+    };
+
+    window.addEventListener("unload", saveFilesBeforeUnload);
+
+    return () => {
+      window.removeEventListener("unload", saveFilesBeforeUnload);
+
+      // Save files to database before exiting or reloading
+      // console.log("Saving files to database"); 
+      saveFilesBeforeUnload();
+    };
+  }, []);
 
   const changeStarredStatus = (index) => {
     documentTiles[index].isStarred = !documentTiles[index].isStarred;
@@ -469,7 +544,17 @@ function DocumentDrivePage() {
       <Box component="main" sx={{ flexGrow: 1, p: 3, ml: "240px", mt: 2, position: "relative"}}>
         <Collapse in={showAlert} sx={{position: "absolute", top: 0, right: 0}}>
           <Alert variant="filled" severity="error" onClose={() => setShowAlert(false)}>
-            An error occurred while processing the document. Please try again.
+            An error occurred while processing the previous document. Please try again.
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 2} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="error">
+            Connection failed.
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 1} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="info">
+            Retrieving files...
           </Alert>
         </Collapse>
         <Typography
@@ -522,6 +607,7 @@ function DocumentDrivePage() {
 
         </Box>
 
+        { documentTiles.length !== 0 ? (
         <Grid2
           container
           spacing={3}
@@ -535,6 +621,7 @@ function DocumentDrivePage() {
             <Grid2 item xs={12} sm={6} md={3} key={index}>
               <Card
                 sx={{
+                  // minWidth: "25vw",
                   border: "2px solid",
                   borderColor: "primary.main",
                   borderRadius: "30px",
@@ -564,11 +651,8 @@ function DocumentDrivePage() {
                 />
                 <CardMedia
                   component="img"
-                  height="194"
                   image={
-                    document.thumbnail === ""
-                      ? "/public/images/drive/Temp.png"
-                      : document.thumbnail
+                    document.thumbnail ? `data:image/jpeg;base64,${document.thumbnail}` : "/public/images/drive/Temp.png"
                   }
                   alt="Temp"
                   sx={{ userSelect: "none", cursor: "pointer"}}
@@ -623,6 +707,22 @@ function DocumentDrivePage() {
             </Grid2>
           ))}
         </Grid2>
+      ) : retryConnection <= 0  ? (
+        <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
+          <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No files found.</Typography>
+          <Typography variant="h6"sx={{ marginBottom: "2vh"}}>Press the <span style={{color: "#06760D"}}>Upload</span> button or drop a file here.</Typography>
+        </Box>
+      ) : retryConnection === 1 ? (
+        <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
+          <Typography variant="h4" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>Fetching files. Please wait.</Typography>
+        </Box>
+      ) : (
+        <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
+          <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>Failed to fetch files.</Typography>
+          <Typography variant="h7" sx={{ marginBottom: "2vh"}}>Please check your internet connection and try again.</Typography>
+          <Button variant="contained" onClick={() => setRetryConnection(1)}>Reconnect</Button>
+        </Box>
+      )}
       </Box>
     </Box>
   );
