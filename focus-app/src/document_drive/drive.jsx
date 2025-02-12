@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigation } from "../utils/navigation";
 import { useLocation } from 'react-router-dom';
+import webgazer from "../webgazer/webgazer";
+
+import config from '../config'
+const baseURL = config.apiUrl
 
 import {
   Drawer,
@@ -34,52 +38,54 @@ import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import Swal from "sweetalert2";
 
 import { parseText } from "../text_reader/textParsing";
+import { reauthenticatingFetch } from "../utils/api";
 
 function DocumentDrivePage() {
   /* Temporary data for document tiles - update this with real document data from backend */
   var files = [
-    {
-      name: "Document1.docx",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "1/11/2024",
-    },
-    {
-      name: "Document2.docx",
-      thumbnail: "",
-      isStarred: true,
-      lastOpened: "2/11/2024",
-    },
-    {
-      name: "ProjectBrief.pdf",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "3/11/2024",
-    },
-    {
-      name: "TechnicalReport.pdf",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "3/11/2024",
-    },
-    {
-      name: "README.txt",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "4/11/2024",
-    },
-    {
-      name: "Notes.docx",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "6/11/2024",
-    },
-    {
-      name: "DocumentName6.pdf",
-      thumbnail: "",
-      isStarred: false,
-      lastOpened: "6/11/2024",
-    },
+    // {
+    //   name: "Document1.docx",
+    //   object: "",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "1/11/2024",
+    // },
+    // {
+    //   name: "Document2.docx",
+    //   thumbnail: "",
+    //   isStarred: true,
+    //   lastOpened: "2/11/2024",
+    // },
+    // {
+    //   name: "ProjectBrief.pdf",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "3/11/2024",
+    // },
+    // {
+    //   name: "TechnicalReport.pdf",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "3/11/2024",
+    // },
+    // {
+    //   name: "README.txt",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "4/11/2024",
+    // },
+    // {
+    //   name: "Notes.docx",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "6/11/2024",
+    // },
+    // {
+    //   name: "DocumentName6.pdf",
+    //   thumbnail: "",
+    //   isStarred: false,
+    //   lastOpened: "6/11/2024",
+    // },
   ];
 
   const { toCalibration, toReadingPage } = useNavigation();
@@ -111,15 +117,50 @@ function DocumentDrivePage() {
 
   const { error } = location.state || {};
 
+  /*
+  Status of connection to backend server (used for retrying connection and for showing alerts):
+    -1 - Successful connection (message cleared)
+    0 - Successful connection message
+    1 - Connecting message
+    2 - Lost connection message
+  */
+  const [retryConnection, setRetryConnection] = useState(1);
+
+  const hasFetched = useRef(false);
+
   const [showAlert, setShowAlert] = useState(false);
 
   useEffect(() => {
-    if (error === 1) {
-      setShowAlert(true);
-    } else {
-      setShowAlert(false);
+    // Retrieve data from database and set fileDetails
+    const getFiles = async () => {  
+      try {
+        const data = await reauthenticatingFetch("GET", `${baseURL}/api/user/file-list/`);
+
+        // console.log(files);
+        // console.log(data); 
+    
+        files = data;
+        setFileDetails(sortAlphabetically(files));
+        setDocumentTiles(sortAlphabetically(files));
+
+        setRetryConnection(0);
+      } catch (error) {
+          console.error("Error fetching files:", error);
+          setRetryConnection(2);
+      }
+    };
+
+    if(retryConnection === 1)
+    {
+      hasFetched.current = false;
+      getFiles();
     }
-  }, []);
+
+    if(retryConnection <= 0)
+      hasFetched.current = true;
+
+  }, [retryConnection]);
+
 
   const [menuIndex, setMenuIndex] = useState(null);
 
@@ -140,6 +181,41 @@ function DocumentDrivePage() {
       showSearches(searchQuery);
     }
   };
+
+  useEffect(() => {
+
+
+  }, [retryConnection]);
+
+  useEffect(() => {
+    webgazer.end(); // stop the webgazer instance when pressing back arrow from reading page
+
+    if (error === 1) {
+      setShowAlert(true);
+    } else {
+      setShowAlert(false);
+    }
+
+    const saveFilesBeforeUnload = () => {
+      // console.log(hasFetched.current);
+      if(hasFetched.current) // Only save when connection is successful and files already fetched, NOT during fetching process
+      {
+        console.log("Exitting Drive");
+        // Add API call here to save files
+
+      }
+    };
+
+    window.addEventListener("unload", saveFilesBeforeUnload);
+
+    return () => {
+      window.removeEventListener("unload", saveFilesBeforeUnload);
+
+      // Save files to database before exiting or reloading
+      // console.log("Saving files to database"); 
+      saveFilesBeforeUnload();
+    };
+  }, []);
 
   const changeStarredStatus = (index) => {
     documentTiles[index].isStarred = !documentTiles[index].isStarred;
@@ -213,6 +289,13 @@ function DocumentDrivePage() {
             ? filterStarred(updatedTiles)
           : showSearches(searchQuery)
         );
+
+        // const file = updatedTiles[index];
+
+        // Update file in database with new filename
+        // Create and use new API endpoint which takes in the old filename and new filename, and updates it
+        // Can't use save-document endpoint to overwrite because I do not have access to the file objects in the drive page
+
       }
     });
   };
@@ -245,7 +328,7 @@ function DocumentDrivePage() {
       customClass: {
         container: 'custom-swal-container' // Apply the custom class
       },
-    }).then((result) => {
+    }).then(async(result) => {
       if (result.isConfirmed) {
         var fileNameToRemove = documentTiles[index].name;
         documentTiles.splice(index, 1);
@@ -260,25 +343,73 @@ function DocumentDrivePage() {
             ? filterStarred(updatedFiles)
           : showSearches(searchQuery)
         );
+
+        // Delete file from database
+        try
+        {
+          const response = await reauthenticatingFetch("DELETE", `${baseURL}/api/user/file-delete?file_name=${fileNameToRemove}`, undefined, false);
+        } 
+        catch (error)
+        {
+          console.error("Error deleting file:", error);
+        }
+
       }
     });
   };
 
   // Change this to retrieve data from database instead of getting from new uploaded file
-  const handleFileSelection = async (e) => {
+  const handleFileSelection = async (fileName) => {
 
-    const file = e.target.files[0];
+    const response = await reauthenticatingFetch("GET", `${baseURL}/api/user/document-load?file_name=${fileName}`, undefined, false);
+
+    if(response.error)
+    {
+      console.log("Error loading file");
+      return null;
+    }
+    else
+    {
+      const readingProgress = {"lineNumber" : response.headers.get('line-number'), "pageNumber": response.headers.get('page-number')};
+      // console.log(readingProgress);
+
+      const blob = await response.blob();
+
+      const file = new File([blob], fileName, {type: blob.type});
+
+      // Parse the text from the file and send it the text reader page
+      const parsedText = await parseText(file);
+
+      // send readingProgress too
     
-    // Parse the text from the file and send it the text reader page
-    const parsedText = await parseText(file);
-    
-    toReadingPage(file, parsedText);
+      toReadingPage(file, parsedText);
+    }
   };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
-    
-    // Store file details and data in database
+
+    const formData = new FormData();
+    formData.append("file_name", file.name);
+    formData.append("file_object", file);
+    formData.append("line_number", 1);
+    formData.append("page_number", 1);
+    const timestamp = Date.now();
+    formData.append("timestamp", timestamp);
+
+    // console.log(formData.get("file_name"));
+    // console.log(formData.get("file_object"));
+    // console.log(formData.get("line_number"));
+    // console.log(formData.get("page_number"));
+    // console.log(formData.get("timestamp"));
+
+    const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-save`, formData, false);
+
+    if(response.error)
+    {
+      console.log("Error uploading file");
+      return null;
+    }   
 
     // Parse the text from the file and send it the text reader page
     const parsedText = await parseText(file);
@@ -469,7 +600,17 @@ function DocumentDrivePage() {
       <Box component="main" sx={{ flexGrow: 1, p: 3, ml: "240px", mt: 2, position: "relative"}}>
         <Collapse in={showAlert} sx={{position: "absolute", top: 0, right: 0}}>
           <Alert variant="filled" severity="error" onClose={() => setShowAlert(false)}>
-            An error occurred while processing the document. Please try again.
+            An error occurred while processing the previous document. Please try again.
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 2} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="error">
+            Connection failed.
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 1} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="info">
+            Retrieving files...
           </Alert>
         </Collapse>
         <Typography
@@ -522,6 +663,7 @@ function DocumentDrivePage() {
 
         </Box>
 
+        { documentTiles.length !== 0 ? (
         <Grid2
           container
           spacing={3}
@@ -535,14 +677,16 @@ function DocumentDrivePage() {
             <Grid2 item xs={12} sm={6} md={3} key={index}>
               <Card
                 sx={{
+                  maxWidth: "25vw",
                   border: "2px solid",
                   borderColor: "primary.main",
                   borderRadius: "30px",
                   boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.25)",
+                  width: "100%",
                 }}
               >
                 <CardHeader
-                  title={<Typography variant="h6">{document.name}</Typography>}
+                  title={<Typography variant="h6" noWrap sx={{ maxWidth: "17vw" }}>{document.name}</Typography>}
                   action={
                     <Tooltip
                       title={
@@ -562,32 +706,33 @@ function DocumentDrivePage() {
                     </Tooltip>
                   }
                 />
+                <Tooltip title={`Open ${document.name}`} placement="top">
                 <CardMedia
+                  height="200"
+                  width="200"
                   component="img"
-                  height="194"
                   image={
-                    document.thumbnail === ""
-                      ? "/public/images/drive/Temp.png"
-                      : document.thumbnail
+                    document.thumbnail ? `data:image/jpeg;base64,${document.thumbnail}` : "/public/images/drive/Temp.png"
                   }
                   alt="Temp"
                   sx={{ userSelect: "none", cursor: "pointer"}}
-                  onClick={handleButtonClick} // let user choose whether to go calibration or reading pages!!! - default option can be chosen in settings
+                  onClick={() => handleFileSelection(document.name)} // let user choose whether to go calibration or reading pages!!! - default option can be chosen in settings
                 />
+                </Tooltip>
                 {/* TEMPORARY - Replace with menu asking whether to go directly to menu or calibration (depending on preferences set in settings)
                    Also use text from database instead of new upload */}
-                <input
+                {/* <input
                   type="file"
                   accept=".pdf,.docx,.txt"
                   onChange={handleFileSelection}
                   ref={fileInputRef}
                   style={{ display: 'none' }}
-                />
+                /> */}
                 {/* END OF TEMPORARY CODE */}
                 <CardHeader
                   title={
                     <Typography variant="body2">
-                      Opened on {document.lastOpened}
+                      Last opened on {document.lastOpened}
                     </Typography>
                   }
                   action={
@@ -623,6 +768,22 @@ function DocumentDrivePage() {
             </Grid2>
           ))}
         </Grid2>
+      ) : retryConnection <= 0  ? (
+        <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
+          <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No files found.</Typography>
+          <Typography variant="h6"sx={{ marginBottom: "2vh"}}>Press the <span style={{color: "#06760D"}}>Upload</span> button or drop a file here.</Typography>
+        </Box>
+      ) : retryConnection === 1 ? (
+        <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
+          <Typography variant="h4" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>Fetching files. Please wait.</Typography>
+        </Box>
+      ) : (
+        <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
+          <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>Failed to fetch files.</Typography>
+          <Typography variant="h7" sx={{ marginBottom: "2vh"}}>Please check your internet connection and try again.</Typography>
+          <Button variant="contained" onClick={() => setRetryConnection(1)}>Reconnect</Button>
+        </Box>
+      )}
       </Box>
     </Box>
   );

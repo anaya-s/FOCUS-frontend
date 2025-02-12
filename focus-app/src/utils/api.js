@@ -38,23 +38,32 @@ async function refreshAccessToken() {
 This function automatically refreshes the access token if expired 
   For GET method: don't pass in any value for 'body' (leave it undefined) e.g. reauthenticatingFetch(method, url)
   For POST method: pass the correct value for 'body' in JSON format  e.g. reauthenticatingFetch(method, url, body)
-*/
-export const reauthenticatingFetch = async (method, url, body) => {
 
-  // console.log(url); //Check if correct endpoint is being used
+  For file handling, make setContentType false and pass the formData object as the body parameter
+  otherwise use True for setContentType and pass the JSON object as the body parameter
+*/
+export const reauthenticatingFetch = async (method, url, body, setContentType) => {
   
   const authTokens = localStorage.getItem(ACCESS_TOKEN);
 
   const parsedTokens = JSON.parse(authTokens); // Parse if not already parsed
   var accessToken = parsedTokens?.access;
 
+  let headers = {
+    Authorization: `Bearer ${accessToken}`,
+  };
+
+  if(setContentType === undefined)
+    setContentType = true;
+
+  if (setContentType) {
+    headers["Content-Type"] = "application/json";
+  }
+
   let options = {
     method: method,
-    headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    ...(body !== undefined && { body: JSON.stringify(body) }),
+    headers: headers,
+    ...(body !== undefined && { body: setContentType ? JSON.stringify(body) : body }),
   };
 
   let response = await fetch(url, options);
@@ -70,5 +79,8 @@ export const reauthenticatingFetch = async (method, url, body) => {
     }
   }
 
-  return response.json();
+  if(setContentType)
+    return response.json();
+  else
+    return response;
 }
