@@ -135,18 +135,18 @@ function DocumentDrivePage() {
       try {
         const data = await reauthenticatingFetch("GET", `${baseURL}/api/user/file-list/`);
 
-        console.log(files);
-        console.log(data); 
+        // console.log(files);
+        // console.log(data); 
     
         files = data;
         setFileDetails(sortAlphabetically(files));
         setDocumentTiles(sortAlphabetically(files));
 
         setRetryConnection(0);
-    } catch (error) {
-        console.error("Error fetching files:", error);
-        setRetryConnection(2);
-    }
+      } catch (error) {
+          console.error("Error fetching files:", error);
+          setRetryConnection(2);
+      }
     };
 
     if(retryConnection === 1)
@@ -201,7 +201,7 @@ function DocumentDrivePage() {
       {
         console.log("Exitting Drive");
         // Add API call here to save files
-        
+
       }
     };
 
@@ -340,20 +340,59 @@ function DocumentDrivePage() {
   };
 
   // Change this to retrieve data from database instead of getting from new uploaded file
-  const handleFileSelection = async (e) => {
+  const handleFileSelection = async (fileName) => {
 
-    const file = e.target.files[0];
+    const response = await reauthenticatingFetch("GET", `${baseURL}/api/user/document-load?file_name=${fileName}`, undefined, false);
+
+    if(response.error)
+    {
+      console.log("Error loading file");
+      return null;
+    }
+    else
+    {
+      const readingProgress = {"lineNumber" : response.headers.get('line-number'), "pageNumber": response.headers.get('page-number')};
+      // console.log(readingProgress);
+
+      const blob = await response.blob();
+
+      const file = new File([blob], fileName, {type: blob.type});
+
+      // Parse the text from the file and send it the text reader page
+      const parsedText = await parseText(file);
+
+      // send readingProgress too
     
-    // Parse the text from the file and send it the text reader page
-    const parsedText = await parseText(file);
-    
-    toReadingPage(file, parsedText);
+      toReadingPage(file, parsedText);
+    }
   };
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
-    
-    // Store file details and data in database
+
+    const formData = new FormData();
+    formData.append("file_name", file.name);
+    formData.append("file_object", file);
+    formData.append("line_number", 1);
+    formData.append("page_number", 1);
+    const timestamp = Date.now();
+    formData.append("timestamp", timestamp);
+
+    // console.log(formData.get("file_name"));
+    // console.log(formData.get("file_object"));
+    // console.log(formData.get("line_number"));
+    // console.log(formData.get("page_number"));
+    // console.log(formData.get("timestamp"));
+
+    const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-save`, formData, false);
+
+    if(response.error)
+    {
+      console.log("Error uploading file");
+      return null;
+    }
+    else
+      console.log(response.message);     
 
     // Parse the text from the file and send it the text reader page
     const parsedText = await parseText(file);
@@ -621,15 +660,16 @@ function DocumentDrivePage() {
             <Grid2 item xs={12} sm={6} md={3} key={index}>
               <Card
                 sx={{
-                  // minWidth: "25vw",
+                  maxWidth: "25vw",
                   border: "2px solid",
                   borderColor: "primary.main",
                   borderRadius: "30px",
                   boxShadow: "0px 4px 10px rgba(0, 0, 0, 0.25)",
+                  width: "100%",
                 }}
               >
                 <CardHeader
-                  title={<Typography variant="h6">{document.name}</Typography>}
+                  title={<Typography variant="h6" noWrap sx={{ maxWidth: "17vw" }}>{document.name}</Typography>}
                   action={
                     <Tooltip
                       title={
@@ -649,29 +689,33 @@ function DocumentDrivePage() {
                     </Tooltip>
                   }
                 />
+                <Tooltip title={`Open ${document.name}`} placement="top">
                 <CardMedia
+                  height="200"
+                  width="200"
                   component="img"
                   image={
                     document.thumbnail ? `data:image/jpeg;base64,${document.thumbnail}` : "/public/images/drive/Temp.png"
                   }
                   alt="Temp"
                   sx={{ userSelect: "none", cursor: "pointer"}}
-                  onClick={handleButtonClick} // let user choose whether to go calibration or reading pages!!! - default option can be chosen in settings
+                  onClick={() => handleFileSelection(document.name)} // let user choose whether to go calibration or reading pages!!! - default option can be chosen in settings
                 />
+                </Tooltip>
                 {/* TEMPORARY - Replace with menu asking whether to go directly to menu or calibration (depending on preferences set in settings)
                    Also use text from database instead of new upload */}
-                <input
+                {/* <input
                   type="file"
                   accept=".pdf,.docx,.txt"
                   onChange={handleFileSelection}
                   ref={fileInputRef}
                   style={{ display: 'none' }}
-                />
+                /> */}
                 {/* END OF TEMPORARY CODE */}
                 <CardHeader
                   title={
                     <Typography variant="body2">
-                      Opened on {document.lastOpened}
+                      Last opened on {document.lastOpened}
                     </Typography>
                   }
                   action={
