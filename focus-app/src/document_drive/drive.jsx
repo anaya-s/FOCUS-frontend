@@ -45,6 +45,7 @@ function DocumentDrivePage() {
   var files = [
     // {
     //   name: "Document1.docx",
+    //   object: "",
     //   thumbnail: "",
     //   isStarred: false,
     //   lastOpened: "1/11/2024",
@@ -288,6 +289,13 @@ function DocumentDrivePage() {
             ? filterStarred(updatedTiles)
           : showSearches(searchQuery)
         );
+
+        // const file = updatedTiles[index];
+
+        // Update file in database with new filename
+        // Create and use new API endpoint which takes in the old filename and new filename, and updates it
+        // Can't use save-document endpoint to overwrite because I do not have access to the file objects in the drive page
+
       }
     });
   };
@@ -320,7 +328,7 @@ function DocumentDrivePage() {
       customClass: {
         container: 'custom-swal-container' // Apply the custom class
       },
-    }).then((result) => {
+    }).then(async(result) => {
       if (result.isConfirmed) {
         var fileNameToRemove = documentTiles[index].name;
         documentTiles.splice(index, 1);
@@ -335,6 +343,17 @@ function DocumentDrivePage() {
             ? filterStarred(updatedFiles)
           : showSearches(searchQuery)
         );
+
+        // Delete file from database
+        try
+        {
+          const response = await reauthenticatingFetch("DELETE", `${baseURL}/api/user/file-delete?file_name=${fileNameToRemove}`, undefined, false);
+        } 
+        catch (error)
+        {
+          console.error("Error deleting file:", error);
+        }
+
       }
     });
   };
@@ -390,9 +409,7 @@ function DocumentDrivePage() {
     {
       console.log("Error uploading file");
       return null;
-    }
-    else
-      console.log(response.message);     
+    }   
 
     // Parse the text from the file and send it the text reader page
     const parsedText = await parseText(file);
