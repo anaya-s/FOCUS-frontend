@@ -7,6 +7,8 @@ import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
 import { useNavigation } from "../utils/navigation";
+import config from '../config'
+const baseURL = config.apiUrl
 
 const pageStyle = {
   display: "flex",
@@ -27,7 +29,7 @@ function Register() {
   const handleCreateUser = async (e) => {
       e.preventDefault();
 
-      let response = await fetch("http://127.0.0.1:8000/api/user/register/", {
+      let response = await fetch(`${baseURL}/api/user/register/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -41,7 +43,8 @@ function Register() {
   
       if (response.status === 201) {
         alert("Account successfully created!");
-        toLogin();
+        toOnboarding();   
+        //toLogin();
       } else {
         alert("Unsuccessful transaction");
       }
@@ -123,7 +126,6 @@ function Register() {
               type="submit"
               onClick={() => {
                 handleCreateUser(); // Call the existing function
-                toOnboarding();     // Redirect to onboarding page
               }}
               fullWidth
               variant="contained"
