@@ -41,12 +41,11 @@ function Register() {
         })
       });
 
-      console.log("register");
       let data = await response.json();
   
       if (response.status === 201) {
         alert("Account successfully created!");
-        // toOnboarding();   
+        toOnboarding();   
         //toLogin();
       } else {
         alert("Unsuccessful transaction");
