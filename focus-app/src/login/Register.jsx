@@ -8,7 +8,7 @@ import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
 import { useNavigation } from "../utils/navigation";
 import config from '../config'
-const baseURL = config.apiUrl
+const baseURL = config.apiUrl;
 
 const pageStyle = {
   display: "flex",
@@ -40,6 +40,9 @@ function Register() {
           email: email
         })
       });
+
+      console.log("register");
+      let data = await response.json();
   
       if (response.status === 201) {
         alert("Account successfully created!");
