@@ -569,7 +569,7 @@ function TextReaderPage() {
     const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
 
     const cleanBaseURL = baseURL.replace(/^https?:\/\//, ""); // remove 'http://' or 'https://' from baseURL when connecting using WebSocket
-    socket.current = new WebSocket(`ws://${cleanBaseURL}/ws/video/?token=${token}`);
+    socket.current = new WebSocket(`wss://${cleanBaseURL}/ws/video/?token=${token}`);
 
     // console.log("Connecting to WebSocket...");
 
