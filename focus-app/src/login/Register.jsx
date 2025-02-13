@@ -43,7 +43,7 @@ function Register() {
   
       if (response.status === 201) {
         alert("Account successfully created!");
-        toOnboarding();   
+        // toOnboarding();   
         //toLogin();
       } else {
         alert("Unsuccessful transaction");
