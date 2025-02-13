@@ -127,9 +127,7 @@ function Register() {
             />
             <Button
               type="submit"
-              onClick={() => {
-                handleCreateUser(); // Call the existing function
-              }}
+              onClick={handleCreateUser}
               fullWidth
               variant="contained"
               color="primary"
