@@ -1,10 +1,8 @@
 import React, { useState } from "react";
 import { Stepper, Step, StepLabel, Box, Button } from "@mui/material";
-import Questionnaire from "./Questionnaire"; // Import the questionnaire component
-//import CalibrationPage from "../calibration/Calibration"; 
-import TEMP from "./TEMP1.jsx"; 
-import CalibrationPage from "./CalibrationOnboarding1.jsx"; // Import the calibration component
-//import PdfUploadPage from "../pdf_upload/PdfUploadPage"; // Existing PDF upload page
+import Questionnaire from "./Questionnaire.jsx"; // Import the questionnaire component
+import CalibrationPage from "./CalibrationOnboarding.jsx"; // Import the calibration component
+import PdfUploadPage from "./PdfUpload.jsx"; // Existing PDF upload page
 
 const steps = ["Questionnaire", "Calibration", "PDF Upload"];
 
@@ -26,7 +24,7 @@ const Onboarding = () => {
       case 1:
         return <CalibrationPage />;
       case 2:
-        return <TEMP />;
+        return <PdfUploadPage />;
       default:
         return <div>Unknown Step</div>;
     }
@@ -45,16 +43,23 @@ const Onboarding = () => {
         paddingTop: "120px",
       }}
     >
-      <Stepper activeStep={activeStep}>
-        {steps.map((label, index) => (
-          <Step key={index}>
-            <StepLabel>{label}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-      <Box sx={{ mt: 5 }}>{renderStepContent(activeStep)}</Box>
+      <Box sx={{ position: 'relative', zIndex: 2000 }}>
+        <Stepper activeStep={activeStep}>
+          {steps.map((label, index) => (
+            <Step key={index}>
+              <StepLabel>{label}</StepLabel>
+            </Step>
+          ))}
+        </Stepper>
+      </Box>
+      <Box sx={{ flex: 1, overflowY: "auto", mt: 5, zIndex: 1000 }}>
+        <Box sx={{ zIndex: 2000 }}>
+          {renderStepContent(activeStep)}
+        </Box>
+      </Box>
       <Box sx={{ display: "flex", justifyContent: "space-between", mt: 3 }}>
         <Button
+          sx={{ zIndex: 2000 }}
           disabled={activeStep === 0}
           onClick={handleBack}
           variant="contained"
