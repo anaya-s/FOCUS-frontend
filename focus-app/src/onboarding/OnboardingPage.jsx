@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Stepper, Step, StepLabel, Box, Button } from "@mui/material";
 import Questionnaire from "./Questionnaire"; // Import the questionnaire component
-import CalibrationPage from "../calibration/Calibration"; 
+//import CalibrationPage from "../calibration/Calibration"; 
 import TEMP from "./TEMP1.jsx"; 
-//import CalibrationPage from "./CalibrationOnboarding.jsx"; // Import the calibration component
+import CalibrationPage from "./CalibrationOnboarding1.jsx"; // Import the calibration component
 //import PdfUploadPage from "../pdf_upload/PdfUploadPage"; // Existing PDF upload page
 
 const steps = ["Questionnaire", "Calibration", "PDF Upload"];
