@@ -96,8 +96,30 @@ function DocumentDrivePage() {
   const sortAlphabetically = (files) =>
     [...files].sort((a, b) => a.name.localeCompare(b.name));
 
+  const formatDateOrTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+
+    const isSameDay = 
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+
+    if (isSameDay) {
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `at ${hours}:${minutes}`;
+    } else {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `on ${day}/${month}/${year}`;
+    }
+  };
+  
+  // Function to sort an array of files by their lastOpened date
   const sortByDate = (files) =>
-    [...files].sort((a, b) => new Date(b.lastOpened) - new Date(a.lastOpened));
+      [...files].sort((a, b) => b.lastOpened - a.lastOpened);
 
   const filterStarred = (files) => files.filter((file) => file.isStarred);
 
@@ -133,7 +155,7 @@ function DocumentDrivePage() {
   const [isFetching, setIsFetching] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(-1);
-  // const isRenaming = useRef(false); 
+  const [isRenaming, setIsRenaming] = useState(-1);
 
   useEffect(() => {
     // Retrieve data from database and set fileDetails
@@ -152,6 +174,7 @@ function DocumentDrivePage() {
       } catch (error) {
           console.error("Error fetching files:", error);
           setRetryConnection(2);
+          setFileDetails([]);
           setDocumentTiles([]);
       }
     };
@@ -192,8 +215,19 @@ function DocumentDrivePage() {
     if(isUploading | isFetching | showAlert)
     {
       setIsDeleting(-1);
+      setIsRenaming(-1);
     }
   }, [isUploading, isFetching, showAlert]);
+
+  useEffect(() => {
+    if(isRenaming === 0)
+      setIsRenaming(-1);
+  }, [isDeleting]);
+
+  useEffect(() => {
+    if(isDeleting === 0)
+      setIsDeleting(-1);
+  }, [isRenaming]);
 
   useEffect(() => {
     webgazer.end(); // stop the webgazer instance when pressing back arrow from reading page
@@ -243,7 +277,7 @@ function DocumentDrivePage() {
     Swal.fire({
       title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Rename File</span>',
       html: `
-        <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; justify-content: center; align-items: center; user-select: none; flex-direction: column;">
+        <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; justify-content: center; align-items: center; flex-direction: column;">
           <p variant=h7>Please enter a new name for the file: <span style="font-weight: bold">${documentTiles[index].name.replace(/\.(pdf|txt|docx)$/, '')}</span></p>
           <p>The extension <span style="font-weight: bold">${extension}</span> will be added to the new filename.</p>
         </div>
@@ -289,21 +323,46 @@ function DocumentDrivePage() {
         }
         return newFilename + extension;
       },
-    }).then((result) => {
+    }).then(async(result) => {
       if (result.isConfirmed) {
-        const newFilename = result.value;
-        const updatedTiles = [...fileDetails];
-        updatedTiles[index].name = newFilename;
-        setFileDetails(sortAlphabetically(updatedTiles));
-        setDocumentTiles(
-          allDocButtonState
-            ? sortAlphabetically(updatedTiles)
-          : recentButtonState
-            ? sortByDate(updatedTiles)
-          : starredButtonState
-            ? filterStarred(updatedTiles)
-          : showSearches(searchQuery)
-        );
+
+        try
+        {
+          const newFilename = result.value;
+          const updatedTiles = [...fileDetails];
+          const oldFileName = updatedTiles[index].name;
+
+          setIsRenaming(1);
+
+          const formData = new FormData();
+          formData.append("file_name", oldFileName);
+          formData.append("new_file_name", newFilename);
+          formData.append("timestamp", updatedTiles[index].lastOpened);
+
+          const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-update`, formData, false);
+
+          updatedTiles[index].name = newFilename;
+          setFileDetails(sortAlphabetically(updatedTiles));
+          setDocumentTiles(
+            allDocButtonState
+              ? sortAlphabetically(updatedTiles)
+            : recentButtonState
+              ? sortByDate(updatedTiles)
+            : starredButtonState
+              ? filterStarred(updatedTiles)
+            : showSearches(searchQuery)
+          );
+
+          setIsRenaming(0);
+        }
+        catch (error)
+        {
+          console.error("Error renaming file:", error);
+          setIsRenaming(-1);
+          setRetryConnection(2);
+          setFileDetails([]);
+          setDocumentTiles([]);
+        }
 
         // const file = updatedTiles[index];
 
@@ -377,6 +436,7 @@ function DocumentDrivePage() {
           console.error("Error deleting file:", error);
           setIsDeleting(-1);
           setRetryConnection(2);
+          setFileDetails([]);
           setDocumentTiles([]);
         }
       }
@@ -411,6 +471,7 @@ function DocumentDrivePage() {
       console.error("Error loading file", error);
       setIsFetching(false);
       setRetryConnection(2);
+      setFileDetails([]);
       setDocumentTiles([]);
       return null;
     }
@@ -449,6 +510,7 @@ function DocumentDrivePage() {
       console.error("Error uploading file: ", error);
       setIsUploading(false);
       setRetryConnection(2);
+      setFileDetails([]);
       setDocumentTiles([]);
     }   
 
@@ -660,6 +722,16 @@ function DocumentDrivePage() {
             File deleted successfully
           </Alert>
         </Collapse>
+        <Collapse in={(isRenaming === 1) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="info">
+            Renaming file...
+          </Alert>
+        </Collapse>
+        <Collapse in={(isRenaming === 0) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="success" onClose={() => {setIsRenaming(-1)}}>
+            File renamed successfully
+          </Alert>
+        </Collapse>
         <Collapse in={retryConnection === 2} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
           <Alert variant="filled" severity="error">
             Operation failed. Please check your internet connection and try again.
@@ -722,7 +794,13 @@ function DocumentDrivePage() {
 
         <DragAndDropOverlay onUpload={handleFileUpload}/>
 
-        { documentTiles.length !== 0 ? (
+        { fileDetails.length !== 0 ? (
+        starredButtonState & documentTiles.length === 0 ? (
+          <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
+          <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No starred files</Typography>
+          <Typography variant="h6"sx={{ marginBottom: "2vh", display: "flex", alignItems: "center"}}>Add a file to favourites by pressing <StarBorderRoundedIcon sx={{ml: "0.25vw"}}/></Typography>
+          </Box>
+        ) : (
         <Grid2
           container
           spacing={3}
@@ -783,7 +861,7 @@ function DocumentDrivePage() {
                 <CardHeader
                   title={
                     <Typography variant="body2">
-                      Last opened on {document.lastOpened}
+                      Last opened {formatDateOrTime(document.lastOpened)}
                     </Typography>
                   }
                   action={
@@ -819,6 +897,7 @@ function DocumentDrivePage() {
             </Grid2>
           ))}
         </Grid2>
+        )
       ) : retryConnection <= 0  ? (
         <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
           <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No files found.</Typography>
