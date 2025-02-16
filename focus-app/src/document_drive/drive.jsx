@@ -109,7 +109,7 @@ function DocumentDrivePage() {
     if (isSameDay) {
       const hours = date.getHours().toString().padStart(2, '0');
       const minutes = date.getMinutes().toString().padStart(2, '0');
-      return `at ${hours}:${minutes}`;
+      return `today at ${hours}:${minutes}`;
     } else {
       const day = date.getDate().toString().padStart(2, '0');
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -154,31 +154,33 @@ function DocumentDrivePage() {
 
   const [showAlert, setShowAlert] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(0);
   const [isDeleting, setIsDeleting] = useState(-1);
   const [isRenaming, setIsRenaming] = useState(-1);
+  const [showInvalidFiles, setShowInvalidFiles] = useState(0);
+
+  const getFiles = async () => {  
+    try {
+      const data = await reauthenticatingFetch("GET", `${baseURL}/api/user/file-list/`);
+
+      // console.log(files);
+      // console.log(data); 
+  
+      files = data;
+      setFileDetails(sortAlphabetically(files));
+      setDocumentTiles(sortAlphabetically(files));
+
+      setRetryConnection(0);
+    } catch (error) {
+        console.error("Error fetching files:", error);
+        setRetryConnection(2);
+        setFileDetails([]);
+        setDocumentTiles([]);
+    }
+  };
 
   useEffect(() => {
     // Retrieve data from database and set fileDetails
-    const getFiles = async () => {  
-      try {
-        const data = await reauthenticatingFetch("GET", `${baseURL}/api/user/file-list/`);
-
-        // console.log(files);
-        // console.log(data); 
-    
-        files = data;
-        setFileDetails(sortAlphabetically(files));
-        setDocumentTiles(sortAlphabetically(files));
-
-        setRetryConnection(0);
-      } catch (error) {
-          console.error("Error fetching files:", error);
-          setRetryConnection(2);
-          setFileDetails([]);
-          setDocumentTiles([]);
-      }
-    };
 
     if(retryConnection === 1)
     {
@@ -213,10 +215,11 @@ function DocumentDrivePage() {
   };
 
   useEffect(() => {
-    if(isUploading | isFetching | showAlert)
+    if(isUploading >= 1 | isFetching | showAlert)
     {
       setIsDeleting(-1);
       setIsRenaming(-1);
+      setShowInvalidFiles(-1);
     }
   }, [isUploading, isFetching, showAlert]);
 
@@ -496,43 +499,89 @@ function DocumentDrivePage() {
     }
   };
 
-  const handleFileUpload = async (file) => {
+  const handleFileUpload = async (newFiles) => {
 
-    const formData = new FormData();
-    formData.append("file_name", file.name);
-    formData.append("file_object", file);
-    formData.append("line_number", 1);
-    formData.append("page_number", 1);
-    const timestamp = Date.now();
-    formData.append("timestamp", timestamp);
-
-    // console.log(formData.get("file_name"));
-    // console.log(formData.get("file_object"));
-    // console.log(formData.get("line_number"));
-    // console.log(formData.get("page_number"));
-    // console.log(formData.get("timestamp"));
-
-    try
+    if(newFiles.length > 1)
+      setIsUploading(newFiles.length);
+    else if(newFiles.length === 1)
+      setIsUploading(1);
+    else
     {
-      setIsUploading(true);
-
-      const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-save`, formData, false);
-
-      // Parse the text from the file and send it the text reader page
-      const parsedText = await parseText(file);
-
-      
-      toReadingPage(file, parsedText);
+      setShowInvalidFiles(1);
+      return;
     }
-    catch(error)
-    {
-      console.error("Error uploading file: ", error);
-      setIsUploading(false);
-      setRetryConnection(2);
-      setFileDetails([]);
-      setDocumentTiles([]);
-    }   
 
+    for(let i = 0; i < newFiles.length; i++)
+    {
+      var fileName = newFiles[i].name;
+      var count = 0;
+
+      var lastDotIndex = fileName.lastIndexOf('.');
+      var baseName = fileName.substring(0, lastDotIndex);
+
+      var extension = fileName.substring(lastDotIndex);
+
+      while (fileDetails.filter(file => file.name === fileName).length > 0) {
+        count++;
+        fileName = `${baseName}(${count})${extension}`;
+      }
+
+      const formData = new FormData();
+      formData.append("file_name", fileName);
+      formData.append("file_object", newFiles[i]);
+      formData.append("line_number", 1);
+      formData.append("page_number", 1);
+      const timestamp = Date.now();
+      formData.append("timestamp", timestamp);
+
+      // console.log(formData.get("file_name"));
+      // console.log(formData.get("file_object"));
+      // console.log(formData.get("line_number"));
+      // console.log(formData.get("page_number"));
+      // console.log(formData.get("timestamp"));
+
+      try
+      {
+        const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-save`, formData, false);
+
+        await getFiles();
+
+        // Parse the text from the file and send it the text reader page
+        if(newFiles.length === 1)
+        {
+          const parsedText = await parseText(newFiles[i]);
+
+          // toReadingPage(newFiles[i], parsedText);
+        }
+      }
+      catch(error)
+      {
+        console.error("Error uploading file: ", error);
+        setIsUploading(0);
+        setRetryConnection(2);
+        setFileDetails([]);
+        setDocumentTiles([]);
+      }   
+    }
+
+    setIsUploading(0);
+
+  };
+
+  const validateFileType = (file) => {
+    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    return validTypes.includes(file.type);
+  };
+
+  const handleChange = (event) => {
+    const files = Array.from(event.target.files);
+    const validFiles = files.filter(validateFileType);
+
+    if (validFiles.length > 0) {
+      handleFileUpload(validFiles);
+    } else {
+      setShowInvalidFiles(1);
+    }
   };
 
   const fileInputRef = useRef(null);
@@ -651,7 +700,8 @@ function DocumentDrivePage() {
             <input
               type="file"
               accept=".pdf,.docx,.txt"
-              onChange={(event) => {handleFileUpload(event.target.files[0])}}
+              onChange={handleChange}
+              multiple
               ref={fileInputRef}
               style={{ display: 'none' }}
             />
@@ -721,34 +771,39 @@ function DocumentDrivePage() {
             An error occurred while processing the previous document. Please try again.
           </Alert>
         </Collapse>
-        <Collapse in={isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+        <Collapse in={isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
           <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Fetching and parsing selected file...
           </Alert>
         </Collapse>
-        <Collapse in={isUploading & !isFetching} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+        <Collapse in={(isUploading >= 1) & !isFetching} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
           <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
-            Uploading and parsing file...
+            {isUploading === 1 ? "Uploading file..." : `Uploading ${isUploading} files...`}
           </Alert>
         </Collapse>
-        <Collapse in={(isDeleting === 1) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+        <Collapse in={(isDeleting === 1) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
           <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Deleting file...
           </Alert>
         </Collapse>
-        <Collapse in={(isDeleting === 0) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+        <Collapse in={(isDeleting === 0) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
           <Alert variant="filled" severity="success" onClose={() => {setIsDeleting(-1)}}>
             File deleted successfully
           </Alert>
         </Collapse>
-        <Collapse in={(isRenaming === 1) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+        <Collapse in={(isRenaming === 1) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
           <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Renaming file...
           </Alert>
         </Collapse>
-        <Collapse in={(isRenaming === 0) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+        <Collapse in={(isRenaming === 0) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
           <Alert variant="filled" severity="success" onClose={() => {setIsRenaming(-1)}}>
             File renamed successfully
+          </Alert>
+        </Collapse>
+        <Collapse in={(showInvalidFiles === 1) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="error" onClose={() => {setShowInvalidFiles(-1)}}>
+            Invalid file type(s). Only .pdf, .docx, or .txt files can be uploaded.
           </Alert>
         </Collapse>
         <Collapse in={retryConnection === 2} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>

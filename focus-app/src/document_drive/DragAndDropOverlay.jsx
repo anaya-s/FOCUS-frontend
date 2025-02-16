@@ -13,15 +13,24 @@ export const DragAndDropOverlay = ({ onUpload }) => {
         "text/plain": ['.txt'],
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ['.docx'],
       },
-      multiple: false,
+      multiple: true,
       noClick: true,
     });
 
     const performUpload = async(event) => {
         if(isDragAccept)
         {
-            const file = await event[0].handle.getFile();
-            onUpload(file);
+          var files = [];
+          for(let i = 0; i < event.length; i++)
+          {
+            const file = await event[i].handle.getFile();
+            files.push(file);
+          }
+          onUpload(files);
+        }
+        else
+        {
+          onUpload([]);
         }
     };
   
