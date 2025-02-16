@@ -23,7 +23,8 @@ import {
   MenuItem,
   Tooltip,
   Alert,
-  Collapse
+  Collapse,
+  CircularProgress
 } from "@mui/material";
 import {
   CloudUpload,
@@ -259,18 +260,36 @@ function DocumentDrivePage() {
     // };
   }, []);
 
-  const changeStarredStatus = (index) => {
+  const changeStarredStatus = async(index) => {
     documentTiles[index].isStarred = !documentTiles[index].isStarred;
 
-    setFileDetails(sortAlphabetically(fileDetails));
+    try
+    {
+      const formData = new FormData();
+      formData.append("file_name", documentTiles[index].name);
+      formData.append("timestamp", documentTiles[index].lastOpened);
+      formData.append("favourite", documentTiles[index].isStarred);
 
-    setDocumentTiles(
-      allDocButtonState
-        ? sortAlphabetically(fileDetails)
-        : recentButtonState
-        ? sortByDate(fileDetails)
-        : filterStarred(fileDetails)
-    );
+      const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-update`, formData, false);
+
+      setFileDetails(sortAlphabetically(fileDetails));
+
+      setDocumentTiles(
+        allDocButtonState
+          ? sortAlphabetically(fileDetails)
+          : recentButtonState
+          ? sortByDate(fileDetails)
+          : filterStarred(fileDetails)
+      );
+
+    }
+    catch (error)
+    {
+      console.error("Error adding files to favourites:", error);
+      setRetryConnection(2);
+      setFileDetails([]);
+      setDocumentTiles([]);
+    }
   };
 
   const handleRename = (index, extension) => {
@@ -702,18 +721,18 @@ function DocumentDrivePage() {
             An error occurred while processing the previous document. Please try again.
           </Alert>
         </Collapse>
-        <Collapse in={isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
-          <Alert variant="filled" severity="info">
+        <Collapse in={isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Fetching and parsing selected file...
           </Alert>
         </Collapse>
-        <Collapse in={isUploading & !isFetching} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
-          <Alert variant="filled" severity="info">
+        <Collapse in={isUploading & !isFetching} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Uploading and parsing file...
           </Alert>
         </Collapse>
-        <Collapse in={(isDeleting === 1) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
-          <Alert variant="filled" severity="info">
+        <Collapse in={(isDeleting === 1) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Deleting file...
           </Alert>
         </Collapse>
@@ -722,8 +741,8 @@ function DocumentDrivePage() {
             File deleted successfully
           </Alert>
         </Collapse>
-        <Collapse in={(isRenaming === 1) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
-          <Alert variant="filled" severity="info">
+        <Collapse in={(isRenaming === 1) & !isFetching & !isUploading} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Renaming file...
           </Alert>
         </Collapse>
@@ -737,8 +756,8 @@ function DocumentDrivePage() {
             Operation failed. Please check your internet connection and try again.
           </Alert>
         </Collapse>
-        <Collapse in={retryConnection === 1} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
-          <Alert variant="filled" severity="info">
+        <Collapse in={retryConnection === 1} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Retrieving files...
           </Alert>
         </Collapse>
