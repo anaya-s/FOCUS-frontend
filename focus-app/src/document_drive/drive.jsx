@@ -23,7 +23,8 @@ import {
   MenuItem,
   Tooltip,
   Alert,
-  Collapse
+  Collapse,
+  CircularProgress
 } from "@mui/material";
 import {
   CloudUpload,
@@ -39,6 +40,7 @@ import Swal from "sweetalert2";
 
 import { parseText } from "../text_reader/textParsing";
 import { reauthenticatingFetch } from "../utils/api";
+import { DragAndDropOverlay } from "./DragAndDropOverlay";
 
 function DocumentDrivePage() {
   /* Temporary data for document tiles - update this with real document data from backend */
@@ -95,8 +97,30 @@ function DocumentDrivePage() {
   const sortAlphabetically = (files) =>
     [...files].sort((a, b) => a.name.localeCompare(b.name));
 
+  const formatDateOrTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+
+    const isSameDay = 
+      date.getDate() === now.getDate() &&
+      date.getMonth() === now.getMonth() &&
+      date.getFullYear() === now.getFullYear();
+
+    if (isSameDay) {
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `today at ${hours}:${minutes}`;
+    } else {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `on ${day}/${month}/${year}`;
+    }
+  };
+  
+  // Function to sort an array of files by their lastOpened date
   const sortByDate = (files) =>
-    [...files].sort((a, b) => new Date(b.lastOpened) - new Date(a.lastOpened));
+      [...files].sort((a, b) => b.lastOpened - a.lastOpened);
 
   const filterStarred = (files) => files.filter((file) => file.isStarred);
 
@@ -126,38 +150,46 @@ function DocumentDrivePage() {
   */
   const [retryConnection, setRetryConnection] = useState(1);
 
-  const hasFetched = useRef(false);
+  // const hasFetched = useRef(false);
 
   const [showAlert, setShowAlert] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isUploading, setIsUploading] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(-1);
+  const [isRenaming, setIsRenaming] = useState(-1);
+  const [showInvalidFiles, setShowInvalidFiles] = useState(0);
+
+  const getFiles = async () => {  
+    try {
+      const data = await reauthenticatingFetch("GET", `${baseURL}/api/user/file-list/`);
+
+      // console.log(files);
+      // console.log(data); 
+  
+      files = data;
+      setFileDetails(sortAlphabetically(files));
+      setDocumentTiles(sortAlphabetically(files));
+
+      setRetryConnection(0);
+    } catch (error) {
+        console.error("Error fetching files:", error);
+        setRetryConnection(2);
+        setFileDetails([]);
+        setDocumentTiles([]);
+    }
+  };
 
   useEffect(() => {
     // Retrieve data from database and set fileDetails
-    const getFiles = async () => {  
-      try {
-        const data = await reauthenticatingFetch("GET", `${baseURL}/api/user/file-list/`);
-
-        // console.log(files);
-        // console.log(data); 
-    
-        files = data;
-        setFileDetails(sortAlphabetically(files));
-        setDocumentTiles(sortAlphabetically(files));
-
-        setRetryConnection(0);
-      } catch (error) {
-          console.error("Error fetching files:", error);
-          setRetryConnection(2);
-      }
-    };
 
     if(retryConnection === 1)
     {
-      hasFetched.current = false;
+      // hasFetched.current = false;
       getFiles();
     }
 
-    if(retryConnection <= 0)
-      hasFetched.current = true;
+    // if(retryConnection <= 0)
+    //   hasFetched.current = true;
 
   }, [retryConnection]);
 
@@ -183,9 +215,23 @@ function DocumentDrivePage() {
   };
 
   useEffect(() => {
+    if(isUploading >= 1 | isFetching | showAlert)
+    {
+      setIsDeleting(-1);
+      setIsRenaming(-1);
+      setShowInvalidFiles(-1);
+    }
+  }, [isUploading, isFetching, showAlert]);
 
+  useEffect(() => {
+    if(isRenaming === 0)
+      setIsRenaming(-1);
+  }, [isDeleting]);
 
-  }, [retryConnection]);
+  useEffect(() => {
+    if(isDeleting === 0)
+      setIsDeleting(-1);
+  }, [isRenaming]);
 
   useEffect(() => {
     webgazer.end(); // stop the webgazer instance when pressing back arrow from reading page
@@ -196,54 +242,73 @@ function DocumentDrivePage() {
       setShowAlert(false);
     }
 
-    const saveFilesBeforeUnload = () => {
-      // console.log(hasFetched.current);
-      if(hasFetched.current) // Only save when connection is successful and files already fetched, NOT during fetching process
-      {
-        console.log("Exitting Drive");
-        // Add API call here to save files
+    // const saveFilesBeforeUnload = () => {
+    //   // console.log(hasFetched.current);
+    //   if(hasFetched.current) // Only save when connection is successful and files already fetched, NOT during fetching process
+    //   {
+    //     console.log("Exitting Drive");
+    //     // Add API call here to save files
 
-      }
-    };
+    //   }
+    // };
 
-    window.addEventListener("unload", saveFilesBeforeUnload);
+    // window.addEventListener("unload", saveFilesBeforeUnload);
 
-    return () => {
-      window.removeEventListener("unload", saveFilesBeforeUnload);
+    // return () => {
+    //   window.removeEventListener("unload", saveFilesBeforeUnload);
 
-      // Save files to database before exiting or reloading
-      // console.log("Saving files to database"); 
-      saveFilesBeforeUnload();
-    };
+    //   // Save files to database before exiting or reloading
+    //   // console.log("Saving files to database"); 
+    //   saveFilesBeforeUnload();
+    // };
   }, []);
 
-  const changeStarredStatus = (index) => {
+  const changeStarredStatus = async(index) => {
     documentTiles[index].isStarred = !documentTiles[index].isStarred;
 
-    setFileDetails(sortAlphabetically(fileDetails));
+    try
+    {
+      const formData = new FormData();
+      formData.append("file_name", documentTiles[index].name);
+      formData.append("timestamp", documentTiles[index].lastOpened);
+      formData.append("favourite", documentTiles[index].isStarred);
 
-    setDocumentTiles(
-      allDocButtonState
-        ? sortAlphabetically(fileDetails)
-        : recentButtonState
-        ? sortByDate(fileDetails)
-        : filterStarred(fileDetails)
-    );
+      const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-update`, formData, false);
+
+      setFileDetails(sortAlphabetically(fileDetails));
+
+      setDocumentTiles(
+        allDocButtonState
+          ? sortAlphabetically(fileDetails)
+          : recentButtonState
+          ? sortByDate(fileDetails)
+          : filterStarred(fileDetails)
+      );
+
+    }
+    catch (error)
+    {
+      console.error("Error adding files to favourites:", error);
+      setRetryConnection(2);
+      setFileDetails([]);
+      setDocumentTiles([]);
+    }
   };
 
   const handleRename = (index, extension) => {
     Swal.fire({
       title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Rename File</span>',
       html: `
-        <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; justify-content: center; align-items: center; user-select: none">
-          <p>Please enter a new name for the file: <span style="font-weight: bold">${documentTiles[index].name}</span></p>
+        <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+          <p variant=h7>Please enter a new name for the file: <span style="font-weight: bold">${documentTiles[index].name.replace(/\.(pdf|txt|docx)$/, '')}</span></p>
+          <p>The extension <span style="font-weight: bold">${extension}</span> will be added to the new filename.</p>
         </div>
       `,
       input: "text",
       inputAttributes: {
         autocapitalize: "off",
       },
-      inputPlaceholder: "The file extension " + extension + " will be added to this name",
+      inputPlaceholder: "Enter new filename here",
       width: "40vw",
       confirmButtonColor: "#06760D",
       allowOutsideClick: false,
@@ -260,6 +325,12 @@ function DocumentDrivePage() {
       preConfirm: () => {
         const newFilename = Swal.getInput().value.trim();
         const restrictedCharacters = /[\\/:*?"<>|.]/;
+        if (/\.(txt|pdf|docx)$/i.test(newFilename))
+        {
+          Swal.showValidationMessage('<div style="display: flex; flex-direction: column; align-items: center, justify-content: center, text-align: center"><span style="font-family: Isotok Web, sans-serif; font-size: 16px; color: black; user-select: none">Filename cannot end with ".txt", ".pdf", or ".docx". Please try again.</span><span style="font-family: Isotok Web, sans-serif; font-size: 16px; color: black; user-select: none">The correct file extension will be added to the new name.</span></div>');
+          return false;
+
+        }
         if (restrictedCharacters.test(newFilename)) {
           Swal.showValidationMessage('<div style="display: flex; flex-direction: column; align-items: center, justify-content: center, text-align: center"><span style="font-family: Isotok Web, sans-serif; font-size: 16px; color: black; user-select: none">Filename contains restricted characters.</span><span style="font-family: Isotok Web, sans-serif; font-size: 16px; color: black; user-select: none">Please remove any \\ / : * ? " < > | . characters.</span></div>');
           return false;
@@ -274,21 +345,46 @@ function DocumentDrivePage() {
         }
         return newFilename + extension;
       },
-    }).then((result) => {
+    }).then(async(result) => {
       if (result.isConfirmed) {
-        const newFilename = result.value;
-        const updatedTiles = [...fileDetails];
-        updatedTiles[index].name = newFilename;
-        setFileDetails(sortAlphabetically(updatedTiles));
-        setDocumentTiles(
-          allDocButtonState
-            ? sortAlphabetically(updatedTiles)
-          : recentButtonState
-            ? sortByDate(updatedTiles)
-          : starredButtonState
-            ? filterStarred(updatedTiles)
-          : showSearches(searchQuery)
-        );
+
+        try
+        {
+          const newFilename = result.value;
+          const updatedTiles = [...fileDetails];
+          const oldFileName = updatedTiles[index].name;
+
+          setIsRenaming(1);
+
+          const formData = new FormData();
+          formData.append("file_name", oldFileName);
+          formData.append("new_file_name", newFilename);
+          formData.append("timestamp", updatedTiles[index].lastOpened);
+
+          const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-update`, formData, false);
+
+          updatedTiles[index].name = newFilename;
+          setFileDetails(sortAlphabetically(updatedTiles));
+          setDocumentTiles(
+            allDocButtonState
+              ? sortAlphabetically(updatedTiles)
+            : recentButtonState
+              ? sortByDate(updatedTiles)
+            : starredButtonState
+              ? filterStarred(updatedTiles)
+            : showSearches(searchQuery)
+          );
+
+          setIsRenaming(0);
+        }
+        catch (error)
+        {
+          console.error("Error renaming file:", error);
+          setIsRenaming(-1);
+          setRetryConnection(2);
+          setFileDetails([]);
+          setDocumentTiles([]);
+        }
 
         // const file = updatedTiles[index];
 
@@ -299,6 +395,8 @@ function DocumentDrivePage() {
       }
     });
   };
+
+
 
   const handleDelete = (index) => {
     Swal.fire({
@@ -330,30 +428,39 @@ function DocumentDrivePage() {
       },
     }).then(async(result) => {
       if (result.isConfirmed) {
-        var fileNameToRemove = documentTiles[index].name;
-        documentTiles.splice(index, 1);
-        var updatedFiles = fileDetails.filter(file => file.name !== fileNameToRemove)
-        setFileDetails(updatedFiles);
-        setDocumentTiles(
-          allDocButtonState
-            ? sortAlphabetically(updatedFiles)
-          : recentButtonState
-            ? sortByDate(updatedFiles)
-          : starredButtonState
-            ? filterStarred(updatedFiles)
-          : showSearches(searchQuery)
-        );
 
         // Delete file from database
         try
         {
-          const response = await reauthenticatingFetch("DELETE", `${baseURL}/api/user/file-delete?file_name=${fileNameToRemove}`, undefined, false);
+          var fileNameToRemove = documentTiles[index].name;
+
+          setIsDeleting(1);
+
+          const response = await reauthenticatingFetch("DELETE", `${baseURL}/api/user/file-delete?file_name=${encodeURIComponent(fileNameToRemove)}`, undefined, false);
+
+          documentTiles.splice(index, 1);
+          var updatedFiles = fileDetails.filter(file => file.name !== fileNameToRemove)
+          setFileDetails(updatedFiles);
+          setDocumentTiles(
+            allDocButtonState
+              ? sortAlphabetically(updatedFiles)
+            : recentButtonState
+              ? sortByDate(updatedFiles)
+            : starredButtonState
+              ? filterStarred(updatedFiles)
+            : showSearches(searchQuery)
+          );
+
+          setIsDeleting(0);
         } 
         catch (error)
         {
           console.error("Error deleting file:", error);
+          setIsDeleting(-1);
+          setRetryConnection(2);
+          setFileDetails([]);
+          setDocumentTiles([]);
         }
-
       }
     });
   };
@@ -361,15 +468,12 @@ function DocumentDrivePage() {
   // Change this to retrieve data from database instead of getting from new uploaded file
   const handleFileSelection = async (fileName) => {
 
-    const response = await reauthenticatingFetch("GET", `${baseURL}/api/user/document-load?file_name=${fileName}`, undefined, false);
+    setIsFetching(true);
 
-    if(response.error)
+    try
     {
-      console.log("Error loading file");
-      return null;
-    }
-    else
-    {
+      const response = await reauthenticatingFetch("GET", `${baseURL}/api/user/document-load?file_name=${fileName}`, undefined, false);
+    
       const readingProgress = {"lineNumber" : response.headers.get('line-number'), "pageNumber": response.headers.get('page-number')};
       // console.log(readingProgress);
 
@@ -384,37 +488,100 @@ function DocumentDrivePage() {
     
       toReadingPage(file, parsedText);
     }
+    catch(error)
+    {
+      console.error("Error loading file", error);
+      setIsFetching(false);
+      setRetryConnection(2);
+      setFileDetails([]);
+      setDocumentTiles([]);
+      return null;
+    }
   };
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+  const handleFileUpload = async (newFiles) => {
 
-    const formData = new FormData();
-    formData.append("file_name", file.name);
-    formData.append("file_object", file);
-    formData.append("line_number", 1);
-    formData.append("page_number", 1);
-    const timestamp = Date.now();
-    formData.append("timestamp", timestamp);
-
-    // console.log(formData.get("file_name"));
-    // console.log(formData.get("file_object"));
-    // console.log(formData.get("line_number"));
-    // console.log(formData.get("page_number"));
-    // console.log(formData.get("timestamp"));
-
-    const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-save`, formData, false);
-
-    if(response.error)
+    if(newFiles.length > 1)
+      setIsUploading(newFiles.length);
+    else if(newFiles.length === 1)
+      setIsUploading(1);
+    else
     {
-      console.log("Error uploading file");
-      return null;
-    }   
+      setShowInvalidFiles(1);
+      return;
+    }
 
-    // Parse the text from the file and send it the text reader page
-    const parsedText = await parseText(file);
-    
-    toReadingPage(file, parsedText);
+    for(let i = 0; i < newFiles.length; i++)
+    {
+      var fileName = newFiles[i].name;
+      var count = 0;
+
+      var lastDotIndex = fileName.lastIndexOf('.');
+      var baseName = fileName.substring(0, lastDotIndex);
+
+      var extension = fileName.substring(lastDotIndex);
+
+      while (fileDetails.filter(file => file.name === fileName).length > 0) {
+        count++;
+        fileName = `${baseName}(${count})${extension}`;
+      }
+
+      const formData = new FormData();
+      formData.append("file_name", fileName);
+      formData.append("file_object", newFiles[i]);
+      formData.append("line_number", 1);
+      formData.append("page_number", 1);
+      const timestamp = Date.now();
+      formData.append("timestamp", timestamp);
+
+      // console.log(formData.get("file_name"));
+      // console.log(formData.get("file_object"));
+      // console.log(formData.get("line_number"));
+      // console.log(formData.get("page_number"));
+      // console.log(formData.get("timestamp"));
+
+      try
+      {
+        const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-save`, formData, false);
+
+        await getFiles();
+
+        // Parse the text from the file and send it the text reader page
+        if(newFiles.length === 1)
+        {
+          const parsedText = await parseText(newFiles[i]);
+
+          // toReadingPage(newFiles[i], parsedText);
+        }
+      }
+      catch(error)
+      {
+        console.error("Error uploading file: ", error);
+        setIsUploading(0);
+        setRetryConnection(2);
+        setFileDetails([]);
+        setDocumentTiles([]);
+      }   
+    }
+
+    setIsUploading(0);
+
+  };
+
+  const validateFileType = (file) => {
+    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    return validTypes.includes(file.type);
+  };
+
+  const handleChange = (event) => {
+    const files = Array.from(event.target.files);
+    const validFiles = files.filter(validateFileType);
+
+    if (validFiles.length > 0) {
+      handleFileUpload(validFiles);
+    } else {
+      setShowInvalidFiles(1);
+    }
   };
 
   const fileInputRef = useRef(null);
@@ -533,7 +700,8 @@ function DocumentDrivePage() {
             <input
               type="file"
               accept=".pdf,.docx,.txt"
-              onChange={handleFileUpload}
+              onChange={handleChange}
+              multiple
               ref={fileInputRef}
               style={{ display: 'none' }}
             />
@@ -603,13 +771,48 @@ function DocumentDrivePage() {
             An error occurred while processing the previous document. Please try again.
           </Alert>
         </Collapse>
-        <Collapse in={retryConnection === 2} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
-          <Alert variant="filled" severity="error">
-            Connection failed.
+        <Collapse in={isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
+            Fetching and parsing selected file...
           </Alert>
         </Collapse>
-        <Collapse in={retryConnection === 1} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
-          <Alert variant="filled" severity="info">
+        <Collapse in={(isUploading >= 1) & !isFetching} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
+            {isUploading === 1 ? "Uploading file..." : `Uploading ${isUploading} files...`}
+          </Alert>
+        </Collapse>
+        <Collapse in={(isDeleting === 1) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
+            Deleting file...
+          </Alert>
+        </Collapse>
+        <Collapse in={(isDeleting === 0) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="success" onClose={() => {setIsDeleting(-1)}}>
+            File deleted successfully
+          </Alert>
+        </Collapse>
+        <Collapse in={(isRenaming === 1) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
+            Renaming file...
+          </Alert>
+        </Collapse>
+        <Collapse in={(isRenaming === 0) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="success" onClose={() => {setIsRenaming(-1)}}>
+            File renamed successfully
+          </Alert>
+        </Collapse>
+        <Collapse in={(showInvalidFiles === 1) & !isFetching & (isUploading === 0)} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="error" onClose={() => {setShowInvalidFiles(-1)}}>
+            Invalid file type(s). Only .pdf, .docx, or .txt files can be uploaded.
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 2} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0}}>
+          <Alert variant="filled" severity="error">
+            Operation failed. Please check your internet connection and try again.
+          </Alert>
+        </Collapse>
+        <Collapse in={retryConnection === 1} sx={{position: "absolute", top: showAlert ? "8vh" : 0, right: 0, justifyContent: "center"}}>
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Retrieving files...
           </Alert>
         </Collapse>
@@ -663,7 +866,15 @@ function DocumentDrivePage() {
 
         </Box>
 
-        { documentTiles.length !== 0 ? (
+        <DragAndDropOverlay onUpload={handleFileUpload}/>
+
+        { fileDetails.length !== 0 ? (
+        starredButtonState & documentTiles.length === 0 ? (
+          <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
+          <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No starred files</Typography>
+          <Typography variant="h6"sx={{ marginBottom: "2vh", display: "flex", alignItems: "center"}}>Add a file to favourites by pressing <StarBorderRoundedIcon sx={{ml: "0.25vw"}}/></Typography>
+          </Box>
+        ) : (
         <Grid2
           container
           spacing={3}
@@ -715,24 +926,16 @@ function DocumentDrivePage() {
                     document.thumbnail ? `data:image/jpeg;base64,${document.thumbnail}` : "/public/images/drive/Temp.png"
                   }
                   alt="Temp"
-                  sx={{ userSelect: "none", cursor: "pointer"}}
+                  sx={{ userSelect: "none", cursor: "pointer", position: "sticky"}}
                   onClick={() => handleFileSelection(document.name)} // let user choose whether to go calibration or reading pages!!! - default option can be chosen in settings
                 />
                 </Tooltip>
                 {/* TEMPORARY - Replace with menu asking whether to go directly to menu or calibration (depending on preferences set in settings)
                    Also use text from database instead of new upload */}
-                {/* <input
-                  type="file"
-                  accept=".pdf,.docx,.txt"
-                  onChange={handleFileSelection}
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                /> */}
-                {/* END OF TEMPORARY CODE */}
                 <CardHeader
                   title={
                     <Typography variant="body2">
-                      Last opened on {document.lastOpened}
+                      Last opened {formatDateOrTime(document.lastOpened)}
                     </Typography>
                   }
                   action={
@@ -768,6 +971,7 @@ function DocumentDrivePage() {
             </Grid2>
           ))}
         </Grid2>
+        )
       ) : retryConnection <= 0  ? (
         <Box display="flex" flexDirection="column" alignItems="center" sx={{backgroundColor: "white", height: "auto", padding: "2vh", margin: "2vh"}}>
           <Typography variant="h3" sx={{ marginBottom: "2vh", marginTop: "5vh"}}>No files found.</Typography>
