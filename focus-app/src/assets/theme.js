@@ -6,33 +6,33 @@ const theme = createTheme({
   typography: {
     fontFamily: '"Istok Web", sans-serif',
     h1: {
-      fontWeight: 700, 
+      fontSize: 17, 
     },
     h2: {
       fontFamily: '"Istok Web", sans-serif',
-      fontWeight: 1000,
+      fontSize: 75,
     },
     h3: {
       fontFamily: '"Istok Web", sans-serif',
       color: '#06760D',
-      fontWeight: 500,
+      fontSize:75,
     },
     h5: {
       fontFamily: '"Istok Web", sans-serif',
       color: '#06760D',
-      fontWeight: 10000,
+      fontSize: 17,
     },
     h6: {
       fontFamily: '"Istok Web", sans-serif',
       color: '000000',
-      fontWeight: 500,
+      fontSize: 17,
     },
     h7: {
       fontFamily: '"Istok Web", sans-serif',
-      fontWeight: 1700,
+      fontSize: 17,
     },
     body1: {
-      fontSize: '1rem',
+      fontSize: '16',
     },
   },
   components: {

@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
       }),
     });
     let data = await response.json();
-
+    console.log(data);
     if (response.status === 200) {
       setAuthTokens(data);
       setUser(jwtDecode(data.access));
@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }) => {
     } else {
       alert("Credentials do not match");
     }
+    return data;
   };
 
   let logoutUser = useCallback(() => {

@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
 import LinearProgress from "@mui/material/LinearProgress";
 import Box from "@mui/material/Box";
 
@@ -90,14 +89,12 @@ const progressBarStyle = {
   marginTop: "100px",
 };
 
-const PageOne = ({ updateData }) => {
-  const [name, setName] = useState("");
-
-  const handleSubmit = () => {
+const PageFive = ({ updateData }) => {
+  const handleEyeStrainSelect = (eye_strain) => {
     // Update the data in the parent component
-    updateData({ name });
+    updateData({ eye_strain });
     // Proceed to the next step (if applicable)
-    console.log("User's name:", name);
+    console.log("User's eye strain:", eye_strain);
   };
 
   return (
@@ -114,36 +111,33 @@ const PageOne = ({ updateData }) => {
           </div>
           <div style={speechBubbleStyle}>
             <Typography variant="h6" component="p" style={{ margin: 0 }}>
-              What's your name?
+              Do you suffer from eye strain whilst looking at your screen?
             </Typography>
             <div style={speechBubbleArrowStyle}></div>
             <div style={speechBubbleArrowInnerStyle}></div>
           </div>
         </div>
 
-        {/* Input field for name */}
-        <TextField
-          label="Your Name"
-          variant="outlined"
-          fullWidth
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          margin="normal"
-        />
-
-        {/* Submit button */}
+        {/* Buttons stacked vertically */}
         <Button
           variant="contained"
           style={buttonStyle}
-          onClick={handleSubmit}
+          onClick={() => handleEyeStrainSelect(true)}
         >
-          Submit
+          Yes
+        </Button>
+        <Button
+          variant="contained"
+          style={buttonStyle}
+          onClick={() => handleEyeStrainSelect(false)}
+        >
+          No
         </Button>
       </div>
       
-      <LinearProgress variant="determinate" value={20} style={progressBarStyle} />
+      <LinearProgress variant="determinate" value={90} style={progressBarStyle} />
     </Box>
   );
 };
 
-export default PageOne;
+export default PageFive;

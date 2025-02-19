@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
 import LinearProgress from "@mui/material/LinearProgress";
 import Box from "@mui/material/Box";
 
@@ -90,14 +89,12 @@ const progressBarStyle = {
   marginTop: "100px",
 };
 
-const PageOne = ({ updateData }) => {
-  const [name, setName] = useState("");
-
-  const handleSubmit = () => {
+const PageThree = ({ updateData }) => {
+  const handleScreenTimeSelect = (screen_time) => {
     // Update the data in the parent component
-    updateData({ name });
+    updateData({ screen_time });
     // Proceed to the next step (if applicable)
-    console.log("User's name:", name);
+    console.log("User's screen time:", screen_time);
   };
 
   return (
@@ -114,36 +111,47 @@ const PageOne = ({ updateData }) => {
           </div>
           <div style={speechBubbleStyle}>
             <Typography variant="h6" component="p" style={{ margin: 0 }}>
-              What's your name?
+              What's your average screen time?
             </Typography>
             <div style={speechBubbleArrowStyle}></div>
             <div style={speechBubbleArrowInnerStyle}></div>
           </div>
         </div>
 
-        {/* Input field for name */}
-        <TextField
-          label="Your Name"
-          variant="outlined"
-          fullWidth
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          margin="normal"
-        />
-
-        {/* Submit button */}
+        {/* Buttons stacked vertically */}
         <Button
           variant="contained"
           style={buttonStyle}
-          onClick={handleSubmit}
+          onClick={() => handleScreenTimeSelect(1)}
         >
-          Submit
+          1-3 hours
+        </Button>
+        <Button
+          variant="contained"
+          style={buttonStyle}
+          onClick={() => handleScreenTimeSelect(3)}
+        >
+          3-6 hours
+        </Button>
+        <Button
+          variant="contained"
+          style={buttonStyle}
+          onClick={() => handleScreenTimeSelect(6)}
+        >
+          6-9 hours
+        </Button>
+        <Button
+          variant="contained"
+          style={buttonStyle}
+          onClick={() => handleScreenTimeSelect(9)}
+        >
+          9+ hours
         </Button>
       </div>
       
-      <LinearProgress variant="determinate" value={20} style={progressBarStyle} />
+      <LinearProgress variant="determinate" value={60} style={progressBarStyle} />
     </Box>
   );
 };
 
-export default PageOne;
+export default PageThree;
