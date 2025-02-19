@@ -1,0 +1,369 @@
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useNavigation } from "../utils/navigation";
+import { useLocation } from 'react-router-dom';
+import webgazer from "../webgazer/webgazer";
+import { reauthenticatingFetch } from "../utils/api";
+
+import { Box, Typography, LinearProgress, Container, Collapse, Alert, IconButton, CircularProgress } from "@mui/material";
+import { ReplayRounded as ReplayRoundedIcon } from "@mui/icons-material";
+
+import config from '../config'
+const baseURL = config.apiUrl
+
+function DiagnosticPage()
+{
+    const canvasRef = useRef(null);
+    const socket = useRef(null);
+    // const [stream, setStream] = useState(null);
+    // const [streamObtained, setStreamStatus] = useState(false);
+    const [connectionOpen, setStatusConn] = useState(false);
+    const [framesData, setFramesData] = useState([]);
+    
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [isLoading, setWebgazerLoading] = useState(true);
+    const [webgazerFinished, setWebgazerFinished] = useState(false);
+
+    const intervalRef = useRef(null);
+
+    /*
+    Status of WebSocket connection (used for retrying connection and for showing alerts):
+    -1 - Successful connection (message cleared)
+    0 - Successful connection message
+    1 - Connecting message
+    2 - Lost connection message
+    */
+    const [retryConnection, setRetryConnection] = useState(1);
+
+    // useEffect(() => {
+    //     const unloadWebgazerOnExit = () => {
+    //         webgazer.end();
+
+    //     };
+
+    //     window.addEventListener("unload", unloadWebgazerOnExit);
+
+    //     return () => {
+    //         window.removeEventListener("unload", unloadWebgazerOnExit);
+
+    //         // Save files to database before exiting or reloading
+    //         // console.log("Saving files to database"); 
+    //         unloadWebgazerOnExit();
+    //     };
+    // }, []);
+
+    // Webgazer initialisation
+    useEffect(() => {
+        const initializeWebGazer = async () => {
+
+            webgazer.params.showVideo = false;
+            webgazer.params.showGazeDot = false;
+            webgazer.params.showVideoPreview = false;
+            webgazer.params.saveDataAcrossSessions = false;
+            webgazer.params.showFaceOverlay = false;
+            webgazer.setRegression("weightedRidge");
+
+            await webgazer.begin(false);
+
+            webgazer.hideGazeDot(1);
+            
+            try
+            {
+            if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
+            {
+                var calibrationData = JSON.parse(localStorage.getItem("calibration"));
+                webgazer.setRegressionData(calibrationData);
+                var accuracy = JSON.parse(localStorage.getItem("accuracy"));
+                // setCalibrationAccuracy(accuracy);
+            }
+            else
+            {
+                const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
+            
+                if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
+                {
+                // set accuracy to -1 to indicate that no calibration data is found
+                //   setCalibrationAccuracy(-1);
+                }
+                else
+                {
+                var calibrationData = responseMsg.calibration_values;
+                webgazer.setRegressionData(calibrationData);
+                }
+            }
+            
+            }
+            catch(error)
+            {
+            console.error("Failed to load calibration data from localStorage:", error);
+            //   setCalibrationAccuracy(-1);
+            }
+
+            /* Fetch the video stream from Webgazer */
+        //   const intervalId = setInterval(() => {
+        //     const stream = webgazer.getVideoStream();
+        //     if (stream !== null) {
+        //       setStream(stream);
+        //       setStreamStatus(true);
+        //       videoRef.current.srcObject = stream;
+        //       clearInterval(intervalId); // Stop checking once stream is available
+        //     }
+        //   }, 500);
+
+        // } catch (error) {
+        //   console.error("Error initializing WebGazer:", error);
+        // }
+
+        setWebgazerLoading(false);
+        setWebgazerFinished(true);
+        console.log("WebGazer initialized successfully");
+        };
+
+        if(isLoading)
+        initializeWebGazer();
+
+    }, [isLoading]);
+
+    // WebSocket connection
+    const connectWebSocket = async () => {
+        setRetryConnection(1);
+        const token = localStorage.getItem("authTokens"); // Assuming token is stored in localStorage
+
+        const cleanBaseURL = baseURL.replace(/^https?:\/\//, ""); // remove 'http://' or 'https://' from baseURL when connecting using WebSocket
+        
+        if(config.debug)
+        socket.current = new WebSocket(`ws://${cleanBaseURL}/ws/video/?token=${token}`);
+        else
+        socket.current = new WebSocket(`wss://${cleanBaseURL}/ws/video/?token=${token}`);
+
+        // console.log("Connecting to WebSocket...");
+
+        socket.current.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.mode === "diagnostic") {
+            const { frame, face_detected, yaw, pitch, roll, eye_speed } = data;
+            // Handle the received data, e.g., update state or perform actions
+            //   console.log("Received frame:", frame);
+            //   console.log("Face detected:", face_detected);
+            //   console.log("Yaw:", yaw);
+            //   console.log("Pitch:", pitch);
+            //   console.log("Roll:", roll);
+            //   console.log("Eye speed:", eye_speed);
+
+                drawImageOnCanvas(frame);
+            }
+        };
+
+        socket.current.onopen = () => {
+        setRetryConnection(0);
+        setStatusConn(true);
+        }
+
+        socket.current.onclose = async(event) => {
+            socket.current = null;
+            setStatusConn(false);
+            setRetryConnection(2);
+        };
+
+        socket.current.onerror = async(event) => {
+        await reauthenticatingFetch("GET", `${baseURL}/api/user/profile/`);
+        console.log("Reconnecting to WebSocket...");
+        connectWebSocket(); // Retry WebSocket connection after refreshing the access token using above request
+        // toNotAuthorized();
+        };
+    };
+
+    useEffect(() => {
+
+        if(retryConnection > 0)
+        {
+            const canvas = canvasRef.current;
+            if (canvas) {
+            const ctx = canvas.getContext('2d');
+
+            // Load the image
+            const image = new Image();
+            image.src = "../../public/images/diagnostics/NoConnection.svg";
+            image.onload = () => {
+                // Calculate the position to place the image in the middle
+                const x = (canvas.width - image.width) / 2;
+                const y = (canvas.height - image.height) / 2;
+
+                // Draw the image in the middle of the canvas
+                ctx.drawImage(image, x, y);
+                };
+            }   
+        }
+        else if(retryConnection !== -1)
+        {
+            const canvas = canvasRef.current;
+            if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+    }, [retryConnection]); // Also add check if camera permission is false
+
+    const drawImageOnCanvas = (base64Image) => {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        };
+        img.src = base64Image;
+    };
+
+    useEffect(() => {
+        if (!socket.current && !isLoading && webgazerFinished) {
+        connectWebSocket();
+        }
+
+        return () => {
+        if (socket.current) {
+            socket.current.close();
+            socket.current = null;
+        }
+
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+        }
+        };
+    }, [isLoading]);
+
+    var total_frames = 0;
+    var previous_frame = 0;
+    var previous_time = 0;
+
+    // Initialize state for previous frame data URL
+    const previousFrameDataUrl = useRef(null);
+
+
+    const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
+    if (socket.current && socket.current.readyState === WebSocket.OPEN) {
+        const timestamp = Date.now(); // Get current timestamp of current frame
+        const frame = canvas.toDataURL("image/jpeg");
+
+        // Compare current frame with the previous frame
+        if (frame !== previousFrameDataUrl.current) {
+        // Store image data and timestamp in framesData array
+        setFramesData((prevFrames) => [
+            ...prevFrames,
+            { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
+        ]);
+
+        // Send the frame via WebSocket
+        socket.current.send(
+            JSON.stringify({
+            frame: frame,
+            timestamp: timestamp,
+            xCoordinatePx: xCoord,
+            yCoordinatePx: yCoord,
+            mode: "diagnostic",
+            })
+        );
+
+        total_frames += 1;
+        if (total_frames === 1) {
+            previous_time = timestamp;
+            previous_frame = total_frames;
+        }
+        if (total_frames % 30 === 0) {
+            window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
+            window.console.log("FPS: ", (total_frames - previous_frame) / ((timestamp - previous_time) / 1000));
+            previous_frame = total_frames;
+            previous_time = timestamp;
+        }
+
+        // Update the previous frame data URL
+        previousFrameDataUrl.current = frame;
+        }
+
+        // handleYCoord(yCoord);
+    }
+    else
+    {
+        // console.error("WebSocket connection no longer open.");
+        setStatusConn(false);
+        webgazer.clearGazeListener();
+    }
+    }, []);
+
+    const gazeListener = (data, canvas) => {
+    if (data) {
+        sendVideoFrame(data.x, data.y, canvas);
+    } else {
+        sendVideoFrame(null, null, canvas);
+    }
+    };
+
+    useEffect(() => {
+    if (connectionOpen) {
+        webgazer.setGazeListener(gazeListener);
+    }
+    else
+    {
+        if(retryConnection !== 1)
+        setRetryConnection(2);
+    }
+    }, [connectionOpen, sendVideoFrame]);
+
+    if (isLoading) {
+        return (
+        <div
+            style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100vh",
+            backgroundColor: "#f9f9f9",
+            userSelect: "none"
+            }}
+        >
+            <Typography variant="h5" style={{ marginBottom: "2vh" }}>
+            Loading WebGazer...
+            </Typography>
+            <LinearProgress
+            style={{ width: "80%", marginTop: "2vh" }}
+            />
+        </div>
+        );
+    }
+
+        return (
+        <Box style={{marginTop: "15vh", display: "flex", flexDirection: "column", justifyContent: "center"}}>
+            <Collapse in={retryConnection === 0} sx={{position: "absolute", top: "15vh", right: "5vh"}}>
+            <Alert variant="filled" severity="success" onClose={() => setRetryConnection(-1)}>
+                Connection to server successful.
+            </Alert>
+            </Collapse>
+            <Collapse in={retryConnection === 1} sx={{position: "absolute", top: "15vh", right: "5vh"}}>
+            <Alert variant="filled" severity="info">
+                Connecting...
+            </Alert>
+            </Collapse>
+            <Collapse in={retryConnection === 2} sx={{position: "absolute", top: "15vh", right: "5vh"}}>
+            <Alert variant="filled" severity="error" 
+            action={
+                <IconButton onClick={() => connectWebSocket()} color="inherit" size="small"><ReplayRoundedIcon fontSize="small"/></IconButton>
+            }>
+                Connection lost. Click here to retry.
+            </Alert>
+            </Collapse>
+            <Typography variant="h3" style={{textAlign: "center"}}>Diagnostics</Typography>
+            <Typography variant="h6" style={{textAlign: "center"}}>Verify if your camera, head tracking, and eye tracking are working properly here.</Typography>
+            <Box style={{display: "flex", flexDirection: "row", justifyContent: "center", marginTop: "5vh"}}>
+                <Container style={{width: "50vw", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center"}}>
+                    <canvas ref={canvasRef} width={640} height={480} style={{borderRadius: "5px", border: "1px solid #ccc", maxWidth: "50vw", backgroundColor: "#d9d9d9"}}></canvas>
+                </Container>
+                <Container style={{width: "50vw", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center"}}>
+                    <h1>Diagnostic settings and checkboxes</h1>
+                </Container>
+            </Box>
+        </Box>
+        );
+}
+
+export default DiagnosticPage;
