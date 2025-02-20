@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useNavigation } from "../utils/navigation";
-import { useLocation } from 'react-router-dom';
 import webgazer from "../webgazer/webgazer";
 import { reauthenticatingFetch } from "../utils/api";
 
-import { Box, Typography, LinearProgress, Container, Collapse, Alert, IconButton, CircularProgress } from "@mui/material";
+import { Box, Typography, LinearProgress, Container, Collapse, Alert, IconButton, CircularProgress, FormControlLabel, Checkbox } from "@mui/material";
 import { ReplayRounded as ReplayRoundedIcon } from "@mui/icons-material";
 
 import config from '../config'
@@ -24,6 +22,35 @@ function DiagnosticPage()
     const [webgazerFinished, setWebgazerFinished] = useState(false);
 
     const intervalRef = useRef(null);
+
+    /* Diagnostic inputs*/
+    const showFaceMesh = useRef(false);
+    const showEyes = useRef(false);
+    const showContours = useRef(false);
+    const showAxes = useRef(true);
+
+    const handleChange = (value) => {
+        if(value == "face")
+            showFaceMesh.current = !showFaceMesh.current;
+        else if(value == "eyes")
+            showEyes.current = !showEyes.current;
+        else if(value == "contours")
+            showContours.current = !showContours.current;
+        else if(value == "axes")
+            showAxes.current = !showAxes.current;
+    };
+
+    /* Diagnostic outputs*/
+
+    // From frontend
+    const [fpsValue, setFpsValue] = useState(null);
+
+    // From backend
+    const [face_detected, setFaceDetected] = useState(null);
+    const [yaw, setYaw] = useState(null);
+    const [pitch, setPitch] = useState(null);
+    const [roll, setRoll] = useState(null);
+    const [eye_speed, setEyeSpeed] = useState(null);
 
     /*
     Status of WebSocket connection (used for retrying connection and for showing alerts):
@@ -131,9 +158,9 @@ function DiagnosticPage()
         const cleanBaseURL = baseURL.replace(/^https?:\/\//, ""); // remove 'http://' or 'https://' from baseURL when connecting using WebSocket
         
         if(config.debug)
-        socket.current = new WebSocket(`ws://${cleanBaseURL}/ws/video/?token=${token}`);
+            socket.current = new WebSocket(`ws://${cleanBaseURL}/ws/video/?token=${token}`);
         else
-        socket.current = new WebSocket(`wss://${cleanBaseURL}/ws/video/?token=${token}`);
+            socket.current = new WebSocket(`wss://${cleanBaseURL}/ws/video/?token=${token}`);
 
         // console.log("Connecting to WebSocket...");
 
@@ -150,6 +177,11 @@ function DiagnosticPage()
             //   console.log("Eye speed:", eye_speed);
 
                 drawImageOnCanvas(frame);
+                setFaceDetected(face_detected);
+                setYaw(yaw);
+                setPitch(pitch);
+                setRoll(roll);
+                setEyeSpeed(eye_speed);
             }
         };
 
@@ -260,6 +292,10 @@ function DiagnosticPage()
             timestamp: timestamp,
             xCoordinatePx: xCoord,
             yCoordinatePx: yCoord,
+            draw_mesh: showFaceMesh.current,
+            draw_contours: showContours.current,
+            show_axis: showAxes.current,
+            draw_eye: showEyes.current,
             mode: "diagnostic",
             })
         );
@@ -271,7 +307,9 @@ function DiagnosticPage()
         }
         if (total_frames % 30 === 0) {
             window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
-            window.console.log("FPS: ", (total_frames - previous_frame) / ((timestamp - previous_time) / 1000));
+            const FPS = (total_frames - previous_frame) / ((timestamp - previous_time) / 1000);
+            setFpsValue(FPS);
+            // console.log("FPS: ", FPS);
             previous_frame = total_frames;
             previous_time = timestamp;
         }
@@ -354,13 +392,50 @@ function DiagnosticPage()
             </Collapse>
             <Typography variant="h3" style={{textAlign: "center"}}>Diagnostics</Typography>
             <Typography variant="h6" style={{textAlign: "center"}}>Verify if your camera, head tracking, and eye tracking are working properly here.</Typography>
+
             <Box style={{display: "flex", flexDirection: "row", justifyContent: "center", marginTop: "5vh"}}>
-                <Container style={{width: "50vw", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center"}}>
-                    <canvas ref={canvasRef} width={640} height={480} style={{borderRadius: "5px", border: "1px solid #ccc", maxWidth: "50vw", backgroundColor: "#d9d9d9"}}></canvas>
-                </Container>
-                <Container style={{width: "50vw", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center"}}>
-                    <h1>Diagnostic settings and checkboxes</h1>
-                </Container>
+            <Container style={{width: "50vw", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center"}}>
+                <canvas ref={canvasRef} width={640} height={480} style={{borderRadius: "5px", border: "1px solid #ccc", maxWidth: "50vw", backgroundColor: "#d9d9d9"}}></canvas>
+            </Container>
+            <Container style={{width: "50vw", maxWidth: "50vw", display: "flex", flexDirection: "column"}}>
+                <Typography variant="h6">
+                    Frames per second (FPS): <span style={{ color: "red" }}> {fpsValue === null ? "Calculating..." : `${fpsValue.toFixed(0)} FPS`}</span>
+                </Typography>
+
+                <Typography variant="h5" mt={"5vh"}>Head tracking</Typography>
+
+                <Typography variant="h6" mt={"2vh"}>
+                    Face detected? { face_detected === 1 ? <span style={{ color: "green" }}>TRUE</span> : <span style={{ color: "red" }}>FALSE</span> }
+                </Typography>
+
+                <Box display="flex" flexDirection="row" mt={"2vh"} style={{minWidth: "40vw", flexWrap: "wrap"}}>
+                    <FormControlLabel control={<Checkbox checked={showFaceMesh.current} onChange={() => handleChange("face")}/>} label="Show face mesh" />
+                    <FormControlLabel control={<Checkbox checked={showEyes.current} onChange={() => handleChange("eyes")}/>} label="Show eye points" />
+                    <FormControlLabel control={<Checkbox checked={showContours.current} onChange={() => handleChange("contours")}/>} label="Show contours" />
+                    <FormControlLabel control={<Checkbox checked={showAxes.current} onChange={() => handleChange("axes")}/>} label="Show axes" />
+                </Box>
+
+                <Box display="flex" gap={2} mt={"2vh"} style={{ minWidth: "40vw", flexWrap: "wrap" }}>
+                    <Typography>
+                        <span style={{ fontWeight: "bold" }}>Pitch: </span> 
+                        <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch" }}>{pitch === null ? "No value" : pitch.toFixed(5)}</span>
+                    </Typography>
+                    <Typography>
+                        <span style={{ fontWeight: "bold" }}>Yaw: </span> 
+                        <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch" }}>{yaw === null ? "No value" : yaw.toFixed(5)}</span>
+                    </Typography>
+                    <Typography>
+                        <span style={{ fontWeight: "bold" }}>Roll: </span> 
+                        <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch" }}>{roll === null ? "No value" : roll.toFixed(5)}</span>
+                    </Typography>
+                </Box>
+
+                <Typography variant="h5" mt={"5vh"}>Eye tracking</Typography>
+                <Typography mt={"1vh"}>
+                    <span style={{ fontWeight: "bold" }}>Eye velocity: </span> 
+                    <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch" }}>{eye_speed === null ? "No value" : eye_speed.toFixed(5)}</span>
+                </Typography>
+            </Container>
             </Box>
         </Box>
         );
