@@ -7,6 +7,8 @@ import PageFive from "./pages/PageFive";
 import PageSix from "./pages/PageSix";
 import config from "../config";
 
+import { reauthenticatingFetch } from "../utils/api";
+
 const containerStyle = {
   //display: 'flex',
   // height: '100vh'
@@ -30,21 +32,21 @@ const Questionnaire = () => {
   }, []);
 
   const handleSubmit = async () => {
-    console.log(data);
+
     try {
       const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/onboarding/`, data)
       console.log(data);
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log("Onboarding data saved successfully:", result);
+      if (response.error) {
+        console.error("Failed to save onboarding data:", response.error);
       } else {
-        const error = await response.json();
-        console.error("Failed to save onboarding data:", error);
+        console.log("Onboarding data saved successfully:");
       }
-    } catch (error) {
+    } 
+    catch (error) {
       console.error("Error submitting onboarding data:", error);
     }
+    
   };
 
   const updateData = (newData) => {
@@ -62,7 +64,7 @@ const Questionnaire = () => {
       <PageFour updateData={updateData} />
       <PageFive updateData={updateData} />
       <PageSix updateData={updateData} />
-      <button onClick={()=>handleSubmit}>Submit</button>
+      <button onClick={handleSubmit}>Submit</button>
     </div>
   );
 };
