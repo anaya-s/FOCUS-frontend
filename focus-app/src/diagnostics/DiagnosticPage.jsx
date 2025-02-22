@@ -12,8 +12,7 @@ function DiagnosticPage()
 {
     const canvasRef = useRef(null);
     const socket = useRef(null);
-    // const [stream, setStream] = useState(null);
-    // const [streamObtained, setStreamStatus] = useState(false);
+
     const [connectionOpen, setStatusConn] = useState(false);
     const [framesData, setFramesData] = useState([]);
     
@@ -61,23 +60,6 @@ function DiagnosticPage()
     */
     const [retryConnection, setRetryConnection] = useState(1);
 
-    // useEffect(() => {
-    //     const unloadWebgazerOnExit = () => {
-    //         webgazer.end();
-
-    //     };
-
-    //     window.addEventListener("unload", unloadWebgazerOnExit);
-
-    //     return () => {
-    //         window.removeEventListener("unload", unloadWebgazerOnExit);
-
-    //         // Save files to database before exiting or reloading
-    //         // console.log("Saving files to database"); 
-    //         unloadWebgazerOnExit();
-    //     };
-    // }, []);
-
     // Webgazer initialisation
     useEffect(() => {
         const initializeWebGazer = async () => {
@@ -93,52 +75,31 @@ function DiagnosticPage()
 
             webgazer.hideGazeDot(1);
             
-            try
-            {
-            if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
-            {
-                var calibrationData = JSON.parse(localStorage.getItem("calibration"));
-                webgazer.setRegressionData(calibrationData);
-                var accuracy = JSON.parse(localStorage.getItem("accuracy"));
-                // setCalibrationAccuracy(accuracy);
-            }
-            else
-            {
-                const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
+            // // Remove following sections if not showing gaze predictions for diagnostics
+            // try
+            // {
+            // if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
+            // {
+            //     var calibrationData = JSON.parse(localStorage.getItem("calibration"));
+            //     webgazer.setRegressionData(calibrationData);
+            //     var accuracy = JSON.parse(localStorage.getItem("accuracy"));
+            // }
+            // else
+            // {
+            //     const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
             
-                if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
-                {
-                // set accuracy to -1 to indicate that no calibration data is found
-                //   setCalibrationAccuracy(-1);
-                }
-                else
-                {
-                var calibrationData = responseMsg.calibration_values;
-                webgazer.setRegressionData(calibrationData);
-                }
-            }
+            //     if (!responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
+            //     {
+            //         var calibrationData = responseMsg.calibration_values;
+            //         webgazer.setRegressionData(calibrationData);
+            //     }
+            // }
             
-            }
-            catch(error)
-            {
-            console.error("Failed to load calibration data from localStorage:", error);
-            //   setCalibrationAccuracy(-1);
-            }
-
-            /* Fetch the video stream from Webgazer */
-        //   const intervalId = setInterval(() => {
-        //     const stream = webgazer.getVideoStream();
-        //     if (stream !== null) {
-        //       setStream(stream);
-        //       setStreamStatus(true);
-        //       videoRef.current.srcObject = stream;
-        //       clearInterval(intervalId); // Stop checking once stream is available
-        //     }
-        //   }, 500);
-
-        // } catch (error) {
-        //   console.error("Error initializing WebGazer:", error);
-        // }
+            // }
+            // catch(error)
+            // {
+            // console.error("Failed to load calibration data from localStorage:", error);
+            // }
 
         setWebgazerLoading(false);
         setWebgazerFinished(true);
@@ -146,7 +107,7 @@ function DiagnosticPage()
         };
 
         if(isLoading)
-        initializeWebGazer();
+            initializeWebGazer();
 
     }, [isLoading]);
 
