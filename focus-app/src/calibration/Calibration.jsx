@@ -26,7 +26,6 @@ const CalibrationPage = () => {
 
   const [isCalibrationGETLoading, setCalibrationGETLoading] = useState(true);
   const [isLoading, setWebgazerLoading] = useState(true);
-  const [loadingProgress, setLoadingProgress] = useState(0);
 
   const [accuracy, setAccuracy] = useState(0);
   const [calibrationTimestamp, setCalibrationTimestamp] = useState(formatTimestamp(new Date(Date.now())));
@@ -67,8 +66,8 @@ const CalibrationPage = () => {
   useEffect(() => {
     const handleResize = () => {
       // update the gaps on resize
-      setGap(window.innerWidth / 12);
-      setRowGap(window.innerWidth / 5);
+      setGap(window.innerWidth / 11);
+      setRowGap(window.innerWidth / 6);
     };
 
     window.addEventListener("resize", handleResize);
@@ -117,11 +116,32 @@ const CalibrationPage = () => {
             container: 'custom-swal-container', // Apply the custom class
           },
           willClose: async () => {
+            try
+            {
             await webgazer.begin(true);
             if (document.documentElement.requestFullscreen) {
               document.documentElement.requestFullscreen();
             }
             document.getElementById("calibrationGrid").style.display = "grid";
+            } catch (error) {
+              // Reset calibration if camera is disabled midway through calibration
+              webgazer.clearData();
+              
+              const newClickCounts = [...clickCounts];
+              for (var i = 0; i < 24; i++)
+              {
+                newClickCounts[i] = 0;
+              }
+              setClickCounts(newClickCounts);
+
+              calibrationData = []
+              localStorage.removeItem("calibration");
+              localStorage.removeItem("accuracy");
+              setTotalClicks(1);
+              setCalibrationSkip(false);
+              setCalibration(true);
+              setCalibrationLive(false);
+            }
           }
         });
     }
@@ -261,16 +281,6 @@ const CalibrationPage = () => {
       setWebgazerLoading(true);
     const initializeWebGazer = async () => {
       try {
-        
-        const loadingInterval = setInterval(() => {
-          setLoadingProgress((prevProgress) => {
-            if (prevProgress >= 100) {
-              clearInterval(loadingInterval);
-            }
-            return Math.min(prevProgress + 100, 100);
-          });
-        }, 250);
-
 
         webgazer.params.showVideo = false;
         webgazer.params.showGazeDot = true; // set false to remove gaze dot
@@ -296,6 +306,34 @@ const CalibrationPage = () => {
 
       } catch (error) {
         console.error("Error initializing WebGazer:", error);
+        document.getElementById("webgazerLoading").style.visibility  = "hidden";
+        Swal.fire({
+          title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Failed to start Webgazer</span>',
+          html: `
+          <p style="font-family: Arial, sans-serif; font-size: 18px; color: black; user-select: none">Webcam not detected or disabled</p>
+          <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none, margin-top: 2vh">
+            <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto; user-select: none">
+            <div style="margin-left: 2vh; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+              <p>Please check if your webcam is <span style="font-weight: bold">enabled and connected</span>. A webcam is required for this website.</p>
+              <p style="margin-top: 2vh;">If your webcam is enabled and connected, please check and allow your <span style="font-weight: bold">browser's camera permissions</span>.</p>
+            </div>
+          </div>
+        `,
+          icon: 'warning',
+          iconColor: 'orange',
+          width: '40vw',
+          confirmButtonColor: "#06760D",
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          confirmButtonText: '<span style="user-select: none; padding: 0">Restart Webgazer</span>',
+          customClass: {
+            container: 'custom-swal-container', // Apply the custom class
+          },
+          willClose: async () => {
+            document.getElementById("webgazerLoading").style.visibility  = "visible";
+            initializeWebGazer();
+          }
+        });
       }
     };
 
@@ -413,7 +451,6 @@ const CalibrationPage = () => {
     setTotalClicks(1);
     setCalibrationSkip(false);
     setCalibration(true);
-    setLoadingProgress(0);
   };
 
   const finishCalibration = () => {
@@ -445,6 +482,7 @@ const CalibrationPage = () => {
   if (isLoading && performCalibration && !isCalibrationGETLoading) {
     return (
       <div
+        id="webgazerLoading"
         style={{
           display: "flex",
           flexDirection: "column",
@@ -459,8 +497,6 @@ const CalibrationPage = () => {
           Loading WebGazer...
         </Typography>
         <LinearProgress
-          variant="determinate"
-          value={loadingProgress}
           style={{ width: "80%", marginTop: "20px" }}
         />
       </div>

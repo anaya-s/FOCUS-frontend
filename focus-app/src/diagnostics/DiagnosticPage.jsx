@@ -5,6 +5,8 @@ import { reauthenticatingFetch } from "../utils/api";
 import { Box, Typography, LinearProgress, Container, Collapse, Alert, IconButton, CircularProgress, FormControlLabel, Checkbox } from "@mui/material";
 import { ReplayRounded as ReplayRoundedIcon } from "@mui/icons-material";
 
+import Swal from "sweetalert2";
+
 import config from '../config'
 const baseURL = config.apiUrl
 
@@ -60,9 +62,25 @@ function DiagnosticPage()
     */
     const [retryConnection, setRetryConnection] = useState(1);
 
+    useEffect(() => {
+        const style = document.createElement('style');
+        style.innerHTML = `
+          .custom-swal-container {
+            z-index: 1500; /* Set the desired z-index */
+          }
+        `;
+        document.head.appendChild(style);
+    
+        return () => {
+          document.head.removeChild(style);
+        };
+    }, []);
+
     // Webgazer initialisation
     useEffect(() => {
         const initializeWebGazer = async () => {
+
+            document.getElementById("webgazerLoading").style.visibility  = "visible";
 
             webgazer.params.showVideo = false;
             webgazer.params.showGazeDot = false;
@@ -71,45 +89,79 @@ function DiagnosticPage()
             webgazer.params.showFaceOverlay = false;
             webgazer.setRegression("weightedRidge");
 
-            await webgazer.begin(false);
+            webgazer.begin(false)
+                .then(() => {
+                
+                    // // Remove following sections if not showing gaze predictions for diagnostics
+                    // try
+                    // {
+                    // if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
+                    // {
+                    //     var calibrationData = JSON.parse(localStorage.getItem("calibration"));
+                    //     webgazer.setRegressionData(calibrationData);
+                    //     var accuracy = JSON.parse(localStorage.getItem("accuracy"));
+                    // }
+                    // else
+                    // {
+                    //     const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
+                    
+                    //     if (!responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
+                    //     {
+                    //         var calibrationData = responseMsg.calibration_values;
+                    //         webgazer.setRegressionData(calibrationData);
+                    //     }
+                    // }
+                    
+                    // }
+                    // catch(error)
+                    // {
+                    // console.error("Failed to load calibration data from localStorage:", error);
+                    // }
 
-            webgazer.hideGazeDot(1);
-            
-            // // Remove following sections if not showing gaze predictions for diagnostics
-            // try
-            // {
-            // if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
-            // {
-            //     var calibrationData = JSON.parse(localStorage.getItem("calibration"));
-            //     webgazer.setRegressionData(calibrationData);
-            //     var accuracy = JSON.parse(localStorage.getItem("accuracy"));
-            // }
-            // else
-            // {
-            //     const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
-            
-            //     if (!responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
-            //     {
-            //         var calibrationData = responseMsg.calibration_values;
-            //         webgazer.setRegressionData(calibrationData);
-            //     }
-            // }
-            
-            // }
-            // catch(error)
-            // {
-            // console.error("Failed to load calibration data from localStorage:", error);
-            // }
+                    setWebgazerLoading(false);
+                    setWebgazerFinished(true);
+                    console.log("WebGazer initialized successfully");
+                })
+                .catch((err) => {
+                    console.error("Failed to initialize WebGazer:", err);
+                    setWebgazerFinished(true);
+                    document.getElementById("webgazerLoading").style.visibility  = "hidden";
+                    // Show alert for user to enable camera permissions
+                    Swal.fire({
+                        title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Failed to start Webgazer</span>',
+                        html: `
+                        <p style="font-family: Arial, sans-serif; font-size: 18px; color: black; user-select: none">Webcam not detected or disabled</p>
+                        <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none, margin-top: 2vh">
+                          <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto; user-select: none">
+                          <div style="margin-left: 2vh; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+                            <p>Please check if your webcam is <span style="font-weight: bold">enabled and connected</span>. A webcam is required for this website.</p>
+                            <p style="margin-top: 2vh;">If your webcam is enabled and connected, please check and allow your <span style="font-weight: bold">browser's camera permissions</span>.</p>
+                          </div>
+                        </div>
+                      `,
+                        icon: 'warning',
+                        iconColor: 'orange',
+                        width: '40vw',
+                        confirmButtonColor: "#06760D",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        confirmButtonText: '<span style="user-select: none; padding: 0">Restart Webgazer</span>',
+                        customClass: {
+                          container: 'custom-swal-container', // Apply the custom class
+                        },
+                        willClose: async () => {
+                          setWebgazerFinished(false);
 
-        setWebgazerLoading(false);
-        setWebgazerFinished(true);
-        console.log("WebGazer initialized successfully");
-        };
+                          document.getElementById("webgazerLoading").style.visibility  = "visible";
+                        }
+                    });
+                });
+    };
 
-        if(isLoading)
-            initializeWebGazer();
+    if(isLoading && !webgazerFinished)
+        initializeWebGazer();
 
-    }, [isLoading]);
+    }, [isLoading, webgazerFinished]);
 
     // WebSocket connection
     const connectWebSocket = async () => {
@@ -311,6 +363,7 @@ function DiagnosticPage()
     if (isLoading) {
         return (
         <div
+            id="webgazerLoading"
             style={{
             display: "flex",
             flexDirection: "column",
@@ -360,7 +413,7 @@ function DiagnosticPage()
             </Container>
             <Container style={{width: "50vw", maxWidth: "50vw", display: "flex", flexDirection: "column"}}>
                 <Typography variant="h6">
-                    Frames per second (FPS): <span style={{ color: "red" }}> {fpsValue === null ? "Calculating..." : `${fpsValue.toFixed(0)} FPS`}</span>
+                    Frames per second (FPS): <span style={{ color: fpsValue <= 15 ? "red" : fpsValue <= 25 ? "orange" : "red" }}> {fpsValue === null ? "Calculating..." : `${fpsValue.toFixed(0)} FPS`}</span>
                 </Typography>
 
                 <Typography variant="h5" mt={"5vh"}>Head tracking</Typography>
