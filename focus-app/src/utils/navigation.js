@@ -32,7 +32,7 @@ export function useNavigation() {
     toNotAuthorized: () => navigate('error/403'),
 
     toCalibration: (file, parsedText) => navigate('/calibrate', { state: { file, parsedText } }),
-    toReadingPage: (file, parsedText) => navigate('/reading', { state: { file, parsedText } }),
+    toReadingPage: (file, parsedText, readingProgress) => navigate('/reading', { state: { file, parsedText, readingProgress } }),
     
     toDrive: (error) => navigate('/drive', { state: { error } }),
     

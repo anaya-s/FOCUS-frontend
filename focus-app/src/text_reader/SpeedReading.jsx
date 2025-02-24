@@ -6,7 +6,7 @@ const baseURL = config.apiUrl
 
 import { Typography, Box, CircularProgress } from "@mui/material";
 
-let startSpeedReading, sendReadingProgress;
+let startSpeedReading, sendReadingProgressSpeed;
 
 export function SpeedReading({textSettings}) {
 
@@ -24,6 +24,7 @@ export function SpeedReading({textSettings}) {
 
   useEffect(() => {
     if (parsedText.current) {
+      console.log(parsedText.current);
       startSpeedReading(documentName.current, parsedText.current);
     }
   }, [parsedText]);
@@ -44,7 +45,7 @@ export function SpeedReading({textSettings}) {
     }
   }, [pauseStatus.current]);
 
-  sendReadingProgress = async () => {
+  sendReadingProgressSpeed = async () => {
     const bodyContents = { fileName: fileName, lineNumber: currentLine };
     console.log(bodyContents);
 
@@ -79,6 +80,7 @@ const iterateWords = async (lines) => {
           setTimeout(resolve, 1000 / highlightSpeed.current)
         ); // set time interval
       }
+      setCurrentWord(0);
     }
   }
 };
@@ -168,4 +170,4 @@ const iterateWords = async (lines) => {
     );
 }
 
-export { sendReadingProgress };
+export { sendReadingProgressSpeed };

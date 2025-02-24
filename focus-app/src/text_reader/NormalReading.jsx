@@ -4,22 +4,50 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
+import { reauthenticatingFetch } from '../utils/api';
+
+import config from '../config'
+const baseURL = config.apiUrl
+
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
-function NormalReading({ file, textSettings }) {
+let sendReadingProgressNormal;
+
+export function NormalReading({ file, textSettings, pageNumberLoad }) {
   const [backgroundColour, backgroundBrightness, pdfScale, pdfCurrentPage, pdfTotalPages, pdfSetPage, isPDF] = textSettings.current;
 
   const [numPages, setNumPages] = useState(1);
-  const [pageNumber, setPageNumber] = useState(1);
+  const pageNumber = useRef(pageNumberLoad);
   const pageRefs = useRef([]);
   const isNotValid = useRef(false);
   const boxRef = useRef(null);
-  const previousPageNumber = useRef(1); // Track the previous valid page number
+  const previousPageNumber = useRef(pageNumberLoad); // Track the previous valid page number
 
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
     pdfTotalPages.current = numPages;
-    pdfCurrentPage.current = 1;
+    pageNumber.current = pageNumberLoad;
+    pdfCurrentPage.current = pageNumberLoad;
+    pdfSetPage.current = true;
+  };
+
+  sendReadingProgressNormal = async () => {
+    try
+    {
+      const formData = new FormData();
+      formData.append("file_name", file.name);
+      formData.append("page_number", pageNumber.current);
+      formData.append("timestamp", Date.now());
+
+      console.log("Reading Mode 1 Saving Progress: Page ", pageNumber);
+
+      const response = await reauthenticatingFetch("POST", `${baseURL}/api/user/document-update`, formData, false);
+    }
+    catch (error)
+    {
+      console.error("Error saving page number: ", error);
+    }
+      
   };
 
   // Check file type
@@ -40,7 +68,7 @@ function NormalReading({ file, textSettings }) {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
             const visiblePageNumber = Number(entry.target.dataset.pageNumber);
-            setPageNumber(visiblePageNumber);
+            pageNumber.current = visiblePageNumber;
             previousPageNumber.current = visiblePageNumber; // Update the previous valid page number
             pdfCurrentPage.current = visiblePageNumber;
           }
@@ -84,11 +112,11 @@ function NormalReading({ file, textSettings }) {
           });
         }
 
-        setPageNumber(page);
+        pageNumber.current = page;
       } 
       else
       {
-        setPageNumber(previousPageNumber.current); // Reset to the previous valid page number
+        pageNumber.current = previousPageNumber.current; // Reset to the previous valid page number
         pdfCurrentPage.current = previousPageNumber.current;
       }
     }
@@ -143,4 +171,4 @@ function NormalReading({ file, textSettings }) {
   );
 }
 
-export default NormalReading;
+export { sendReadingProgressNormal };

@@ -486,7 +486,7 @@ function DocumentDrivePage() {
 
       // send readingProgress too
     
-      toReadingPage(file, parsedText);
+      toReadingPage(file, parsedText, readingProgress);
     }
     catch(error)
     {
