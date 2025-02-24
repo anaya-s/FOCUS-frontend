@@ -278,67 +278,99 @@ function DiagnosticPage()
     }, [isLoading]);
 
     var total_frames = 0;
-    var previous_frame = 0;
+    var previous_total_count = 0;
+    var previous_total_time = 0;
+
+    var sent_frames = 0;
     var previous_time = 0;
+    var previous_count = 0;
+
+    var previous_send_time = 0;
 
     // Initialize state for previous frame data URL
     const previousFrameDataUrl = useRef(null);
 
 
     const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
-    if (socket.current && socket.current.readyState === WebSocket.OPEN) {
-        const timestamp = Date.now(); // Get current timestamp of current frame
-        const frame = canvas.toDataURL("image/jpeg");
+        if (socket.current && socket.current.readyState === WebSocket.OPEN) {
+            const timestamp = Date.now(); // Get current timestamp of current frame
+            const frame = canvas.toDataURL("image/jpeg");
+    
+            // Compare current frame with the previous frame
+            if (frame !== previousFrameDataUrl.current) {
+                // Store image data and timestamp in framesData array
+                setFramesData((prevFrames) => [
+                    ...prevFrames,
+                    { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
+                ]);
+    
+                // Calculate the time difference between the current frame and the last sent frame
+                const timeDiff = timestamp - previous_send_time;
+                // console.log("Timestamp: ", timestamp, "Previous sent time", previous_time , "Time difference: ", timeDiff);
 
-        // Compare current frame with the previous frame
-        if (frame !== previousFrameDataUrl.current) {
-        // Store image data and timestamp in framesData array
-        setFramesData((prevFrames) => [
-            ...prevFrames,
-            { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
-        ]);
+                if(previous_total_time === 0)
+                {
+                    previous_total_time = timestamp;
+                    previous_total_count = 1;
+                }
+    
+                // Only send the frame if the time difference is greater than or equal to 100 milliseconds (10 FPS)
+                if (timeDiff >= 100) {               
+                    // Send the frame via WebSocket
+                    socket.current.send(
+                        JSON.stringify({
+                            frame: frame,
+                            timestamp: timestamp,
+                            xCoordinatePx: xCoord,
+                            yCoordinatePx: yCoord,
+                            draw_mesh: showFaceMesh.current,
+                            draw_contours: showContours.current,
+                            show_axis: showAxes.current,
+                            draw_eye: showEyes.current,
+                            mode: "diagnostic",
+                        })
+                    );
 
-        // Send the frame via WebSocket
-        socket.current.send(
-            JSON.stringify({
-            frame: frame,
-            timestamp: timestamp,
-            xCoordinatePx: xCoord,
-            yCoordinatePx: yCoord,
-            draw_mesh: showFaceMesh.current,
-            draw_contours: showContours.current,
-            show_axis: showAxes.current,
-            draw_eye: showEyes.current,
-            mode: "diagnostic",
-            })
-        );
+                    previous_send_time = timestamp;
 
-        total_frames += 1;
-        if (total_frames === 1) {
-            previous_time = timestamp;
-            previous_frame = total_frames;
+                    if (previous_time === 0)
+                    {
+                        previous_time = timestamp;
+                        previous_count = 1;
+                    }
+
+                    // Below should be 10 FPS
+                    sent_frames += 1;
+
+                    if (sent_frames % 30 === 0) {
+                        const actualFPS = ((sent_frames - previous_count) / ((timestamp - previous_time) / 1000));
+                        window.console.log("Actual FPS: ", actualFPS);
+                        previous_time = timestamp;
+                        previous_count = sent_frames;
+                    }
+                }
+
+                total_frames += 1;
+
+                // Calculate and log FPS every 30 sent frames
+                if (total_frames % 30 === 0) {
+                    const FPS = ((total_frames - previous_total_count) / ((timestamp - previous_total_time) / 1000));
+                    setFpsValue(FPS);
+                    window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord, "FPS: ", FPS);
+                    previous_total_time = timestamp;
+                    previous_total_count = total_frames;
+                }
+
+                // Update the previous frame data URL and timestamp
+                previousFrameDataUrl.current = frame;
+            }
         }
-        if (total_frames % 30 === 0) {
-            window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
-            const FPS = (total_frames - previous_frame) / ((timestamp - previous_time) / 1000);
-            setFpsValue(FPS);
-            // console.log("FPS: ", FPS);
-            previous_frame = total_frames;
-            previous_time = timestamp;
+        else
+        {
+            // console.error("WebSocket connection no longer open.");
+            setStatusConn(false);
+            webgazer.clearGazeListener();
         }
-
-        // Update the previous frame data URL
-        previousFrameDataUrl.current = frame;
-        }
-
-        // handleYCoord(yCoord);
-    }
-    else
-    {
-        // console.error("WebSocket connection no longer open.");
-        setStatusConn(false);
-        webgazer.clearGazeListener();
-    }
     }, []);
 
     const gazeListener = (data, canvas) => {
@@ -392,7 +424,7 @@ function DiagnosticPage()
             </Alert>
             </Collapse>
             <Collapse in={retryConnection === 1} sx={{position: "absolute", top: "15vh", right: "5vh"}}>
-            <Alert variant="filled" severity="info">
+            <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
                 Connecting...
             </Alert>
             </Collapse>
@@ -413,7 +445,7 @@ function DiagnosticPage()
             </Container>
             <Container style={{width: "50vw", maxWidth: "50vw", display: "flex", flexDirection: "column"}}>
                 <Typography variant="h6">
-                    Frames per second (FPS): <span style={{ color: fpsValue <= 15 ? "red" : fpsValue <= 25 ? "orange" : "red" }}> {fpsValue === null ? "Calculating..." : `${fpsValue.toFixed(0)} FPS`}</span>
+                    Frames per second (FPS): <span style={{ color: fpsValue <= 15 ? "red" : fpsValue <= 25 ? "orange" : "green" }}> {fpsValue === null ? "Calculating..." : `${fpsValue.toFixed(0)} FPS`}</span>
                 </Typography>
 
                 <Typography variant="h5" mt={"5vh"}>Head tracking</Typography>
