@@ -26,8 +26,8 @@ const rightColumnStyle = {
 };
 
 const imageStyle = {
-  width: "400px",
-  height: "225px",
+  width: "500px",
+  height: "500px",
 };
 
 const PageOne = () => {
@@ -58,7 +58,7 @@ const PageOne = () => {
       <div>
       <div style={rightColumnStyle}>
         <img
-          src="/images/homepage/felixspeech.png" 
+          src="/images/homepage/felix_done.png" 
           alt="Felix the productivity robot"
           style={imageStyle}
         />

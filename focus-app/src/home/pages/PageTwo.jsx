@@ -39,7 +39,7 @@ const PageTwo = () => {
           Stay Sharp, Stay Productive
         </Typography>
         <Typography variant="h4">
-          60% of people suffer from digital eye strain
+          60% of people suffer from digital eye strain - we're here to help
         </Typography>
       </div>
       <div style={featureStyle}>
@@ -53,7 +53,7 @@ const PageTwo = () => {
             Real Time
           </Typography>
           <Typography variant="h6" sx={{ color: "gray" }}>
-            Use your camera to track eye movements
+            Use your camera to track eye movements while you read
           </Typography>
         </div>
         <div style={featureItemStyle}>
@@ -66,7 +66,7 @@ const PageTwo = () => {
             Eye Fatigue
           </Typography>
           <Typography variant="h6" sx={{ color: "gray" }}>
-            Monitors eye health with in-house technology
+            Let us reduce your eye fatigue levels with reminders to take breaks
           </Typography>
         </div>
         <div style={featureItemStyle}>
@@ -79,7 +79,7 @@ const PageTwo = () => {
             Be Productive
           </Typography>
           <Typography variant="h6" sx={{ color: "gray" }}>
-            Personalised tips to boost productivity
+            Personalised tips to boost productivity and reduce eye strain
           </Typography>
         </div>
       </div>
