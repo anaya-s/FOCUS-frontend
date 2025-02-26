@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
+import { CircularProgress } from "@mui/material";
 import { reauthenticatingFetch } from '../../utils/api';
 import config from '../../config'
 const baseURL = config.apiUrl
@@ -25,42 +26,54 @@ ChartJS.register(
 
 function processData(data) {
   const sessionLabels = data.sessions.map((session) => `${session.session_id}`);
-  const sessionTotals = data.sessions.map((session) => session.total_reading_time);
-  
-  return{sessionLabels, sessionTotals};
+  const sessionFocusTimes = data.sessions.map((session) => session.total_focus_time);
+  const sessionTotalReadingTimes = data.sessions.map((session) => session.total_reading_time - session.total_focus_time);
+
+  return { sessionLabels, sessionTotalReadingTimes, sessionFocusTimes };
 }
 
 export default function ReadingTime() {
   const [loading, setLoading] = useState(true);
   const [sessionLabels, setSessionLabels] = useState([]);
-  const [sessionTotals, setSessionTotals] = useState([]);
-  
+  const [sessionTotalReadingTimes, setSessionTotalReadingTimes] = useState([]);
+  const [sessionFocusTimes, setSessionFocusTimes] = useState([]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const result = await reauthenticatingFetch("GET",`${baseURL}/api/eye/reading-times/`);
+        const result = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-times/`);
 
-        const { sessionLabels, sessionTotals } = processData(result);
+        const { sessionLabels, sessionTotalReadingTimes, sessionFocusTimes } = processData(result);
         setSessionLabels(sessionLabels);
-        setSessionTotals(sessionTotals);
+        setSessionTotalReadingTimes(sessionTotalReadingTimes);
+        setSessionFocusTimes(sessionFocusTimes);
         setLoading(false);
       } catch (err) {
         console.log(err);
       }
     };
 
-      fetchData();
+    fetchData();
   }, []);
 
   const chartData = {
     labels: sessionLabels,
     datasets: [
       {
-        label: "Reading time (seconds)",
-        data: sessionTotals,
+        label: "Focus time (seconds)",
+        data: sessionFocusTimes,
         borderWidth: 1,
-        backgroundColor: "rgba(75, 192, 192, 0.2)",
-        borderColor: "rgba(75, 192, 192, 1)",
+        backgroundColor: "rgba(6, 118, 13, 0.2)",
+        borderColor: "rgba(6, 118, 13, 1)",
+        stack: 'combined',
+      },
+      {
+        label: "Total reading time (seconds)",
+        data: sessionTotalReadingTimes,
+        borderWidth: 1,
+        backgroundColor: "rgba(220, 0, 78, 0.2)",
+        borderColor: "black",
+        stack: 'combined',
       },
     ],
   };
@@ -69,31 +82,39 @@ export default function ReadingTime() {
     responsive: true,
     plugins: {
       legend: {
-        position: "top", 
-        display: false,
+        position: "top",
+        display: true,
       },
       title: {
         display: true,
-        text: "Reading Times", 
+        text: "Total Reading and Focus Times per Session",
       },
     },
     scales: {
       y: {
         title: {
           display: true,
-          text: "Time (seconds)", // Set your Y-axis label here
+          text: "Time (seconds)",
         },
-        beginAtZero: true, // Optional: Ensures the Y-axis starts at zero
+        beginAtZero: true,
+        stacked: true,
       },
       x: {
         title: {
           display: true,
           text: "Session ID",
         },
-        beginAtZero: false, // Optional: Ensures the Y-axis starts at zero
+        stacked: true,
       },
     },
   };
 
-  return <Bar data={chartData} options={chartOptions} />;
+  if (loading)
+  {
+    return <CircularProgress/>;
+  }
+  else
+  {
+    return <Bar data={chartData} options={chartOptions} />;
+  }
 }
