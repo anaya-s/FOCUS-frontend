@@ -71,7 +71,13 @@ const CalibrationPage = () => {
     };
 
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize); // Cleanup on unmount
+    return () => 
+    {
+      Swal.close();
+      window.removeEventListener("resize", handleResize); // Cleanup on unmount
+      window.removeEventListener('click', closeAlertOnClick);
+      window.removeEventListener('fullscreenchange', onFullscreenChange);
+    }
   }, []);
 
   useEffect(() => {
@@ -455,7 +461,6 @@ const CalibrationPage = () => {
 
   const finishCalibration = () => {
     // Move to next webpage
-    console.log(file);
     toReadingPage(file, parsedText);
   };
 
