@@ -6,16 +6,15 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 
 const Footer = () => {
   return (
-    <Box>
+    <Box sx={{backgroundColor: '#f5f5f2'}}>
       <Box 
-        sx={{ 
-          backgroundColor: '#f5f5f5', 
+        sx={{  
           p: 4, 
           mt: 'auto',
           marginTop: 10,
           position: 'relative',
           zIndex: 1300,
-          height: "35vh"
+          
           
         }}
         component="footer"

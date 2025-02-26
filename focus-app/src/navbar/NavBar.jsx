@@ -44,7 +44,7 @@ const NavBar = () => {
           About
         </Button>
         <Button style={buttonStyle} onClick={() => {webgazer.end(); toOurProducts();}}>Our Products</Button>
-        {user ? <AccountMenu /> : <Button style={buttonStyle} onClick={() => {webgazer.end(); toLogin();}}> Login </Button>}
+        {user ? <AccountMenu /> : <Button style={buttonStyle} variant="contained" onClick={() => {webgazer.end(); toLogin();}}> Login </Button>}
       </div>
     </div>
   );

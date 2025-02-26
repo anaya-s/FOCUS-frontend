@@ -6,6 +6,8 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
 import Link from "@mui/material/Link";
+import Alert from "@mui/material/Alert";
+import Collapse from '@mui/material/Collapse';
 import { useNavigation } from "../utils/navigation";
 import config from '../config'
 const baseURL = config.apiUrl;
@@ -16,10 +18,12 @@ const pageStyle = {
   justifyContent: "center",
   alignItems: "center",
   textAlign: "center",
+  marginTop: '100px'
 };
 
 function Register() {
-  // const [name, setName] = useState("");
+  const [showAlert, setShowAlert] = useState(-1);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -28,27 +32,31 @@ function Register() {
 
   const handleCreateUser = async (e) => {
       e.preventDefault();
+      try {
+        let response = await fetch(`${baseURL}/api/user/register/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            username: email,
+            password: password,
+            email: email
+          })
+        });
 
-      let response = await fetch(`${baseURL}/api/user/register/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: email,
-          password: password,
-          email: email
-        })
-      });
-
-      let data = await response.json();
-  
-      if (response.status === 201) {
-        alert("Account successfully created!");
-        toOnboarding();   
-        //toLogin();
-      } else {
-        alert("Unsuccessful transaction");
+        let data = await response.json();
+        console.log("hello")
+        if (response.status === 201) {
+          setShowAlert(1);
+          toOnboarding();   
+        } else {
+          setShowAlert(0);
+          alert("Unsuccessful transaction");
+        }
+      } catch(error) {
+        console.error("Fetch failed:", error);
+        setShowAlert(0);
       }
   };
 
@@ -136,6 +144,7 @@ function Register() {
                 backgroundColor: "green",
                 "&:hover": { backgroundColor: "darkgreen" },
               }}
+              disabled={!password || !email}
             >
               Sign up
             </Button>
@@ -152,6 +161,20 @@ function Register() {
           </Link>
         </Typography>
       </Container>
+
+      {/* Alerts */}
+      <Box>
+        <Collapse in={showAlert === 1} sx={{position: "absolute", bottom: 30, left: 30}}>
+          <Alert variant="filled" severity="success" onClose={() => setShowAlert(-1)}>
+            Account created successfully
+          </Alert>
+        </Collapse>
+        <Collapse in={showAlert === 0} sx={{position: "absolute", bottom: 30, left: 30}}>
+          <Alert variant="filled" severity="error" onClose={() => setShowAlert(-1)}>
+            Unsuccessful transaction
+          </Alert>
+        </Collapse>
+      </Box>
     </Box>
   );
 }
