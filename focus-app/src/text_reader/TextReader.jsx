@@ -34,6 +34,7 @@ import {
   TextIncrease as TextIncreaseIcon,
   DeblurRounded as DeblurRoundedIcon,
   ReplayRounded as ReplayRoundedIcon,
+  Timer,
 } from '@mui/icons-material';
 
 import { styled } from '@mui/system';
@@ -99,6 +100,105 @@ function TextReaderPage() {
   */
   const [hideSettings, setHideSettings] = useState(0);
 
+  /* Set a timer for 5 minutes, checking if user is focused or not */
+  const [focusTimer, setFocusTimer] = useState(0);
+  const [startTimer, setStartTimer] = useState(false);
+
+  const currentBreakTime = useRef(0);
+  const totalBreakTime = useRef(0);
+
+  const getBreakAlertContent = () => {
+    return `
+      <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
+        <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto">
+        <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+          <p>It looks like you've lost focus in the past five minutes. How about taking a short break?</p>
+          <p style="margin-top: 20px;"><span style="font-weight: bold">Current break time:</span> ${currentBreakTime.current} seconds</p>
+          <p style="margin-top: 20px;"><span style="font-weight: bold">Total break time:</span> ${totalBreakTime.current} seconds</p>
+          <p style="margin-top: 20px;">Press <span style="font-weight: bold">Continue</span> to resume reading.</p>
+        </div>
+      </div>
+    `;
+  };
+
+  useEffect(() => {
+
+    let incrementTimer;
+    let incrementBreakTimer;
+
+    const getBreakStatus = async () => {
+      try
+      {
+        const response = await reauthenticatingFetch("GET", `${baseURL}/api/eye/break-check/`);
+        //console.log(response);
+
+        if(response.status)
+        {
+          console.error("Not enough data to check break status.");
+          setStartTimer(true);
+        }
+        else
+        {
+          if(response.face_detected_status == true && response.focus_status == true)
+            setStartTimer(true);
+
+          if(response.face_detected_status == false)
+          {
+            // Show small alert notifying users to keep face in view
+          }
+          if(response.focus_status == false)
+            showBreakAlert();
+        }
+      }
+      catch(error)
+      {
+        console.error("Failed to check break status:", error);
+        setStartTimer(true);
+      }
+
+    };
+
+    if(retryConnection <= 0)
+    {
+      if (startTimer == true) {
+        clearInterval(incrementBreakTimer);
+
+        incrementTimer = setInterval(() => {
+          setFocusTimer(prevTimer => prevTimer + 1);
+        }, 1000); // Increment timer every second
+
+        if(focusTimer >= 300) // 5 minutes = 300
+        {
+          // console.log("Checking focus and face detection in past five minutes ...");
+          setStartTimer(false);
+          setFocusTimer(0);
+          clearInterval(incrementTimer);
+          getBreakStatus();
+        }
+
+        // console.log("timer : ", focusTimer);
+      }
+      else
+      {
+        incrementBreakTimer = setInterval(() => {
+          currentBreakTime.current += 1;
+          totalBreakTime.current += 1;
+
+          Swal.update({
+            html: getBreakAlertContent()
+          });
+        }, 1000); // Increment timer and update alert contents every secon
+      }
+    }
+    else
+      setFocusTimer(0);
+
+    return () => {
+      clearInterval(incrementTimer);
+      clearInterval(incrementBreakTimer);
+    };
+  }, [focusTimer, startTimer, retryConnection]);
+
   /* Check if file is uploaded correctly with its parsed text */
   useEffect(() => {
     if(file !== undefined && parsedText !== undefined)
@@ -152,34 +252,22 @@ function TextReaderPage() {
     Swal.fire({
 
       title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Break suggested</span>',
-        html: `
-        <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
-          <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto">
-          <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
-            <p>I have detected fatigue. Please take a break.</p>
-            <p style="margin-top: 20px;">Total break time: </p>
-            <p style="margin-top: 20px;">Press continue to resume reading.</p>
-          </div>
-        </div>
-      `,
+      html: getBreakAlertContent(),
       icon: "info",
-      confirmButtonText: "OK",
+      confirmButtonText: "Continue", // maybe also add "Return to drive" button
       confirmButtonColor: "#06760D",
       allowOutsideClick: false,
       allowEscapeKey: false,
-      allowEnterKey: false,
       showCancelButton: false,
       showDenyButton: false,
       showConfirmButton: true,
       showCloseButton: false,
-      showCloseButtonOnOverlay: false,
-      showCloseButtonOnEsc: false,
-      showLoaderOnConfirm: true,
       customClass: {
         container: 'custom-swal-container', // Apply the custom class
       },
       willClose: async () => {
-        
+        setStartTimer(true);
+        currentBreakTime.current = 0;
       }
     });
 
@@ -492,6 +580,39 @@ function TextReaderPage() {
     borderColor: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "red" : "auto",
   });
 
+  const getCalibration = async () => {
+    try
+    {
+      if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
+      {
+        var calibrationData = JSON.parse(localStorage.getItem("calibration"));
+        webgazer.setRegressionData(calibrationData);
+        var accuracy = JSON.parse(localStorage.getItem("accuracy"));
+        setCalibrationAccuracy(accuracy);
+      }
+      else
+      {
+        const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
+    
+        if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
+        {
+          // set accuracy to -1 to indicate that no calibration data is found
+          setCalibrationAccuracy(-1);
+        }
+        else
+        {
+          var calibrationData = responseMsg.calibration_values;
+          webgazer.setRegressionData(calibrationData);
+        }
+      }
+    }
+    catch(error)
+    {
+      console.error("Failed to load calibration data from localStorage and server:", error);
+      setCalibrationAccuracy(-1);
+    }
+  };
+
   // Webgazer initialisation
   useEffect(() => {
     const initializeWebGazer = async () => {
@@ -512,40 +633,12 @@ function TextReaderPage() {
         {     
           await webgazer.begin(false);
           
-          try
-          {
-            if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
-            {
-              var calibrationData = JSON.parse(localStorage.getItem("calibration"));
-              webgazer.setRegressionData(calibrationData);
-              var accuracy = JSON.parse(localStorage.getItem("accuracy"));
-              setCalibrationAccuracy(accuracy);
-            }
-            else
-            {
-              const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
-          
-              if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
-              {
-                // set accuracy to -1 to indicate that no calibration data is found
-                setCalibrationAccuracy(-1);
-              }
-              else
-              {
-                var calibrationData = responseMsg.calibration_values;
-                webgazer.setRegressionData(calibrationData);
-              }
-            }
+          await getCalibration();
 
-            setWebgazerLoading(false);
-            setWebgazerFinished(true);
-            console.log("WebGazer initialized successfully");
-          }
-          catch(error)
-          {
-            console.error("Failed to load calibration data from localStorage:", error);
-            setCalibrationAccuracy(-1);
-          }
+          setWebgazerLoading(false);
+          setWebgazerFinished(true);
+          console.log("WebGazer initialized successfully");
+          setStartTimer(true);
         }
         catch(webgazerError)
         {
@@ -604,7 +697,8 @@ function TextReaderPage() {
 
     // console.log("Connecting to WebSocket...");
 
-    socket.current.onopen = () => {
+    socket.current.onopen = async() => {
+    await getCalibration();
     setRetryConnection(0);
     setStatusConn(true);
     }
@@ -612,6 +706,7 @@ function TextReaderPage() {
       socket.current = null;
       setStatusConn(false);
       setRetryConnection(2);
+      setCalibrationAccuracy(-1);
     };
     socket.current.onerror = async(event) => {
       await reauthenticatingFetch("GET", `${baseURL}/api/user/profile/`);
@@ -743,15 +838,16 @@ useEffect(() => {
         {
           readingMode === 4 && hideSettings !== 1 ? (
           <Collapse in={calibrationAccuracy === -1} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : "13vh", left: "5vh", zIndex: 1500}}>
-          { retryConnection === 2 ? (
-          <Alert variant="filled" severity="warning">
-            No calibration data found. Please check your connection.
-          </Alert>
-            ) : (
-          <Alert variant="filled" severity="warning">
-            No calibration data found. Please calibrate before using this reading mode.
-          </Alert>
-          )}
+            { retryConnection === 2 ? (
+            <Alert variant="filled" severity="warning">
+              No calibration data found. Please check your connection.
+            </Alert>
+              ) : (
+            (retryConnection <= 0 && calibrationAccuracy === -1) && (
+            <Alert variant="filled" severity="warning">
+              No calibration data found. Please calibrate before using this reading mode.
+            </Alert>
+            ))}
           </Collapse>
           ) : ( null )
         }
@@ -977,7 +1073,7 @@ useEffect(() => {
                 <Tooltip title={retryConnection !== 2 ? "Check or update calibration details" : "Check your connection before calibration"} placement="left">  
                 {calibrationAccuracy === -1 && hideSettings !== 1 ? (
                   <FlashingButton variant="outlined" sx={{ml: "1vw"}} onClick={retryConnection !== 2 ? () => { webgazer.end(); toCalibration(file, parsedText); } : null}>
-                    {retryConnection !== 2 ? "Start calibration" : "Check connection"}
+                    {retryConnection <= 0 ? "Start calibration" : "Check connection"}
                   </FlashingButton>
                 ) : (
                   <Button variant="contained" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>
