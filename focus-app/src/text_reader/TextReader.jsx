@@ -107,6 +107,11 @@ function TextReaderPage() {
   const currentBreakTime = useRef(0);
   const totalBreakTime = useRef(0);
 
+  const isOnBreak = useRef(false);
+
+  // Set this value using the Settings page - maybe stored from localStorage
+  const [timeLimit, setTimeLimit] = useState(0.1); // 1 minute time limit by default
+
   const getBreakAlertContent = () => {
     return `
       <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
@@ -129,7 +134,7 @@ function TextReaderPage() {
     const getBreakStatus = async () => {
       try
       {
-        const response = await reauthenticatingFetch("GET", `${baseURL}/api/eye/break-check/`);
+        const response = await reauthenticatingFetch("GET", `${baseURL}/api/eye/break-check?time_limit=${timeLimit}`);
         //console.log(response);
 
         if(response.status)
@@ -147,7 +152,10 @@ function TextReaderPage() {
             // Show small alert notifying users to keep face in view
           }
           if(response.focus_status == false)
+          {
+            isOnBreak.current = true;
             showBreakAlert();
+          }
         }
       }
       catch(error)
@@ -167,7 +175,7 @@ function TextReaderPage() {
           setFocusTimer(prevTimer => prevTimer + 1);
         }, 1000); // Increment timer every second
 
-        if(focusTimer >= 300) // 5 minutes = 300
+        if(focusTimer >= (timeLimit * 60))
         {
           // console.log("Checking focus and face detection in past five minutes ...");
           setStartTimer(false);
@@ -176,7 +184,7 @@ function TextReaderPage() {
           getBreakStatus();
         }
 
-        // console.log("timer : ", focusTimer);
+        console.log("timer : ", focusTimer);
       }
       else
       {
@@ -267,6 +275,7 @@ function TextReaderPage() {
       },
       willClose: async () => {
         setStartTimer(true);
+        isOnBreak.current = false;
         currentBreakTime.current = 0;
       }
     });
@@ -743,44 +752,47 @@ const previousFrameDataUrl = useRef(null);
 
 const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
   if (socket.current && socket.current.readyState === WebSocket.OPEN) {
-    const timestamp = Date.now(); // Get current timestamp of current frame
-    const frame = canvas.toDataURL("image/jpeg");
+    if(isOnBreak.current == false)
+    {
+      const timestamp = Date.now(); // Get current timestamp of current frame
+      const frame = canvas.toDataURL("image/jpeg");
 
-    // Compare current frame with the previous frame
-    if (frame !== previousFrameDataUrl.current) {
-      // Store image data and timestamp in framesData array
-      setFramesData((prevFrames) => [
-        ...prevFrames,
-        { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
-      ]);
+      // Compare current frame with the previous frame
+      if (frame !== previousFrameDataUrl.current) {
+        // Store image data and timestamp in framesData array
+        setFramesData((prevFrames) => [
+          ...prevFrames,
+          { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
+        ]);
 
-      // Send the frame via WebSocket
-      socket.current.send(
-        JSON.stringify({
-          frame: frame,
-          timestamp: timestamp,
-          xCoordinatePx: xCoord,
-          yCoordinatePx: yCoord,
-        })
-      );
+        // Send the frame via WebSocket
+        socket.current.send(
+          JSON.stringify({
+            frame: frame,
+            timestamp: timestamp,
+            xCoordinatePx: xCoord,
+            yCoordinatePx: yCoord,
+          })
+        );
 
-      total_frames += 1;
-      if (total_frames === 1) {
-        previous_time = timestamp;
-        previous_frame = total_frames;
+        total_frames += 1;
+        if (total_frames === 1) {
+          previous_time = timestamp;
+          previous_frame = total_frames;
+        }
+        if (total_frames % 30 === 0) {
+          window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
+          window.console.log("FPS: ", (total_frames - previous_frame) / ((timestamp - previous_time) / 1000));
+          previous_frame = total_frames;
+          previous_time = timestamp;
+        }
+
+        // Update the previous frame data URL
+        previousFrameDataUrl.current = frame;
       }
-      if (total_frames % 30 === 0) {
-        window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
-        window.console.log("FPS: ", (total_frames - previous_frame) / ((timestamp - previous_time) / 1000));
-        previous_frame = total_frames;
-        previous_time = timestamp;
-      }
 
-      // Update the previous frame data URL
-      previousFrameDataUrl.current = frame;
+      handleYCoord(yCoord);
     }
-
-    handleYCoord(yCoord);
   }
   else
   {
