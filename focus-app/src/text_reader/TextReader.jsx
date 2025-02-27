@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { reauthenticatingFetch } from "../utils/api";
 import config from '../config'
 const baseURL = config.apiUrl
+import '../../public/fonts/fonts.css'
 
 import webgazer from "../webgazer/webgazer.js";
 
@@ -15,7 +16,7 @@ import { sendReadingProgressLineUnblur, LineUnblur } from "./LineUnblur";
 import { NLP } from "./NLP";
 
 /* MaterialUI Imports */
-import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox, Alert, Collapse, CircularProgress } from "@mui/material";
+import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, ListSubheader, Grid2, TextField, Checkbox, Alert, Collapse, CircularProgress } from "@mui/material";
 
 import {
   Menu as MenuIcon,
@@ -298,16 +299,20 @@ function TextReaderPage() {
   /* Text typography parameters */
 
   const fontOptions = [
-    { label: 'Arial', value: 'Arial, sans-serif' },
-    { label: 'Courier New', value: '"Courier New", Courier, monospace' },
-    { label: 'Georgia', value: 'Georgia, serif' },
-    { label: 'Istok Web', value: 'Istok Web, sans-serif' }, // default text font
-    { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
-    { label: 'Verdana', value: 'Verdana, sans-serif' }
-    // add more font options here
+    { label: "Sans-Serif Fonts", type: "header" },
+    { label: "Istok Web", value: "Istok Web, sans-serif" },
+    { label: "OpenDyslexic", value: "'OpenDyslexic', sans-serif" },
+    { label: "Arial", value: "Arial, sans-serif" },
+    { label: "Roboto", value: "Roboto, sans-serif" },
+    { label: "Open Sans", value: "Open Sans, sans-serif" }, 
+    
+    { label: "Serif Fonts", type: "header" },
+    { label: "Times New Roman", value: '"Times New Roman", Times, serif' },
+    { label: "Georgia", value: "Georgia, serif" },
+    { label: "Merriweather", value: "Merriweather, serif" }, 
   ];
 
-  const fontStyleRef = useRef(fontOptions[3].value);
+  const fontStyleRef = useRef(fontOptions[1].value);
   const fontSizeRef = useRef(28);
   const textOpacityRef = useRef(0.5);
   const letterSpacingRef = useRef(0);
@@ -380,7 +385,7 @@ function TextReaderPage() {
   };
 
   const setDefaultSettings = () => {
-    fontStyleRef.current = fontOptions[3].value;
+    fontStyleRef.current = fontOptions[1].value;
     fontSizeRef.current = 28;
     textOpacityRef.current = 0.5;
     letterSpacingRef.current = 0;
@@ -1238,11 +1243,15 @@ useEffect(() => {
                     fullWidth
                     sx={{ backgroundColor: "#D9D9D9" }}
                   >
-                    {fontOptions.map((font) => (
+                  {fontOptions.map((font, index) =>
+                    font.type === "header" ? (
+                      <ListSubheader key={`header-${index}`}>{font.label}</ListSubheader>
+                    ) : (
                       <MenuItem key={font.value} value={font.value}>
                         {font.label}
                       </MenuItem>
-                    ))}
+                    )
+                  )}
                   </Select>
                 </FormControl>
               </Box>
