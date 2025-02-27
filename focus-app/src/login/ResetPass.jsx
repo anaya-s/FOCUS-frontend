@@ -13,6 +13,7 @@ function ResetPassword() {
   const [success, setSuccess] = useState(null);
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
+  const uidb64 = searchParams.get("uidb64");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,10 +23,10 @@ function ResetPassword() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/user/reset-password/", {
+      const response = await fetch("http://127.0.0.1:8000/api/user/password-reset-confirm/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ uidb64, token, password }),
       });
 
       const data = await response.json();
@@ -103,6 +104,7 @@ function ResetPassword() {
                 backgroundColor: "green",
                 "&:hover": { backgroundColor: "darkgreen" },
               }}
+              disabled={!password||!confirmPassword||password!==confirmPassword}
             >
               Reset Password
             </Button>
