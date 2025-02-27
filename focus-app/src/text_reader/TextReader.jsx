@@ -197,7 +197,7 @@ function TextReaderPage() {
           getBreakStatus();
         }
 
-        console.log("timer : ", focusTimer);
+        // console.log("timer : ", focusTimer);
       }
       else
       {
@@ -503,7 +503,7 @@ function TextReaderPage() {
   const readingSpeedRef = useRef(0);
 
   const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef, isPDFRef]);
-  const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, readingSpeedRef, isOnBreak, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, readingSpeedRef, isOnBreak, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, autoScrollSpeedRef, unblurredLinesRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const nlpSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, showVerbsRef, showConjucationsRef, fileNameRef, parsedTextRef]);
@@ -1072,7 +1072,7 @@ useEffect(() => {
                   <Typography variant="h7"
                     sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
                   >
-                    {readingMode.current === 3 | readingMode.current === 2 ? highlightSpeedRef.current*60 : highlightSpeedRef.current}
+                    {readingMode.current === 3 ? highlightSpeedRef.current*60 : readingMode.current === 2 ? (highlightSpeedRef.current * wordCountRef.current * 60) : highlightSpeedRef.current}
                   </Typography>
               </Container>
               { readingMode.current === 2 ? (
@@ -1088,7 +1088,7 @@ useEffect(() => {
                           onChange={handleWordCount}
                           min={1}
                           step={1}
-                          max={maxWordCountRef.current}
+                          max={maxWordCountRef.current >= 10 ? 10 : maxWordCountRef.current}
                           sx={{ width: "15vw" }}
                         />
                       </Box>
