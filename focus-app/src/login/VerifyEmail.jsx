@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Box from "@mui/material/Box";
+import config from '../config'
 
 const pageStyle = {
   display: "flex",
@@ -18,9 +19,10 @@ const VerifyEmail = () => {
   const token = searchParams.get("token");
   const navigate = useNavigate();
 
+  const baseURL = config.apiUrl;
   useEffect(() => {
     if (token) {
-      fetch("http://127.0.0.1:8000/api/user/verify-email/", {
+      fetch(`${baseURL}/api/user/verify-email/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token }),

@@ -6,15 +6,17 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Link from "@mui/material/Link";
 import { useNavigation } from "../utils/navigation";
+import config from '../config'
 
 function ResetPassRequest() {
   const [email, setEmail] = useState("");
   const { toLogin } = useNavigation();
+  const baseURL = config.apiUrl;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const response = await fetch("http://127.0.0.1:8000/api/user/password-reset/", {
+    const response = await fetch(`${baseURL}/api/user/password-reset/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
