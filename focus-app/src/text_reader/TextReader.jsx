@@ -91,7 +91,7 @@ function TextReaderPage() {
     4 - Line by line unblurring
     5 - Natural Language Processing (NLP) assistance
   */
-  const [readingMode, setReadingMode] = useState(3);
+  const readingMode = useRef(3);
 
   /* Hide reading modes based on input document type:
   0 - hide nothing
@@ -148,7 +148,7 @@ function TextReaderPage() {
 
         if(response.status)
         {
-          console.error("Not enough data to check break status.");
+          console.error("Not enough data to check break status: ", response.status);
           setStartTimer(true);
         }
         else
@@ -234,14 +234,14 @@ function TextReaderPage() {
 
       if (parsedText.length === 0) // Image-based PDF file
       {
-        setReadingMode(1);
+        readingMode.current = 1;
         setHideSettings(1);
       }
       else
       {
         if(file.type !== "application/pdf") // Word or text file
         {
-          setReadingMode(3);
+          readingMode.current = 3;
           setHideSettings(2);
         }
       }
@@ -335,7 +335,7 @@ function TextReaderPage() {
     border: "1px solid #ccc",
     pt: "5px", pb: "5px",
     width: "2vw",
-    backgroundColor: readingMode !== 1 ? invertTextColourRef.current ? colour : "white" : colour
+    backgroundColor: readingMode.current !== 1 ? invertTextColourRef.current ? colour : "white" : colour
   });
 
   const colourSchemeIconColour = (colour) => ({
@@ -385,7 +385,7 @@ function TextReaderPage() {
     textOpacityRef.current = 0.5;
     letterSpacingRef.current = 0;
 
-    if(readingMode === 4)
+    if(readingMode.current === 4)
       lineSpacingRef.current = 7;
     else
       lineSpacingRef.current = 3;
@@ -395,7 +395,7 @@ function TextReaderPage() {
     backgroundColourRef.current = [0,0,0];
     backgroundColourSelectionRef.current = 1;
 
-    if(readingMode === 2)
+    if(readingMode.current === 2)
       highlightSpeedRef.current = 5;
     else
       highlightSpeedRef.current = 2;
@@ -500,10 +500,12 @@ function TextReaderPage() {
   const showVerbsRef = useRef(true);
   const showConjucationsRef = useRef(true);
 
+  const readingSpeedRef = useRef(0);
+
   const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef, isPDFRef]);
-  const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
-  const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
-  const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, autoScrollSpeedRef, unblurredLinesRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, readingSpeedRef, isOnBreak, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, readingSpeedRef, isOnBreak, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, autoScrollSpeedRef, unblurredLinesRef, readingSpeedRef, isOnBreak, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const nlpSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, showVerbsRef, showConjucationsRef, fileNameRef, parsedTextRef]);
 
   const [pauseStatus, setPauseStatus] = useState(true);
@@ -519,7 +521,8 @@ function TextReaderPage() {
   const handleReadingModeSelection = (mode) => () => {
     pauseStatusRef.current = true;
     setPauseStatus(pauseStatusRef.current);
-    setReadingMode(mode);
+    readingSpeedRef.current = 0; // reset reading speed when changing reading mode
+    readingMode.current = mode;
   };
 
   const setPauseStatusValues = () => {
@@ -569,18 +572,18 @@ function TextReaderPage() {
   const { toNotAuthorized, toDrive, toCalibration } = useNavigation();
 
   useEffect(() => {
-    if(readingMode === 4)
+    if(readingMode.current === 4)
       lineSpacingRef.current = 7;
     else
       lineSpacingRef.current = 2;
 
-    if(readingMode === 2)
+    if(readingMode.current === 2)
       highlightSpeedRef.current = 5;
     else
       highlightSpeedRef.current = 2;
 
-    webgazer.hideGazeDot(readingMode);
-  }, [readingMode]);
+    webgazer.hideGazeDot(readingMode.current);
+  }, [readingMode.current]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 }); // auto-scroll to the top
@@ -597,7 +600,7 @@ function TextReaderPage() {
   }, []);
 
   const readingModeButtonSelection = (mode) => ({
-    border: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "1px dashed red" : readingMode == mode ? "3px solid #06760D" : "normal",
+    border: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "1px dashed red" : readingMode.current == mode ? "3px solid #06760D" : "normal",
     color: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "red" : "auto",
     borderColor: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "red" : "auto",
   });
@@ -772,11 +775,9 @@ const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
 
       // Compare current frame with the previous frame
       if (frame !== previousFrameDataUrl.current) {
-        // Store image data and timestamp in framesData array
-        setFramesData((prevFrames) => [
-          ...prevFrames,
-          { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
-        ]);
+
+        // if(readingMode.current !== 2 & readingMode.current !== 3)
+        //   readingSpeedRef.current = undefined;
 
         // Send the frame via WebSocket
         socket.current.send(
@@ -785,6 +786,9 @@ const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
             timestamp: timestamp,
             xCoordinatePx: xCoord,
             yCoordinatePx: yCoord,
+            mode: "reading",
+            reading_mode: readingMode.current,
+            wpm: readingSpeedRef.current,
           })
         );
 
@@ -860,13 +864,13 @@ useEffect(() => {
 
   return (
     <Box style={{marginTop: "15vh", justifyContent: "center"}}>
-        <Collapse in={isNoFaceDetected === false} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : calibrationAccuracy === -1 && readingMode === 4 ? "21vh" : "13vh", left: "5vh", zIndex: 1500}}>
+        <Collapse in={isNoFaceDetected === false} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : calibrationAccuracy === -1 && readingMode.current === 4 ? "21vh" : "13vh", left: "5vh", zIndex: 1500}}>
           <Alert variant="filled" icon={<FaceRetouchingOffRoundedIcon size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="warning">
             Minimal face detection during the last {timeLimit > 1 ? `${timeLimit} minutes` : "minute"}. Please keep your face in view.
           </Alert>
         </Collapse>
         {
-          readingMode === 4 && hideSettings !== 1 ? (
+          readingMode.current === 4 && hideSettings !== 1 ? (
           <Collapse in={calibrationAccuracy === -1} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : "13vh", left: "5vh", zIndex: 1500}}>
             { retryConnection === 2 ? (
             <Alert variant="filled" severity="warning">
@@ -902,10 +906,10 @@ useEffect(() => {
       <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
         {/* Create all reading mode components here */}
         {
-        readingMode === 1 ? <NormalReading file={fileRef.current} textSettings={normalReadingSettings}/>
-        : readingMode === 2 ? <RSVP textSettings={RSVPSettings}/>
-        : readingMode === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
-        : readingMode === 4 ? <LineUnblur textSettings={lineUnblurSettings}/>
+        readingMode.current === 1 ? <NormalReading file={fileRef.current} textSettings={normalReadingSettings}/>
+        : readingMode.current === 2 ? <RSVP textSettings={RSVPSettings}/>
+        : readingMode.current === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
+        : readingMode.current === 4 ? <LineUnblur textSettings={lineUnblurSettings}/>
         : <NLP textSettings={nlpSettings}/>
         }
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "1.5vw", backgroundColor: "white", mt: "-7vh"}}>
@@ -989,7 +993,7 @@ useEffect(() => {
               </Box>
             </Container>
 
-            { readingMode === 1 ? ( // Normal render
+            { readingMode.current === 1 ? ( // Normal render
             isPDFRef.current ? (
               <Box>
                   <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
@@ -1029,7 +1033,7 @@ useEffect(() => {
                 </Container>
               </Box>
              ) : null 
-            ): readingMode === 2 | readingMode === 3 ? ( // Speed reading
+            ): readingMode.current === 2 | readingMode.current === 3 ? ( // Speed reading
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <Box sx={{ display: "flex", flexDirection: "column"}}>
@@ -1054,13 +1058,13 @@ useEffect(() => {
                 <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
                   <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                     <Typography variant="caption">
-                      {readingMode === 3 ? "Highlighting speed" : "Speed" }
+                      {readingMode.current === 3 ? "Highlighting speed" : "Speed" }
                     </Typography>
                     <Slider
                       value={typeof highlightSpeedRef.current === 'number' ? highlightSpeedRef.current : 2}
                       onChange={handleHighlightSpeed}
                       min={1}
-                      step={readingMode === 1 ? 0.1 : 1}
+                      step={1}
                       max={10}
                       sx={{ width: "15vw" }}
                     />
@@ -1068,10 +1072,10 @@ useEffect(() => {
                   <Typography variant="h7"
                     sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
                   >
-                    {readingMode === 1 ? highlightSpeedRef.current*10 : highlightSpeedRef.current}
+                    {readingMode.current === 3 ? highlightSpeedRef.current*60 : readingMode.current === 2 ? (highlightSpeedRef.current * wordCountRef.current * 60) : highlightSpeedRef.current}
                   </Typography>
               </Container>
-              { readingMode === 2 ? (
+              { readingMode.current === 2 ? (
                 parsedText.length !== 0 ? (
                   <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
                     <TextIncreaseIcon sx={{fontSize: "30px", mr: "2vw"}}/>
@@ -1084,7 +1088,7 @@ useEffect(() => {
                           onChange={handleWordCount}
                           min={1}
                           step={1}
-                          max={maxWordCountRef.current}
+                          max={maxWordCountRef.current >= 10 ? 10 : maxWordCountRef.current}
                           sx={{ width: "15vw" }}
                         />
                       </Box>
@@ -1097,7 +1101,7 @@ useEffect(() => {
                 ) : null
               ) : null }
           </Box>
-            ): readingMode === 4 ? ( // Line-by-line unblurring
+            ): readingMode.current === 4 ? ( // Line-by-line unblurring
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center", justifyContent: "center"}}>
                 <Tooltip title={retryConnection !== 2 ? "Check or update calibration details" : "Check your connection before calibration"} placement="left">  
@@ -1218,7 +1222,7 @@ useEffect(() => {
           </Container>
 
           {/* Text layout settings */}
-          { readingMode !== 1 ? (
+          { readingMode.current !== 1 ? (
           <Container>
             <Typography variant="h6" sx={{mt: "2vh"}}>Text Layout</Typography>
 
@@ -1265,7 +1269,7 @@ useEffect(() => {
               </Typography>
             </Container>
 
-            { readingMode !== 2 ? (
+            { readingMode.current !== 2 ? (
             <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <OpacityIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
@@ -1311,7 +1315,7 @@ useEffect(() => {
               </Typography>
             </Container>
 
-            { readingMode !== 2 && readingMode !== 4 ? (
+            { readingMode.current !== 2 && readingMode.current !== 4 ? (
             <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
@@ -1372,42 +1376,42 @@ useEffect(() => {
                 <Grid2 container spacing={2} justifyContent="center" width="100%">
                   <Grid2 item xs={4}>
                     <Tooltip title="Monochrome" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* White - default */}
+                      <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* White - default */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Green" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(2)} onClick={() => handleBackgroundColour(2)}><Box sx={colourSchemeButton("rgb(6,118,3)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(6,118,3)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Green */}
+                      <Button variant="outlined" sx={colourSchemeSelection(2)} onClick={() => handleBackgroundColour(2)}><Box sx={colourSchemeButton("rgb(6,118,3)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(6,118,3)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Green */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Blue" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(3)} onClick={() => handleBackgroundColour(3)}><Box sx={colourSchemeButton("rgb(0,123,229)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(0,123,229)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Blue */}
+                      <Button variant="outlined" sx={colourSchemeSelection(3)} onClick={() => handleBackgroundColour(3)}><Box sx={colourSchemeButton("rgb(0,123,229)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(0,123,229)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Blue */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Red" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(4)} onClick={() => handleBackgroundColour(4)}><Box sx={colourSchemeButton("rgb(211,46,63)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(211,46,63)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Red */}
+                      <Button variant="outlined" sx={colourSchemeSelection(4)} onClick={() => handleBackgroundColour(4)}><Box sx={colourSchemeButton("rgb(211,46,63)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(211,46,63)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Red */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Brown" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(5)} onClick={() => handleBackgroundColour(5)}><Box sx={colourSchemeButton("rgb(78,53,22)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(78,53,22)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Brown */}
+                      <Button variant="outlined" sx={colourSchemeSelection(5)} onClick={() => handleBackgroundColour(5)}><Box sx={colourSchemeButton("rgb(78,53,22)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(78,53,22)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Brown */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Yellow" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(6)} onClick={() => handleBackgroundColour(6)}><Box sx={colourSchemeButton("rgb(251,192,45)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(251,192,45)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Yellow */}
+                      <Button variant="outlined" sx={colourSchemeSelection(6)} onClick={() => handleBackgroundColour(6)}><Box sx={colourSchemeButton("rgb(251,192,45)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(251,192,45)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Yellow */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Orange" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(7)} onClick={() => handleBackgroundColour(7)}><Box sx={colourSchemeButton("rgb(245,124,0)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(245,124,0)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Orange */}
+                      <Button variant="outlined" sx={colourSchemeSelection(7)} onClick={() => handleBackgroundColour(7)}><Box sx={colourSchemeButton("rgb(245,124,0)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(245,124,0)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Orange */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Purple" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(8)} onClick={() => handleBackgroundColour(8)}><Box sx={colourSchemeButton("rgb(142,36,170)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(142,36,170)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Purple */}
+                      <Button variant="outlined" sx={colourSchemeSelection(8)} onClick={() => handleBackgroundColour(8)}><Box sx={colourSchemeButton("rgb(142,36,170)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(142,36,170)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Purple */}
                     </Tooltip>
                   </Grid2>
                 </Grid2>
