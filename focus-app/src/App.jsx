@@ -23,6 +23,7 @@ import DashboardOverall from "./user_account/dashboard/DashboardOverall";
 import UserAccount from "./user_account/UserAccount";
 import UserProfile from "./user_account/settings/UserProfile";
 import UserSettings from "./user_account/settings/UserSettings";
+import DiagnosticPage from "./diagnostics/DiagnosticPage";
 
 function App() {
   return (
@@ -97,6 +98,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <TextReaderPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/diagnostics"
+              element={
+                <ProtectedRoute>
+                  <DiagnosticPage />
                 </ProtectedRoute>
               }
             />

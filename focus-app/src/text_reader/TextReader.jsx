@@ -127,6 +127,10 @@ function TextReaderPage() {
     }
     else
       toDrive(1); // Return back to Drive page with error status
+
+    return () => {
+      Swal.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -504,64 +508,87 @@ function TextReaderPage() {
         webgazer.params.videoViewerHeight = 1080;
         webgazer.params.moveTickSize = 25;
 
-        await webgazer.begin(false);
-        
         try
-        {
-          if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
+        {     
+          await webgazer.begin(false);
+          
+          try
           {
-            var calibrationData = JSON.parse(localStorage.getItem("calibration"));
-            webgazer.setRegressionData(calibrationData);
-            var accuracy = JSON.parse(localStorage.getItem("accuracy"));
-            setCalibrationAccuracy(accuracy);
-          }
-          else
-          {
-            const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
-        
-            if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
+            if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
             {
-              // set accuracy to -1 to indicate that no calibration data is found
-              setCalibrationAccuracy(-1);
+              var calibrationData = JSON.parse(localStorage.getItem("calibration"));
+              webgazer.setRegressionData(calibrationData);
+              var accuracy = JSON.parse(localStorage.getItem("accuracy"));
+              setCalibrationAccuracy(accuracy);
             }
             else
             {
-              var calibrationData = responseMsg.calibration_values;
-              webgazer.setRegressionData(calibrationData);
-            }
-          }
+              const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
           
+              if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
+              {
+                // set accuracy to -1 to indicate that no calibration data is found
+                setCalibrationAccuracy(-1);
+              }
+              else
+              {
+                var calibrationData = responseMsg.calibration_values;
+                webgazer.setRegressionData(calibrationData);
+              }
+            }
+
+            setWebgazerLoading(false);
+            setWebgazerFinished(true);
+            console.log("WebGazer initialized successfully");
+          }
+          catch(error)
+          {
+            console.error("Failed to load calibration data from localStorage:", error);
+            setCalibrationAccuracy(-1);
+          }
         }
-        catch(error)
+        catch(webgazerError)
         {
-          console.error("Failed to load calibration data from localStorage:", error);
-          setCalibrationAccuracy(-1);
+          console.error("Failed to initialize WebGazer:", webgazerError);
+          setWebgazerFinished(true);
+          document.getElementById("webgazerLoading").style.visibility  = "hidden";
+          // Show alert for user to enable camera permissions
+          Swal.fire({
+              title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Failed to start Webgazer</span>',
+              html: `
+              <p style="font-family: Arial, sans-serif; font-size: 18px; color: black; user-select: none">Webcam not detected or disabled</p>
+              <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none, margin-top: 2vh">
+                <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto; user-select: none">
+                <div style="margin-left: 2vh; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+                  <p>Please check if your webcam is <span style="font-weight: bold">enabled and connected</span>. A webcam is required for this website.</p>
+                  <p style="margin-top: 2vh;">If your webcam is enabled and connected, please check and allow your <span style="font-weight: bold">browser's camera permissions</span>.</p>
+                </div>
+              </div>
+            `,
+              icon: 'warning',
+              iconColor: 'orange',
+              width: '40vw',
+              confirmButtonColor: "#06760D",
+              allowOutsideClick: false,
+              allowEscapeKey: false,
+              confirmButtonText: '<span style="user-select: none; padding: 0">Restart Webgazer</span>',
+              customClass: {
+                container: 'custom-swal-container', // Apply the custom class
+              },
+              willClose: async () => {
+                setWebgazerFinished(false);
+                if(document.getElementById("webgazerLoading"))
+                  document.getElementById("webgazerLoading").style.visibility  = "visible";
+              }
+          }); 
         }
 
-        /* Fetch the video stream from Webgazer */
-      //   const intervalId = setInterval(() => {
-      //     const stream = webgazer.getVideoStream();
-      //     if (stream !== null) {
-      //       setStream(stream);
-      //       setStreamStatus(true);
-      //       videoRef.current.srcObject = stream;
-      //       clearInterval(intervalId); // Stop checking once stream is available
-      //     }
-      //   }, 500);
-
-      // } catch (error) {
-      //   console.error("Error initializing WebGazer:", error);
-      // }
-
-      setWebgazerLoading(false);
-      setWebgazerFinished(true);
-      console.log("WebGazer initialized successfully");
     };
 
-    if(isLoading)
+    if(isLoading && !webgazerFinished)
       initializeWebGazer();
 
-  }, [isLoading]);
+  }, [isLoading, webgazerFinished]);
 
   // WebSocket connection
   const connectWebSocket = async () => {
@@ -690,6 +717,7 @@ useEffect(() => {
   if (isLoading) {
     return (
       <div
+        id="webgazerLoading"
         style={{
           display: "flex",
           flexDirection: "column",
