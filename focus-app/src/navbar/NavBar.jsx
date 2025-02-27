@@ -1,10 +1,10 @@
 import { useContext } from "react";
-import Button from "@mui/material/Button";
 import { useNavigation } from "../utils/navigation";
 import AccountMenu from "./account/AccountMenu";
 import AuthContext from "../context/AuthContext";
-import zIndex from "@mui/material/styles/zIndex";
 import webgazer from "../webgazer/webgazer";
+
+import { Button, Divider } from "@mui/material";
 
 const barStyle = {
   display: "flex",
@@ -27,14 +27,14 @@ const navStyle = {
 };
 
 const buttonStyle = {
-  padding: "5px",
-  marginRight: "5px",
-  borderRadius: "17px",
+  padding: "8px",
+  marginRight: "8px",
+  borderRadius: "20px",
 };
 
 const NavBar = () => {
   let { user } = useContext(AuthContext);
-  const { toHome, toLogin, toAbout, toOurProducts} = useNavigation();
+  const { toHome, toLogin, toAbout, toOurProducts, toDrive, toDiagnostics} = useNavigation();
 
   // Function to stop webcam access (if any) after ending webgazer
   const stopCamera = () => {
@@ -60,10 +60,11 @@ const NavBar = () => {
     <div style={barStyle}>
       <Button onClick={() => {webgazer.end(); stopCamera(); toHome()}} sx={{fontWeight: "bold", pl: "10px", pr: "10px", fontSize: "25px"}}>FOCUS</Button>
       <div style={navStyle}>
-        <Button style={buttonStyle} onClick={() => {webgazer.end(); stopCamera(); toAbout()}}>
-          About
-        </Button>
+        <Button style={buttonStyle} onClick={() => {webgazer.end(); stopCamera(); toAbout()}}>About</Button>
         <Button style={buttonStyle} onClick={() => {webgazer.end(); stopCamera(); toOurProducts();}}>Our Products</Button>
+        {user ? <Divider orientation="vertical" variant="middle" flexItem sx={{mr: "16px"}} /> : null}
+        {user ? <Button style={buttonStyle} variant="outlined" onClick={() => {webgazer.end(); stopCamera(); toDrive(0);}}> Your Drive </Button> : null}
+        {user ? <Button style={buttonStyle} variant="outlined" onClick={() => {webgazer.end(); stopCamera(); toDiagnostics();}}> Diagnostics </Button> : null}
         {user ? <AccountMenu /> : <Button style={buttonStyle} variant="contained" onClick={() => {webgazer.end(); stopCamera(); toLogin();}}> Login </Button>}
       </div>
     </div>
