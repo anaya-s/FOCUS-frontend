@@ -46,10 +46,9 @@ function Register() {
         });
 
         let data = await response.json();
-        console.log("hello")
+
         if (response.status === 201) {
           setShowAlert(1);
-          toOnboarding();   
         } else {
           setShowAlert(0);
           alert("Unsuccessful transaction");
@@ -58,6 +57,7 @@ function Register() {
         console.error("Fetch failed:", error);
         setShowAlert(0);
       }
+
   };
 
   return (
