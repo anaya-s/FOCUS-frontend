@@ -51,7 +51,6 @@ function Register() {
           setShowAlert(1);
         } else {
           setShowAlert(0);
-          alert("Unsuccessful transaction");
         }
       } catch(error) {
         console.error("Fetch failed:", error);
@@ -166,7 +165,7 @@ function Register() {
       <Box>
         <Collapse in={showAlert === 1} sx={{position: "absolute", bottom: 30, left: 30}}>
           <Alert variant="filled" severity="success" onClose={() => setShowAlert(-1)}>
-            Account created successfully
+            Account created successfully, Please verify your email
           </Alert>
         </Collapse>
         <Collapse in={showAlert === 0} sx={{position: "absolute", bottom: 30, left: 30}}>

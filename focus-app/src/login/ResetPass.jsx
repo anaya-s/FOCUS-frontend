@@ -5,6 +5,7 @@ import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import { useSearchParams } from "react-router-dom";
+import config from '../config'
 
 function ResetPassword() {
   const [password, setPassword] = useState("");
@@ -14,7 +15,7 @@ function ResetPassword() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
   const uidb64 = searchParams.get("uidb64");
-
+  const baseURL = config.apiUrl;
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
@@ -23,7 +24,7 @@ function ResetPassword() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/user/password-reset-confirm/", {
+      const response = await fetch(`${baseURL}/api/user/password-reset-confirm/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uidb64, token, password }),
