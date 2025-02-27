@@ -35,6 +35,8 @@ export function useNavigation() {
     toReadingPage: (file, parsedText) => navigate('/reading', { state: { file, parsedText } }),
     
     toDrive: (error) => navigate('/drive', { state: { error } }),
+
+    toDiagnostics: () => navigate('/diagnostics'),
     
     toCustom: (path) => navigate(path), 
   };
