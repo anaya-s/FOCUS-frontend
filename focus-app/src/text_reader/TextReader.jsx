@@ -15,7 +15,7 @@ import { sendReadingProgressLineUnblur, LineUnblur } from "./LineUnblur";
 import { NLP } from "./NLP";
 
 /* MaterialUI Imports */
-import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox, Alert, Collapse } from "@mui/material";
+import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox, Alert, Collapse, CircularProgress } from "@mui/material";
 
 import {
   Menu as MenuIcon,
@@ -34,7 +34,7 @@ import {
   TextIncrease as TextIncreaseIcon,
   DeblurRounded as DeblurRoundedIcon,
   ReplayRounded as ReplayRoundedIcon,
-  Timer,
+  FaceRetouchingOffRounded as FaceRetouchingOffRoundedIcon,
 } from '@mui/icons-material';
 
 import { styled } from '@mui/system';
@@ -108,9 +108,18 @@ function TextReaderPage() {
   const totalBreakTime = useRef(0);
 
   const isOnBreak = useRef(false);
+  const [isNoFaceDetected, setNoFaceDetected] = useState(true); // used for "No face detected" alert
 
   // Set this value using the Settings page - maybe stored from localStorage
-  const [timeLimit, setTimeLimit] = useState(0.1); // 1 minute time limit by default
+  const [timeLimit, setTimeLimit] = useState(1); // 1 minute time limit by default
+
+  function secondsToHms(seconds) 
+  {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
 
   const getBreakAlertContent = () => {
     return `
@@ -118,8 +127,8 @@ function TextReaderPage() {
         <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto">
         <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
           <p>It looks like you've lost focus in the past five minutes. How about taking a short break?</p>
-          <p style="margin-top: 20px;"><span style="font-weight: bold">Current break time:</span> ${currentBreakTime.current} seconds</p>
-          <p style="margin-top: 20px;"><span style="font-weight: bold">Total break time:</span> ${totalBreakTime.current} seconds</p>
+          <p style="margin-top: 20px;"><span style="font-weight: bold">Current break time:</span> ${secondsToHms(currentBreakTime.current)}</p>
+          <p style="margin-top: 20px;"><span style="font-weight: bold">Total break time:</span> ${secondsToHms(totalBreakTime.current)}</p>
           <p style="margin-top: 20px;">Press <span style="font-weight: bold">Continue</span> to resume reading.</p>
         </div>
       </div>
@@ -134,7 +143,7 @@ function TextReaderPage() {
     const getBreakStatus = async () => {
       try
       {
-        const response = await reauthenticatingFetch("GET", `${baseURL}/api/eye/break-check?time_limit=${timeLimit}`);
+        const response = await reauthenticatingFetch("GET", `${baseURL}/api/eye/break-check/?time_limit=${timeLimit}`);
         //console.log(response);
 
         if(response.status)
@@ -145,11 +154,15 @@ function TextReaderPage() {
         else
         {
           if(response.face_detected_status == true && response.focus_status == true)
+          {
             setStartTimer(true);
+            setNoFaceDetected(true);
+          }
 
           if(response.face_detected_status == false)
           {
             // Show small alert notifying users to keep face in view
+            setNoFaceDetected(false);
           }
           if(response.focus_status == false)
           {
@@ -177,14 +190,14 @@ function TextReaderPage() {
 
         if(focusTimer >= (timeLimit * 60))
         {
-          // console.log("Checking focus and face detection in past five minutes ...");
+          // console.log("Checking focus and face detection in past {timeLimit} minutes ...");
           setStartTimer(false);
           setFocusTimer(0);
           clearInterval(incrementTimer);
           getBreakStatus();
         }
 
-        console.log("timer : ", focusTimer);
+        // console.log("timer : ", focusTimer);
       }
       else
       {
@@ -195,7 +208,7 @@ function TextReaderPage() {
           Swal.update({
             html: getBreakAlertContent()
           });
-        }, 1000); // Increment timer and update alert contents every secon
+        }, 1000); // Increment timer and update alert contents every second
       }
     }
     else
@@ -547,7 +560,7 @@ function TextReaderPage() {
 
   const intervalRef = useRef(null);
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   const handleDrawer = () => {
     setOpen(!open);
@@ -847,6 +860,11 @@ useEffect(() => {
 
   return (
     <Box style={{marginTop: "15vh", justifyContent: "center"}}>
+        <Collapse in={isNoFaceDetected === false} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : calibrationAccuracy === -1 && readingMode === 4 ? "21vh" : "13vh", left: "5vh", zIndex: 1500}}>
+          <Alert variant="filled" icon={<FaceRetouchingOffRoundedIcon size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="warning">
+            Minimal face detection during the last {timeLimit > 1 ? `${timeLimit} minutes` : "minute"}. Please keep your face in view.
+          </Alert>
+        </Collapse>
         {
           readingMode === 4 && hideSettings !== 1 ? (
           <Collapse in={calibrationAccuracy === -1} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : "13vh", left: "5vh", zIndex: 1500}}>
@@ -869,7 +887,7 @@ useEffect(() => {
           </Alert>
         </Collapse>
         <Collapse in={retryConnection === 1} sx={{position: "absolute", bottom: "5vh", left: "5vh", zIndex: 1500}}>
-          <Alert variant="filled" severity="info">
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Connecting...
           </Alert>
         </Collapse>
