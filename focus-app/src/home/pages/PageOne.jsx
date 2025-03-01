@@ -8,6 +8,7 @@ const pageStyle = {
   justifyContent: "center", 
   height: "100vh",
   gap: "200px", 
+  // background: "#77dd77",
 };
 
 const contentStyle = {

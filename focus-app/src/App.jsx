@@ -4,6 +4,7 @@ import HomePage from "./home/HomePage";
 import LoginPage from "./login/LoginPage";
 import ResetPass from "./login/ResetPass";
 import Onboarding from "./onboarding/OnboardingPage";
+import ResetPassRequest from "./login/ResetPassRequest";
 import Register from "./login/Register";
 import NavBar from "./navbar/NavBar";
 import Footer from "./home/Footer";
@@ -24,6 +25,7 @@ import UserAccount from "./user_account/UserAccount";
 import UserProfile from "./user_account/settings/UserProfile";
 import UserSettings from "./user_account/settings/UserSettings";
 import DiagnosticPage from "./diagnostics/DiagnosticPage";
+import VerifyEmail from "./login/VerifyEmail";
 
 function App() {
   return (
@@ -35,10 +37,11 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/reset-password-request" element={<ResetPassRequest />} />
             <Route path="/reset-password" element={<ResetPass />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="error/404" element={<NotFound />} />
-            <Route path="error/403" element={<NotAuthorized />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/error/403" element={<NotAuthorized />} />
             <Route path="/about" element={<AboutUs />} />
             <Route path="/products" element={<OurProducts />} />
             <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
@@ -109,6 +112,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* catch all other routes */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
         </AuthProvider>
