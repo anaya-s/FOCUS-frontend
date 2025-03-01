@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Bar } from "react-chartjs-2";
 import zoomPlugin from 'chartjs-plugin-zoom';
-import { Box, Button, CircularProgress, Divider } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, Alert, Typography } from "@mui/material";
 import { reauthenticatingFetch } from '../../utils/api';
 import config from '../../config'
 const baseURL = config.apiUrl
@@ -32,6 +32,13 @@ export default function ReadingTime() {
   const [dataTotalReadingTimes, setdataTotalReadingTimes] = useState([]);
   const [dataFocusTimes, setdataFocusTimes] = useState([]);
 
+  /*
+  Status of connection to backend server
+    2 - connection failed
+    1 - connection in progress
+    0 - connection successful
+  */
+  const [validConnection, setValidConnection] = useState(1);
 
   /* Set filter when displaying data
     "user" - display all data
@@ -39,7 +46,16 @@ export default function ReadingTime() {
     "video" - display data per video
   */
   const [filter, setFilter] = useState("user");
+  const [filterBeforeDisconnect, setFilterBeforeDisconnect] = useState("user");
+  const updateYAxis = useRef(false);
 
+  /* Toggle for setting y-axis scale to seconds or minutes 
+  - 59 - minutes
+  - 0 - seconds
+  */
+  const [yAxisScale, setYAxisScale] = useState(59);
+
+  // Used to convert timestamp to time in HH:MM:SS format for x-axis
   const convertToTime = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -59,7 +75,6 @@ export default function ReadingTime() {
     {
       const reading_times = data.cumulative_reading_time;
       const focus_times = data.cumulative_focus_time;
-      console.log(reading_times, "-----------", focus_times);
 
       if(reading_times.length != focus_times.length)
       {
@@ -68,32 +83,39 @@ export default function ReadingTime() {
       }
 
       dataLabels = reading_times.map((timestamp) => convertToTime(timestamp.timestamp));
-      dataFocusTimes = focus_times.map((timestamp) => timestamp.cumulative_time * 60);
-      dataTotalReadingTimes =  reading_times.map((timestamp) => timestamp.cumulative_time * 60);
-
-      // console.log(dataFocusTimes);
-      console.log(dataTotalReadingTimes);
+      dataFocusTimes = focus_times.map((timestamp) => timestamp.cumulative_time * (60 - yAxisScale));
+      dataTotalReadingTimes =  reading_times.map((timestamp) => timestamp.cumulative_time * (60 - yAxisScale));
 
       dataTotalReadingTimes = dataTotalReadingTimes.map((time, index) => time - dataFocusTimes[index]);
-
-      console.log(dataTotalReadingTimes);
 
     }
 
     if(filter == "user")
     {
       dataLabels = datamap.map((session) => `${session.session_id}`);
-      dataFocusTimes = datamap.map((session) => session.total_focus_time * 60);
-      dataTotalReadingTimes = datamap.map((session) => (session.total_reading_time - session.total_focus_time) * 60);
+      dataFocusTimes = datamap.map((session) => session.total_focus_time * (60 - yAxisScale));
+      dataTotalReadingTimes = datamap.map((session) => (session.total_reading_time - session.total_focus_time) * (60 - yAxisScale));
     }
     else if(filter == "session")
     {
       dataLabels = datamap.map((videos) => `${videos.video_id}`);
-      dataFocusTimes = datamap.map((videos) => videos.total_focus_time * 60);
-      dataTotalReadingTimes = datamap.map((videos) => (videos.total_reading_time - videos.total_focus_time) * 60);
+      dataFocusTimes = datamap.map((videos) => videos.total_focus_time * (60 - yAxisScale));
+      dataTotalReadingTimes = datamap.map((videos) => (videos.total_reading_time - videos.total_focus_time) *(60 - yAxisScale));
     }
   
     return { dataLabels, dataTotalReadingTimes, dataFocusTimes };
+  }
+
+  const changeYAxis = () => {
+
+    if(yAxisScale === 59)
+      setYAxisScale(0); // seconds
+    else
+      setYAxisScale(59); // minutes
+
+    // update data
+    updateYAxis.current = true;
+    setLoading(true);
   }
 
   const handleFilter = async(newFilter) => {
@@ -105,55 +127,69 @@ export default function ReadingTime() {
       setdataTotalReadingTimes([]);
       setdataFocusTimes([]);
       setFilter(newFilter);
-      console.log(`Filter set to ${newFilter}`);
+      // console.log(`Filter set to ${newFilter}`);
     }
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setValidConnection(1);
         const result = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-times/?display=${filter}`);
 
-        console.log(filter, "==>", result);
+        // console.log(filter, "==>", result);
 
         const { dataLabels, dataTotalReadingTimes, dataFocusTimes } = processData(result);
         setdataLabels(dataLabels);
         setdataTotalReadingTimes(dataTotalReadingTimes);
         setdataFocusTimes(dataFocusTimes);
         setLoading(false);
+        setValidConnection(0);
       } catch (err) {
         console.error(err);
-        // Show alert for failed connection and set all datasets to empty
+
+        setValidConnection(2);
+        setLoading(true);
+
+        setFilterBeforeDisconnect(filter);
+        setFilter("");
+        setdataLabels([]);
+        setdataTotalReadingTimes([]);
+        setdataFocusTimes([]);
       }
     };
 
-    fetchData();
-  }, [filter]);
+    if(filter !== "")
+      fetchData();
+
+    updateYAxis.current = false;
+
+  }, [filter, updateYAxis.current]);
 
   const chartData = {
     labels: dataLabels,
     datasets: [
       {
-        label: "Focus time (seconds)",
+        label: yAxisScale === 59 ? "Focus time (minutes)" : "Focus time (seconds)",
         data: dataFocusTimes,
         borderWidth: 1,
         backgroundColor: "rgba(6, 118, 13, 0.2)",
         borderColor: "rgba(6, 118, 13, 1)",
         stack: 'combined',
         type: filter === "video" ? "line" : "bar",
-        pointRadius: dataLabels.length < 250 ? 2 : 0,
-        pointHoverRadius: 4,
+        pointRadius: 0.25,
+        pointHoverRadius: 5,
       },
       {
-        label: "Total reading time (seconds)",
+        label: yAxisScale === 59 ? "Total reading time (minutes)" : "Total reading time (seconds)",
         data: dataTotalReadingTimes,
         borderWidth: 1,
         backgroundColor: "rgba(220, 0, 78, 0.2)",
         borderColor: "black",
         stack: 'combined',
         type: filter === "video" ? "line" : "bar",
-        pointRadius: dataLabels.length < 250 ? 2 : 0,
-        pointHoverRadius: 4,
+        pointRadius: 0.25,
+        pointHoverRadius: 5,
       },
     ],
   };
@@ -173,6 +209,20 @@ export default function ReadingTime() {
           : filter === "session"
           ? "Total Reading and Focus Times in current session"
           : "Total Reading and Focus Times in latest video",
+      },
+      tooltip: {
+        callbacks: {
+          label: function (context) {
+            const index = context.dataIndex;
+            if (context.dataset.label === "Total reading time (seconds)" | context.dataset.label === "Total reading time (minutes)") {
+              if(yAxisScale === 59)
+                return `Total reading time (minutes): ${(dataTotalReadingTimes[index] + dataFocusTimes[index]).toFixed(3)}`;
+              else
+                return `Total reading time (seconds): ${(dataTotalReadingTimes[index] + dataFocusTimes[index]).toFixed(3)}`;
+            }
+            return `${context.dataset.label}: ${context.raw.toFixed(3)}`;
+          },
+        },
       },
       zoom: {
         pan: {
@@ -198,7 +248,7 @@ export default function ReadingTime() {
       y: {
         title: {
           display: true,
-          text: "Time (seconds)",
+          text: yAxisScale === 59 ? "Time (minutes)" : "Time (seconds)",
         },
         beginAtZero: true, // Prevents negative values
         stacked: true,
@@ -221,13 +271,22 @@ export default function ReadingTime() {
   return (
     <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column"}}>
       <Container sx={{height: "30vh", display: "flex", alignItems: "center", justifyContent: "center"}}>
-        {loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions}/>}
+        {validConnection !== 2 ?
+          loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions}/> 
+          :
+          <Container>
+            <Typography variant="h5" sx={{textAlign: "center", mt: "5vh"}}>Connection failed</Typography>
+            <Button variant="contained" onClick={() => handleFilter(filterBeforeDisconnect)} sx={{mt: "1vh"}}>Retry</Button>
+          </Container>
+        }
       </Container>
       <Divider />
       <Container sx={{display: "flex", justifyContent: "space-evenly", flexDirection: "row", mt: "2vh", mb: "2vh"}}>
-      <Button onClick={() => handleFilter("user")} variant={filter === "user" ? "contained" : "outlined"}>User</Button>
-      <Button onClick={() => handleFilter("session")} variant={filter === "session" ? "contained" : "outlined"}>Session</Button>
-      <Button onClick={() => handleFilter("video")} variant={filter === "video" ? "contained" : "outlined"}>Video</Button>
+      <Button onClick={() => changeYAxis()} variant="outlined" disabled={validConnection === 2 || loading}>{yAxisScale === 59 ? "Switch to seconds" : "Switch to minutes"}</Button>
+      <Divider orientation="vertical" flexItem />
+      <Button onClick={() => handleFilter("user")} variant={filter === "user" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>User</Button>
+      <Button onClick={() => handleFilter("session")} variant={filter === "session" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>Session</Button>
+      <Button onClick={() => handleFilter("video")} variant={filter === "video" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>Video</Button>
       </Container>
     </Box>
   );
