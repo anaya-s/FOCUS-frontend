@@ -83,24 +83,24 @@ export default function ReadingSpeed() {
       dataLabels = reading_speeds.map((timestamp) => convertToTime(timestamp.timestamp));
       dataReadingSpeedOverTime =  reading_speeds.map((timestamp) => timestamp.wpm);
 
-      return { dataLabels, dataReadingSpeedOverTime, dataOverallAverageReadingSpeed, dataTotalWords };
+      return { dataLabels, yDataValues: dataReadingSpeedOverTime, totalAverageWPM: dataOverallAverageReadingSpeed, totalWordsRead: dataTotalWords };
     }
 
     if(filter == "user")
     {
       dataLabels = datamap.map((session) => `${session.session_id}`);
-      averageReadingSpeed = datamap.map((session) => session.average_wpm);
+      averageReadingSpeed = datamap.map((session) => session.average_wpm.toFixed(0));
     }
     else if(filter == "session")
     {
       dataLabels = datamap.map((videos) => `${videos.video_id}`);
-      averageReadingSpeed = datamap.map((videos) => videos.average_wpm);
+      averageReadingSpeed = datamap.map((videos) => videos.average_wpm.toFixed(0));
     }
 
     console.log(dataLabels, averageReadingSpeed);
 
-    return { dataLabels, averageReadingSpeed, dataOverallAverageReadingSpeed, dataTotalWords };
-  }
+    return { dataLabels, yDataValues: averageReadingSpeed, totalAverageWPM: dataOverallAverageReadingSpeed, totalWordsRead: dataTotalWords };
+}
 
   const changeYAxis = () => {
 
@@ -175,13 +175,9 @@ export default function ReadingSpeed() {
         borderWidth: 1,
         backgroundColor: "rgba(6, 118, 13, 0.2)",
         borderColor: "rgba(6, 118, 13, 1)",
-        stack: 'combined',
         type: filter === "video" ? "line" : "bar",
         pointRadius: 0.25,
         pointHoverRadius: 5,
-      },
-      {
-        // Add vertical line on graph for overall average reading speed
       },
     ],
   };
@@ -229,7 +225,6 @@ export default function ReadingSpeed() {
           text: "Reading speed (words per minute)",
         },
         beginAtZero: true, // Prevents negative values
-        stacked: true,
         suggestedMin: 0, // Ensures the Y-axis does not go below zero
       },
       x: {
@@ -237,7 +232,6 @@ export default function ReadingSpeed() {
           display: true,
           text: filter === "user" ? "Session ID" : filter === "session" ? "Video ID" : "Timestamp",
         },
-        stacked: true,
         min: 0, // Ensures the X-axis does not go below zero
       },
     },
@@ -247,25 +241,37 @@ export default function ReadingSpeed() {
 
 
   return (
-    <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column"}}>
-      <Container sx={{height: "30vh", display: "flex", alignItems: "center", justifyContent: "center"}}>
-        {validConnection !== 2 ?
-          loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions}/> 
-          :
-          <Container>
-            <Typography variant="h5" sx={{textAlign: "center", mt: "5vh"}}>Connection failed</Typography>
-            <Button variant="contained" onClick={() => handleFilter(filterBeforeDisconnect)} sx={{mt: "1vh"}}>Retry</Button>
-          </Container>
-        }
-      </Container>
-      <Divider />
-      <Container sx={{display: "flex", justifyContent: "space-evenly", flexDirection: "row", mt: "2vh", mb: "2vh"}}>
-      {/* <Button onClick={() => changeYAxis()} variant="outlined" disabled={validConnection === 2 || loading}>{yAxisScale === 59 ? "Switch to seconds" : "Switch to minutes"}</Button>
-      <Divider orientation="vertical" flexItem /> */}
-      <Button onClick={() => handleFilter("user")} variant={filter === "user" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>User</Button>
-      <Button onClick={() => handleFilter("session")} variant={filter === "session" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>Session</Button>
-      <Button onClick={() => handleFilter("video")} variant={filter === "video" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>Video</Button>
-      </Container>
+    <Box>
+        <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column"}}>
+            <Container sx={{height: "30vh", display: "flex", alignItems: "center", justifyContent: "center"}}>
+                {validConnection !== 2 ?
+                loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions}/> 
+                :
+                <Container>
+                    <Typography variant="h5" sx={{textAlign: "center", mt: "5vh"}}>Connection failed</Typography>
+                    <Button variant="contained" onClick={() => handleFilter(filterBeforeDisconnect)} sx={{mt: "1vh"}}>Retry</Button>
+                </Container>
+                }
+            </Container>
+            <Divider />
+            <Container sx={{display: "flex", justifyContent: "space-evenly", flexDirection: "row", mt: "2vh", mb: "2vh"}}>
+            {/* <Button onClick={() => changeYAxis()} variant="outlined" disabled={validConnection === 2 || loading}>{yAxisScale === 59 ? "Switch to seconds" : "Switch to minutes"}</Button>
+            <Divider orientation="vertical" flexItem /> */}
+            <Button onClick={() => handleFilter("user")} variant={filter === "user" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>User</Button>
+            <Button onClick={() => handleFilter("session")} variant={filter === "session" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>Session</Button>
+            <Button onClick={() => handleFilter("video")} variant={filter === "video" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>Video</Button>
+            </Container>
+        </Box>
+        {/* <Box sx={{display: "flex", flexDirection: "column", mt: "2vh"}}>
+            <Container sx={{display: "flex", justifyContent: "space-between", flexDirection: "row", mb: "2vh"}}>
+                <Container>
+                    <Typography variant="h5" sx={{border: "1px solid black", height: "10vh", alignContent: "center"}}>Total average reading speed: {totalAverageWPM} wpm</Typography>
+                </Container>
+                <Container>
+                    <Typography variant="h5" sx={{border: "1px solid black", height: "10vh", alignContent: "center"}}>Total words read: {totalWordsRead}</Typography>
+                </Container>
+            </Container>
+        </Box> */}
     </Box>
   );
 }
