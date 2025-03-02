@@ -328,6 +328,8 @@ function TextReaderPage() {
   const pdfSetPageRef = useRef(false);
   const isPDFRef = useRef(false);
 
+  const fpsIntervalRef = useRef(100);
+
   const colourSchemeSelection = (selection) => ({
     border: backgroundColourSelectionRef.current == selection ? "3px solid #06760D" : "normal"
   });
@@ -763,12 +765,26 @@ function TextReaderPage() {
     };
   }, [isLoading]);
 
-  var total_frames = 0;
-  var previous_frame = 0;
-  var previous_time = 0;
+var total_frames = 0;
+var previous_total_count = 0;
+var previous_total_time = 0;
+
+var sent_frames = 0;
+var previous_time = 0;
+var previous_count = 0;
+
+var previous_send_time = 0;
+
 
 // Initialize state for previous frame data URL
 const previousFrameDataUrl = useRef(null);
+
+useEffect(() => {
+  if(readingMode.current === 4 && calibrationAccuracy !== -1)
+    fpsIntervalRef.current = 50; // increase FPS limit to counteract performance impact from calculating gaze predictions
+  else
+    fpsIntervalRef.current = 100;
+}, [readingMode.current]);
 
 
 const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
@@ -784,41 +800,69 @@ const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
         // if(readingMode.current !== 2 & readingMode.current !== 3)
         //   readingSpeedRef.current = undefined;
 
-        // Send the frame via WebSocket
-        socket.current.send(
-          JSON.stringify({
-            frame: frame,
-            timestamp: timestamp,
-            xCoordinatePx: xCoord,
-            yCoordinatePx: yCoord,
-            mode: "reading",
-            reading_mode: readingMode.current,
-            wpm: readingSpeedRef.current,
-          })
-        );
+        // Calculate the time difference between the current frame and the last sent frame
+        const timeDiff = timestamp - previous_send_time;
+
+        if(previous_total_time === 0)
+        {
+            previous_total_time = timestamp;
+            previous_total_count = 1;
+        }
+
+        // Only send the frame if the time difference is greater than or equal to (1000 / fpsLimit)
+        if (timeDiff >= fpsIntervalRef.current) {   
+
+          // Send the frame via WebSocket
+          socket.current.send(
+            JSON.stringify({
+              frame: frame,
+              timestamp: timestamp,
+              xCoordinatePx: xCoord,
+              yCoordinatePx: yCoord,
+              mode: "reading",
+              reading_mode: readingMode.current,
+              wpm: readingSpeedRef.current,
+            })
+          );
+
+          previous_send_time = timestamp;
+
+          if (previous_time === 0)
+          {
+              previous_time = timestamp;
+              previous_count = 1;
+          }
+
+          sent_frames += 1;
+
+          if (sent_frames % 30 === 0) {
+              const actualFPS = ((sent_frames - previous_count) / ((timestamp - previous_time) / 1000));
+              window.console.log("Actual FPS: ", actualFPS);
+              console.log("Frames sent: ", sent_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord, "Actual FPS: ", actualFPS);
+              previous_time = timestamp;
+              previous_count = sent_frames;
+          }
+        }
 
         total_frames += 1;
-        if (total_frames === 1) {
-          previous_time = timestamp;
-          previous_frame = total_frames;
-        }
+
+        // Calculate and log FPS every 20 sent frames
         if (total_frames % 30 === 0) {
-          window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
-          window.console.log("FPS: ", (total_frames - previous_frame) / ((timestamp - previous_time) / 1000));
-          previous_frame = total_frames;
-          previous_time = timestamp;
+            const FPS = ((total_frames - previous_total_count) / ((timestamp - previous_total_time) / 1000));
+            // console.log("Frames: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord, "FPS: ", FPS);
+            previous_total_time = timestamp;
+            previous_total_count = total_frames;
         }
 
-        // Update the previous frame data URL
+        // Update the previous frame data URL and timestamp
         previousFrameDataUrl.current = frame;
       }
-
-      handleYCoord(yCoord);
     }
   }
   else
   {
     // console.error("WebSocket connection no longer open.");
+    total_frames = 0;
     setStatusConn(false);
     webgazer.clearGazeListener();
   }
