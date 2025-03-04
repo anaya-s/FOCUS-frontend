@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
 import LinearProgress from "@mui/material/LinearProgress";
 import Box from "@mui/material/Box";
 
@@ -90,14 +89,12 @@ const progressBarStyle = {
   marginTop: "100px",
 };
 
-const PageTwo = ({ updateData }) => {
-  const [dob, setDob] = useState("");
-
-  const handleSubmit = () => {
+const PageSix = ({ updateData }) => {
+  const handleGlassesSelect = (glasses) => {
     // Update the data in the parent component
-    updateData({ dob });
+    updateData({ glasses });
     // Proceed to the next step (if applicable)
-    console.log("User's date of birth:", dob);
+    console.log("User's glasses:", glasses);
   };
 
   return (
@@ -114,40 +111,33 @@ const PageTwo = ({ updateData }) => {
           </div>
           <div style={speechBubbleStyle}>
             <Typography variant="h6" component="p" style={{ margin: 0 }}>
-              When were you born?
+              Do you wear glasses?
             </Typography>
             <div style={speechBubbleArrowStyle}></div>
             <div style={speechBubbleArrowInnerStyle}></div>
           </div>
         </div>
 
-        {/* Input field for date of birth */}
-        <TextField
-          label="Date of Birth"
-          type="date"
-          variant="outlined"
-          fullWidth
-          value={dob}
-          onChange={(e) => setDob(e.target.value)}
-          margin="normal"
-          InputLabelProps={{
-            shrink: true,
-          }}
-        />
-
-        {/* Submit button */}
+        {/* Buttons stacked vertically */}
         <Button
           variant="contained"
           style={buttonStyle}
-          onClick={handleSubmit}
+          onClick={() => handleGlassesSelect(true)}
         >
-          Submit
+          Yes
+        </Button>
+        <Button
+          variant="contained"
+          style={buttonStyle}
+          onClick={() => handleGlassesSelect(false)}
+        >
+          No
         </Button>
       </div>
       
-      <LinearProgress variant="determinate" value={40} style={progressBarStyle} />
+      <LinearProgress variant="determinate" value={100} style={progressBarStyle} />
     </Box>
   );
 };
 
-export default PageTwo;
+export default PageSix;

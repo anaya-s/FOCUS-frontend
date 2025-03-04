@@ -6,22 +6,28 @@ import PageFour from "./pages/PageFour";
 import PageFive from "./pages/PageFive";
 
 const containerStyle = {
-  //display: 'flex',
-  // height: '100vh'
+  height: "100vh",
+  overflowY: "scroll",
+  scrollSnapType: "y mandatory",
+  scrollbarWidth: "none",
 };
+
+const pageStyle = {
+  scrollSnapAlign: "center",
+  height: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
 const HomePage = () => {
-
-  useEffect(() => {
-    window.scrollTo({ top: 0 }); // auto-scroll to the top
-  }, []);
-
   return (
     <div style={containerStyle}>
-      <PageOne />
-      <PageTwo />
-      <PageThree />
-      <PageFour />
-      <PageFive />
+      <div style={pageStyle}><PageOne /></div>
+      <div style={pageStyle}><PageTwo /></div>
+      <div style={pageStyle}><PageThree /></div>
+      <div style={pageStyle}><PageFour /></div>
+      <div style={pageStyle}><PageFive /></div>
     </div>
   );
 };

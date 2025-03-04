@@ -22,11 +22,16 @@ function Login() {
   const [password, setPassword] = useState("");
 
   let { loginUser } = useContext(AuthContext);
-  const { toReset, toRegister } = useNavigation();
+  const { toReset, toRegister, toOnboarding } = useNavigation();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    loginUser(email, password);
+    const response = await loginUser(email, password);
+    console.log(response);
+    console.log(response.session_id);
+    if (response.session_id === 1) {
+      toOnboarding();
+    }
   };
 
   return (
