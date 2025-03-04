@@ -107,7 +107,7 @@ const PageOne = ({ updateData }) => {
         <div style={topRowStyle}>
           <div style={imageContainerStyle}>
             <img
-              src="/images/homepage/felix_self.png"
+              src="/images/homepage/felix_done.png"
               alt="Felix the productivity robot"
               style={imageStyle}
             />
