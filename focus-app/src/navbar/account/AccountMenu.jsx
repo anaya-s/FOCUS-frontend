@@ -37,7 +37,7 @@ export default function AccountMenu() {
 
   useEffect(() => {
     const fetchUsername = async () => {
-try {
+    try {
       const responseMsg = await reauthenticatingFetch("GET", `${baseURL}/api/user/profile/`);
 
       if (responseMsg.error) {
@@ -53,6 +53,26 @@ try {
     fetchUsername();
   }, []);
 
+  // Function to stop webcam access (if any) after ending webgazer
+  const stopCamera = () => {
+    // Stop all video streams to turn off webcam
+    const videos = document.querySelectorAll('video');
+    videos.forEach((video) => {
+      if (video.srcObject) {
+        const stream = video.srcObject;
+        const tracks = stream.getTracks();
+        tracks.forEach((track) => track.stop());
+      }
+      video.srcObject = null; 
+    });
+  
+    // Remove all video container <div> elements
+    const containers = document.querySelectorAll('#webgazerVideoContainer');
+    containers.forEach((container) => {
+      container.remove();
+    });
+  };
+
   return (
     <>
       <Box sx={{ display: "flex", alignItems: "center", textAlign: "center" }}> 
@@ -66,7 +86,7 @@ try {
             aria-expanded={open ? "true" : undefined}
           >
             <Avatar sx={{ width: 32, height: 32 }}>
-              {username.charAt(0).toUpperCase() || ""} 
+              {username.length !== 0 ? username.charAt(0).toUpperCase() : ""} 
             </Avatar>
           </IconButton>
         </Tooltip>
@@ -109,26 +129,26 @@ try {
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
-        <MenuItem onClick={() => {webgazer.end(); toDashboard();}}>
+        <MenuItem onClick={() => {webgazer.end(); stopCamera(); toDashboard();}}>
           <ListItemIcon>
             <AnalyticsIcon fontSize="small" />
           </ListItemIcon>
           Dashboard
         </MenuItem>
-        <MenuItem onClick={() => {webgazer.end(); toProfile();}}>
+        <MenuItem onClick={() => {webgazer.end(); stopCamera(); toProfile();}}>
           <ListItemIcon>
             <PersonIcon fontSize="small" />
           </ListItemIcon>
           Profile
         </MenuItem>
-        <MenuItem onClick={() => {webgazer.end(); toSettings();}}>
+        <MenuItem onClick={() => {webgazer.end(); stopCamera(); toSettings();}}>
           <ListItemIcon>
             <Settings fontSize="small" />
           </ListItemIcon>
           Settings
         </MenuItem>
         <Divider />
-        <MenuItem onClick={() => {webgazer.end(); logoutUser();}}>
+        <MenuItem onClick={() => {webgazer.end(); stopCamera(); logoutUser();}}>
           <ListItemIcon>
             <Logout fontSize="small" />
           </ListItemIcon>

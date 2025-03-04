@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom';
 import { reauthenticatingFetch } from "../utils/api";
 import config from '../config'
 const baseURL = config.apiUrl
+import '../../public/fonts/fonts.css'
 
 import webgazer from "../webgazer/webgazer.js";
 
@@ -15,7 +16,7 @@ import { sendReadingProgressLineUnblur, LineUnblur } from "./LineUnblur";
 import { NLP } from "./NLP";
 
 /* MaterialUI Imports */
-import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, Grid2, TextField, Checkbox, Alert, Collapse } from "@mui/material";
+import { Button, Typography, Container, Box, LinearProgress, IconButton, Tooltip, Divider, Drawer, Slider, Select, MenuItem, FormControl, ListSubheader, Grid2, TextField, Checkbox, Alert, Collapse, CircularProgress } from "@mui/material";
 
 import {
   Menu as MenuIcon,
@@ -34,6 +35,7 @@ import {
   TextIncrease as TextIncreaseIcon,
   DeblurRounded as DeblurRoundedIcon,
   ReplayRounded as ReplayRoundedIcon,
+  FaceRetouchingOffRounded as FaceRetouchingOffRoundedIcon,
 } from '@mui/icons-material';
 
 import { styled } from '@mui/system';
@@ -90,7 +92,7 @@ function TextReaderPage() {
     4 - Line by line unblurring
     5 - Natural Language Processing (NLP) assistance
   */
-  const [readingMode, setReadingMode] = useState(3);
+  const readingMode = useRef(3);
 
   /* Hide reading modes based on input document type:
   0 - hide nothing
@@ -98,6 +100,126 @@ function TextReaderPage() {
   2 - hide Reading Modes 2,3,4,5
   */
   const [hideSettings, setHideSettings] = useState(0);
+
+  /* Set a timer for 5 minutes, checking if user is focused or not */
+  const [focusTimer, setFocusTimer] = useState(0);
+  const [startTimer, setStartTimer] = useState(false);
+
+  const currentBreakTime = useRef(0);
+  const totalBreakTime = useRef(0);
+
+  const isOnBreak = useRef(false);
+  const [isNoFaceDetected, setNoFaceDetected] = useState(true); // used for "No face detected" alert
+
+  // Set this value using the Settings page - maybe stored from localStorage
+  const [timeLimit, setTimeLimit] = useState(1); // 1 minute time limit by default
+
+  function secondsToHms(seconds) 
+  {
+    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  }
+
+  const getBreakAlertContent = () => {
+    return `
+      <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
+        <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto">
+        <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+          <p>It looks like you've lost focus in the past five minutes. How about taking a short break?</p>
+          <p style="margin-top: 20px;"><span style="font-weight: bold">Current break time:</span> ${secondsToHms(currentBreakTime.current)}</p>
+          <p style="margin-top: 20px;"><span style="font-weight: bold">Total break time:</span> ${secondsToHms(totalBreakTime.current)}</p>
+          <p style="margin-top: 20px;">Press <span style="font-weight: bold">Continue</span> to resume reading.</p>
+        </div>
+      </div>
+    `;
+  };
+
+  useEffect(() => {
+
+    let incrementTimer;
+    let incrementBreakTimer;
+
+    const getBreakStatus = async () => {
+      try
+      {
+        const response = await reauthenticatingFetch("GET", `${baseURL}/api/eye/break-check/?time_limit=${timeLimit}`);
+        //console.log(response);
+
+        if(response.status)
+        {
+          console.error("Not enough data to check break status: ", response.status);
+          setStartTimer(true);
+        }
+        else
+        {
+          if(response.face_detected_status == true && response.focus_status == true)
+          {
+            setStartTimer(true);
+            setNoFaceDetected(true);
+          }
+
+          if(response.face_detected_status == false)
+          {
+            // Show small alert notifying users to keep face in view
+            setNoFaceDetected(false);
+          }
+          if(response.focus_status == false)
+          {
+            isOnBreak.current = true;
+            showBreakAlert();
+          }
+        }
+      }
+      catch(error)
+      {
+        console.error("Failed to check break status:", error);
+        setStartTimer(true);
+      }
+
+    };
+
+    if(retryConnection <= 0)
+    {
+      if (startTimer == true) {
+        clearInterval(incrementBreakTimer);
+
+        incrementTimer = setInterval(() => {
+          setFocusTimer(prevTimer => prevTimer + 1);
+        }, 1000); // Increment timer every second
+
+        if(focusTimer >= (timeLimit * 60))
+        {
+          // console.log("Checking focus and face detection in past {timeLimit} minutes ...");
+          setStartTimer(false);
+          setFocusTimer(0);
+          clearInterval(incrementTimer);
+          getBreakStatus();
+        }
+
+        // console.log("timer : ", focusTimer);
+      }
+      else
+      {
+        incrementBreakTimer = setInterval(() => {
+          currentBreakTime.current += 1;
+          totalBreakTime.current += 1;
+
+          Swal.update({
+            html: getBreakAlertContent()
+          });
+        }, 1000); // Increment timer and update alert contents every second
+      }
+    }
+    else
+      setFocusTimer(0);
+
+    return () => {
+      clearInterval(incrementTimer);
+      clearInterval(incrementBreakTimer);
+    };
+  }, [focusTimer, startTimer, retryConnection]);
 
   /* Check if file is uploaded correctly with its parsed text */
   useEffect(() => {
@@ -113,20 +235,24 @@ function TextReaderPage() {
 
       if (parsedText.length === 0) // Image-based PDF file
       {
-        setReadingMode(1);
+        readingMode.current = 1;
         setHideSettings(1);
       }
       else
       {
         if(file.type !== "application/pdf") // Word or text file
         {
-          setReadingMode(3);
+          readingMode.current = 3;
           setHideSettings(2);
         }
       }
     }
     else
       toDrive(1); // Return back to Drive page with error status
+
+    return () => {
+      Swal.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -148,6 +274,7 @@ function TextReaderPage() {
     Swal.fire({
 
       title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Break suggested</span>',
+QuestionnaireAttempt
         html: `
         <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
           <img src="../../public/images/homepage/felix_done.png" alt="Felix" style="width: 150px; height: auto">
@@ -158,24 +285,25 @@ function TextReaderPage() {
           </div>
         </div>
       `,
+=======
+      html: getBreakAlertContent(),
+ main
       icon: "info",
-      confirmButtonText: "OK",
+      confirmButtonText: "Continue", // maybe also add "Return to drive" button
       confirmButtonColor: "#06760D",
       allowOutsideClick: false,
       allowEscapeKey: false,
-      allowEnterKey: false,
       showCancelButton: false,
       showDenyButton: false,
       showConfirmButton: true,
       showCloseButton: false,
-      showCloseButtonOnOverlay: false,
-      showCloseButtonOnEsc: false,
-      showLoaderOnConfirm: true,
       customClass: {
         container: 'custom-swal-container', // Apply the custom class
       },
       willClose: async () => {
-        
+        setStartTimer(true);
+        isOnBreak.current = false;
+        currentBreakTime.current = 0;
       }
     });
 
@@ -184,16 +312,20 @@ function TextReaderPage() {
   /* Text typography parameters */
 
   const fontOptions = [
-    { label: 'Arial', value: 'Arial, sans-serif' },
-    { label: 'Courier New', value: '"Courier New", Courier, monospace' },
-    { label: 'Georgia', value: 'Georgia, serif' },
-    { label: 'Istok Web', value: 'Istok Web, sans-serif' }, // default text font
-    { label: 'Times New Roman', value: '"Times New Roman", Times, serif' },
-    { label: 'Verdana', value: 'Verdana, sans-serif' }
-    // add more font options here
+    { label: "Sans-Serif Fonts", type: "header" },
+    { label: "Istok Web", value: "Istok Web, sans-serif" },
+    { label: "OpenDyslexic", value: "'OpenDyslexic', sans-serif" },
+    { label: "Arial", value: "Arial, sans-serif" },
+    { label: "Roboto", value: "Roboto, sans-serif" },
+    { label: "Open Sans", value: "Open Sans, sans-serif" }, 
+    
+    { label: "Serif Fonts", type: "header" },
+    { label: "Times New Roman", value: '"Times New Roman", Times, serif' },
+    { label: "Georgia", value: "Georgia, serif" },
+    { label: "Merriweather", value: "Merriweather, serif" }, 
   ];
 
-  const fontStyleRef = useRef(fontOptions[3].value);
+  const fontStyleRef = useRef(fontOptions[1].value);
   const fontSizeRef = useRef(28);
   const textOpacityRef = useRef(0.5);
   const letterSpacingRef = useRef(0);
@@ -221,7 +353,7 @@ function TextReaderPage() {
     border: "1px solid #ccc",
     pt: "5px", pb: "5px",
     width: "2vw",
-    backgroundColor: readingMode !== 1 ? invertTextColourRef.current ? colour : "white" : colour
+    backgroundColor: readingMode.current !== 1 ? invertTextColourRef.current ? colour : "white" : colour
   });
 
   const colourSchemeIconColour = (colour) => ({
@@ -266,12 +398,12 @@ function TextReaderPage() {
   };
 
   const setDefaultSettings = () => {
-    fontStyleRef.current = fontOptions[3].value;
+    fontStyleRef.current = fontOptions[1].value;
     fontSizeRef.current = 28;
     textOpacityRef.current = 0.5;
     letterSpacingRef.current = 0;
 
-    if(readingMode === 4)
+    if(readingMode.current === 4)
       lineSpacingRef.current = 7;
     else
       lineSpacingRef.current = 3;
@@ -281,7 +413,7 @@ function TextReaderPage() {
     backgroundColourRef.current = [0,0,0];
     backgroundColourSelectionRef.current = 1;
 
-    if(readingMode === 2)
+    if(readingMode.current === 2)
       highlightSpeedRef.current = 5;
     else
       highlightSpeedRef.current = 2;
@@ -386,10 +518,12 @@ function TextReaderPage() {
   const showVerbsRef = useRef(true);
   const showConjucationsRef = useRef(true);
 
+  const readingSpeedRef = useRef(0);
+
   const normalReadingSettings = useRef([backgroundColourRef, backgroundBrightnessRef, pdfScaleRef, pdfCurrentPageRef, pdfTotalPagesRef, pdfSetPageRef, isPDFRef]);
-  const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
-  const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
-  const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, autoScrollSpeedRef, unblurredLinesRef, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const RSVPSettings = useRef([fontStyleRef, fontSizeRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, wordCountRef, readingSpeedRef, isOnBreak, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const speedReadingSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, readingSpeedRef, isOnBreak, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
+  const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, autoScrollSpeedRef, unblurredLinesRef, readingSpeedRef, isOnBreak, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const nlpSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, showVerbsRef, showConjucationsRef, fileNameRef, parsedTextRef]);
 
   const [pauseStatus, setPauseStatus] = useState(true);
@@ -405,7 +539,8 @@ function TextReaderPage() {
   const handleReadingModeSelection = (mode) => () => {
     pauseStatusRef.current = true;
     setPauseStatus(pauseStatusRef.current);
-    setReadingMode(mode);
+    readingSpeedRef.current = 0; // reset reading speed when changing reading mode
+    readingMode.current = mode;
   };
 
   const setPauseStatusValues = () => {
@@ -446,7 +581,7 @@ function TextReaderPage() {
 
   const intervalRef = useRef(null);
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   const handleDrawer = () => {
     setOpen(!open);
@@ -455,18 +590,18 @@ function TextReaderPage() {
   const { toNotAuthorized, toDrive, toCalibration } = useNavigation();
 
   useEffect(() => {
-    if(readingMode === 4)
+    if(readingMode.current === 4)
       lineSpacingRef.current = 7;
     else
       lineSpacingRef.current = 2;
 
-    if(readingMode === 2)
+    if(readingMode.current === 2)
       highlightSpeedRef.current = 5;
     else
       highlightSpeedRef.current = 2;
 
-    webgazer.hideGazeDot(readingMode);
-  }, [readingMode]);
+    webgazer.hideGazeDot(readingMode.current);
+  }, [readingMode.current]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 }); // auto-scroll to the top
@@ -483,10 +618,43 @@ function TextReaderPage() {
   }, []);
 
   const readingModeButtonSelection = (mode) => ({
-    border: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "1px dashed red" : readingMode == mode ? "3px solid #06760D" : "normal",
+    border: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "1px dashed red" : readingMode.current == mode ? "3px solid #06760D" : "normal",
     color: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "red" : "auto",
     borderColor: (hideSettings == 1 && mode != 1) || (hideSettings == 2 && mode != 2 && mode != 3 && mode != 4 && mode != 5) ? "red" : "auto",
   });
+
+  const getCalibration = async () => {
+    try
+    {
+      if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
+      {
+        var calibrationData = JSON.parse(localStorage.getItem("calibration"));
+        webgazer.setRegressionData(calibrationData);
+        var accuracy = JSON.parse(localStorage.getItem("accuracy"));
+        setCalibrationAccuracy(accuracy);
+      }
+      else
+      {
+        const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
+    
+        if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
+        {
+          // set accuracy to -1 to indicate that no calibration data is found
+          setCalibrationAccuracy(-1);
+        }
+        else
+        {
+          var calibrationData = responseMsg.calibration_values;
+          webgazer.setRegressionData(calibrationData);
+        }
+      }
+    }
+    catch(error)
+    {
+      console.error("Failed to load calibration data from localStorage and server:", error);
+      setCalibrationAccuracy(-1);
+    }
+  };
 
   // Webgazer initialisation
   useEffect(() => {
@@ -504,64 +672,59 @@ function TextReaderPage() {
         webgazer.params.videoViewerHeight = 1080;
         webgazer.params.moveTickSize = 25;
 
-        await webgazer.begin(false);
-        
         try
-        {
-          if(localStorage.getItem("calibration") && localStorage.getItem("accuracy"))
-          {
-            var calibrationData = JSON.parse(localStorage.getItem("calibration"));
-            webgazer.setRegressionData(calibrationData);
-            var accuracy = JSON.parse(localStorage.getItem("accuracy"));
-            setCalibrationAccuracy(accuracy);
-          }
-          else
-          {
-            const responseMsg = await reauthenticatingFetch("GET",`${baseURL}/api/user/calibration-retrieval/`)
-        
-            if (responseMsg.error) // if the JSON response contains an error, this means that no calibration data is found in database
-            {
-              // set accuracy to -1 to indicate that no calibration data is found
-              setCalibrationAccuracy(-1);
-            }
-            else
-            {
-              var calibrationData = responseMsg.calibration_values;
-              webgazer.setRegressionData(calibrationData);
-            }
-          }
+        {     
+          await webgazer.begin(false);
           
+          await getCalibration();
+
+          setWebgazerLoading(false);
+          setWebgazerFinished(true);
+          console.log("WebGazer initialized successfully");
+          setStartTimer(true);
         }
-        catch(error)
+        catch(webgazerError)
         {
-          console.error("Failed to load calibration data from localStorage:", error);
-          setCalibrationAccuracy(-1);
+          console.error("Failed to initialize WebGazer:", webgazerError);
+          setWebgazerFinished(true);
+          document.getElementById("webgazerLoading").style.visibility  = "hidden";
+          // Show alert for user to enable camera permissions
+          Swal.fire({
+              title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Failed to start Webgazer</span>',
+              html: `
+              <p style="font-family: Arial, sans-serif; font-size: 18px; color: black; user-select: none">Webcam not detected or disabled</p>
+              <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none, margin-top: 2vh">
+                <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto; user-select: none">
+                <div style="margin-left: 2vh; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
+                  <p>Please check if your webcam is <span style="font-weight: bold">enabled and connected</span>. A webcam is required for this website.</p>
+                  <p style="margin-top: 2vh;">If your webcam is enabled and connected, please check and allow your <span style="font-weight: bold">browser's camera permissions</span>.</p>
+                </div>
+              </div>
+            `,
+              icon: 'warning',
+              iconColor: 'orange',
+              width: '40vw',
+              confirmButtonColor: "#06760D",
+              allowOutsideClick: false,
+              allowEscapeKey: false,
+              confirmButtonText: '<span style="user-select: none; padding: 0">Restart Webgazer</span>',
+              customClass: {
+                container: 'custom-swal-container', // Apply the custom class
+              },
+              willClose: async () => {
+                setWebgazerFinished(false);
+                if(document.getElementById("webgazerLoading"))
+                  document.getElementById("webgazerLoading").style.visibility  = "visible";
+              }
+          }); 
         }
 
-        /* Fetch the video stream from Webgazer */
-      //   const intervalId = setInterval(() => {
-      //     const stream = webgazer.getVideoStream();
-      //     if (stream !== null) {
-      //       setStream(stream);
-      //       setStreamStatus(true);
-      //       videoRef.current.srcObject = stream;
-      //       clearInterval(intervalId); // Stop checking once stream is available
-      //     }
-      //   }, 500);
-
-      // } catch (error) {
-      //   console.error("Error initializing WebGazer:", error);
-      // }
-
-      setWebgazerLoading(false);
-      setWebgazerFinished(true);
-      console.log("WebGazer initialized successfully");
     };
 
-    if(isLoading)
+    if(isLoading && !webgazerFinished)
       initializeWebGazer();
 
-  }, [isLoading]);
+  }, [isLoading, webgazerFinished]);
 
   // WebSocket connection
   const connectWebSocket = async () => {
@@ -577,7 +740,8 @@ function TextReaderPage() {
 
     // console.log("Connecting to WebSocket...");
 
-    socket.current.onopen = () => {
+    socket.current.onopen = async() => {
+    await getCalibration();
     setRetryConnection(0);
     setStatusConn(true);
     }
@@ -585,6 +749,7 @@ function TextReaderPage() {
       socket.current = null;
       setStatusConn(false);
       setRetryConnection(2);
+      setCalibrationAccuracy(-1);
     };
     socket.current.onerror = async(event) => {
       await reauthenticatingFetch("GET", `${baseURL}/api/user/profile/`);
@@ -621,44 +786,48 @@ const previousFrameDataUrl = useRef(null);
 
 const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
   if (socket.current && socket.current.readyState === WebSocket.OPEN) {
-    const timestamp = Date.now(); // Get current timestamp of current frame
-    const frame = canvas.toDataURL("image/jpeg");
+    if(isOnBreak.current == false)
+    {
+      const timestamp = Date.now(); // Get current timestamp of current frame
+      const frame = canvas.toDataURL("image/jpeg");
 
-    // Compare current frame with the previous frame
-    if (frame !== previousFrameDataUrl.current) {
-      // Store image data and timestamp in framesData array
-      setFramesData((prevFrames) => [
-        ...prevFrames,
-        { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
-      ]);
+      // Compare current frame with the previous frame
+      if (frame !== previousFrameDataUrl.current) {
 
-      // Send the frame via WebSocket
-      socket.current.send(
-        JSON.stringify({
-          frame: frame,
-          timestamp: timestamp,
-          xCoordinatePx: xCoord,
-          yCoordinatePx: yCoord,
-        })
-      );
+        // if(readingMode.current !== 2 & readingMode.current !== 3)
+        //   readingSpeedRef.current = undefined;
 
-      total_frames += 1;
-      if (total_frames === 1) {
-        previous_time = timestamp;
-        previous_frame = total_frames;
+        // Send the frame via WebSocket
+        socket.current.send(
+          JSON.stringify({
+            frame: frame,
+            timestamp: timestamp,
+            xCoordinatePx: xCoord,
+            yCoordinatePx: yCoord,
+            mode: "reading",
+            reading_mode: readingMode.current,
+            wpm: readingSpeedRef.current,
+          })
+        );
+
+        total_frames += 1;
+        if (total_frames === 1) {
+          previous_time = timestamp;
+          previous_frame = total_frames;
+        }
+        if (total_frames % 30 === 0) {
+          window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
+          window.console.log("FPS: ", (total_frames - previous_frame) / ((timestamp - previous_time) / 1000));
+          previous_frame = total_frames;
+          previous_time = timestamp;
+        }
+
+        // Update the previous frame data URL
+        previousFrameDataUrl.current = frame;
       }
-      if (total_frames % 30 === 0) {
-        window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
-        window.console.log("FPS: ", (total_frames - previous_frame) / ((timestamp - previous_time) / 1000));
-        previous_frame = total_frames;
-        previous_time = timestamp;
-      }
 
-      // Update the previous frame data URL
-      previousFrameDataUrl.current = frame;
+      handleYCoord(yCoord);
     }
-
-    handleYCoord(yCoord);
   }
   else
   {
@@ -690,6 +859,7 @@ useEffect(() => {
   if (isLoading) {
     return (
       <div
+        id="webgazerLoading"
         style={{
           display: "flex",
           flexDirection: "column",
@@ -712,18 +882,24 @@ useEffect(() => {
 
   return (
     <Box style={{marginTop: "15vh", justifyContent: "center"}}>
+        <Collapse in={isNoFaceDetected === false} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : calibrationAccuracy === -1 && readingMode.current === 4 ? "21vh" : "13vh", left: "5vh", zIndex: 1500}}>
+          <Alert variant="filled" icon={<FaceRetouchingOffRoundedIcon size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="warning">
+            Minimal face detection during the last {timeLimit > 1 ? `${timeLimit} minutes` : "minute"}. Please keep your face in view.
+          </Alert>
+        </Collapse>
         {
-          readingMode === 4 && hideSettings !== 1 ? (
+          readingMode.current === 4 && hideSettings !== 1 ? (
           <Collapse in={calibrationAccuracy === -1} sx={{position: "absolute", bottom: retryConnection === -1 ? "5vh" : "13vh", left: "5vh", zIndex: 1500}}>
-          { retryConnection === 2 ? (
-          <Alert variant="filled" severity="warning">
-            No calibration data found. Please check your connection.
-          </Alert>
-            ) : (
-          <Alert variant="filled" severity="warning">
-            No calibration data found. Please calibrate before using this reading mode.
-          </Alert>
-          )}
+            { retryConnection === 2 ? (
+            <Alert variant="filled" severity="warning">
+              No calibration data found. Please check your connection.
+            </Alert>
+              ) : (
+            (retryConnection <= 0 && calibrationAccuracy === -1) && (
+            <Alert variant="filled" severity="warning">
+              No calibration data found. Please calibrate before using this reading mode.
+            </Alert>
+            ))}
           </Collapse>
           ) : ( null )
         }
@@ -733,7 +909,7 @@ useEffect(() => {
           </Alert>
         </Collapse>
         <Collapse in={retryConnection === 1} sx={{position: "absolute", bottom: "5vh", left: "5vh", zIndex: 1500}}>
-          <Alert variant="filled" severity="info">
+          <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
             Connecting...
           </Alert>
         </Collapse>
@@ -748,10 +924,10 @@ useEffect(() => {
       <Box sx={{display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "row"}}>
         {/* Create all reading mode components here */}
         {
-        readingMode === 1 ? <NormalReading file={fileRef.current} textSettings={normalReadingSettings}/>
-        : readingMode === 2 ? <RSVP textSettings={RSVPSettings}/>
-        : readingMode === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
-        : readingMode === 4 ? <LineUnblur textSettings={lineUnblurSettings}/>
+        readingMode.current === 1 ? <NormalReading file={fileRef.current} textSettings={normalReadingSettings}/>
+        : readingMode.current === 2 ? <RSVP textSettings={RSVPSettings}/>
+        : readingMode.current === 3 ? <SpeedReading textSettings={speedReadingSettings}/>
+        : readingMode.current === 4 ? <LineUnblur textSettings={lineUnblurSettings}/>
         : <NLP textSettings={nlpSettings}/>
         }
         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: "85vh", ml: "1.5vw", backgroundColor: "white", mt: "-7vh"}}>
@@ -835,7 +1011,7 @@ useEffect(() => {
               </Box>
             </Container>
 
-            { readingMode === 1 ? ( // Normal render
+            { readingMode.current === 1 ? ( // Normal render
             isPDFRef.current ? (
               <Box>
                   <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
@@ -875,7 +1051,7 @@ useEffect(() => {
                 </Container>
               </Box>
              ) : null 
-            ): readingMode === 2 | readingMode === 3 ? ( // Speed reading
+            ): readingMode.current === 2 | readingMode.current === 3 ? ( // Speed reading
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <Box sx={{ display: "flex", flexDirection: "column"}}>
@@ -900,13 +1076,13 @@ useEffect(() => {
                 <SpeedRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
                   <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
                     <Typography variant="caption">
-                      {readingMode === 3 ? "Highlighting speed" : "Speed" }
+                      {readingMode.current === 3 ? "Highlighting speed" : "Speed" }
                     </Typography>
                     <Slider
                       value={typeof highlightSpeedRef.current === 'number' ? highlightSpeedRef.current : 2}
                       onChange={handleHighlightSpeed}
                       min={1}
-                      step={readingMode === 1 ? 0.1 : 1}
+                      step={1}
                       max={10}
                       sx={{ width: "15vw" }}
                     />
@@ -914,10 +1090,10 @@ useEffect(() => {
                   <Typography variant="h7"
                     sx={{width: "3vw", userSelect: "none", backgroundColor: "#D9D9D9", borderRadius: "5px", textAlign: "center", padding: "5px"}}
                   >
-                    {readingMode === 1 ? highlightSpeedRef.current*10 : highlightSpeedRef.current}
+                    {readingMode.current === 3 ? highlightSpeedRef.current*60 : readingMode.current === 2 ? (highlightSpeedRef.current * wordCountRef.current * 60) : highlightSpeedRef.current}
                   </Typography>
               </Container>
-              { readingMode === 2 ? (
+              { readingMode.current === 2 ? (
                 parsedText.length !== 0 ? (
                   <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
                     <TextIncreaseIcon sx={{fontSize: "30px", mr: "2vw"}}/>
@@ -930,7 +1106,7 @@ useEffect(() => {
                           onChange={handleWordCount}
                           min={1}
                           step={1}
-                          max={maxWordCountRef.current}
+                          max={maxWordCountRef.current >= 10 ? 10 : maxWordCountRef.current}
                           sx={{ width: "15vw" }}
                         />
                       </Box>
@@ -943,13 +1119,13 @@ useEffect(() => {
                 ) : null
               ) : null }
           </Box>
-            ): readingMode === 4 ? ( // Line-by-line unblurring
+            ): readingMode.current === 4 ? ( // Line-by-line unblurring
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center", justifyContent: "center"}}>
                 <Tooltip title={retryConnection !== 2 ? "Check or update calibration details" : "Check your connection before calibration"} placement="left">  
                 {calibrationAccuracy === -1 && hideSettings !== 1 ? (
                   <FlashingButton variant="outlined" sx={{ml: "1vw"}} onClick={retryConnection !== 2 ? () => { webgazer.end(); toCalibration(file, parsedText); } : null}>
-                    {retryConnection !== 2 ? "Start calibration" : "Check connection"}
+                    {retryConnection <= 0 ? "Start calibration" : "Check connection"}
                   </FlashingButton>
                 ) : (
                   <Button variant="contained" sx={{ml: "1vw"}} onClick={() => {webgazer.end(); toCalibration(file,parsedText);}}>
@@ -1064,7 +1240,7 @@ useEffect(() => {
           </Container>
 
           {/* Text layout settings */}
-          { readingMode !== 1 ? (
+          { readingMode.current !== 1 ? (
           <Container>
             <Typography variant="h6" sx={{mt: "2vh"}}>Text Layout</Typography>
 
@@ -1080,11 +1256,15 @@ useEffect(() => {
                     fullWidth
                     sx={{ backgroundColor: "#D9D9D9" }}
                   >
-                    {fontOptions.map((font) => (
+                  {fontOptions.map((font, index) =>
+                    font.type === "header" ? (
+                      <ListSubheader key={`header-${index}`}>{font.label}</ListSubheader>
+                    ) : (
                       <MenuItem key={font.value} value={font.value}>
                         {font.label}
                       </MenuItem>
-                    ))}
+                    )
+                  )}
                   </Select>
                 </FormControl>
               </Box>
@@ -1111,7 +1291,7 @@ useEffect(() => {
               </Typography>
             </Container>
 
-            { readingMode !== 2 ? (
+            { readingMode.current !== 2 ? (
             <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <OpacityIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
@@ -1157,7 +1337,7 @@ useEffect(() => {
               </Typography>
             </Container>
 
-            { readingMode !== 2 && readingMode !== 4 ? (
+            { readingMode.current !== 2 && readingMode.current !== 4 ? (
             <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
               <FormatLineSpacingRoundedIcon sx={{fontSize: "30px", mr: "2vw"}}/>
               <Box sx={{ display: "flex", flexDirection: "column", mr: "2vw" }}>
@@ -1218,42 +1398,42 @@ useEffect(() => {
                 <Grid2 container spacing={2} justifyContent="center" width="100%">
                   <Grid2 item xs={4}>
                     <Tooltip title="Monochrome" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* White - default */}
+                      <Button variant="outlined" sx={colourSchemeSelection(1)} onClick={() => handleBackgroundColour(1)}><Box sx={colourSchemeButton("black")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("black")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* White - default */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Green" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(2)} onClick={() => handleBackgroundColour(2)}><Box sx={colourSchemeButton("rgb(6,118,3)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(6,118,3)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Green */}
+                      <Button variant="outlined" sx={colourSchemeSelection(2)} onClick={() => handleBackgroundColour(2)}><Box sx={colourSchemeButton("rgb(6,118,3)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(6,118,3)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Green */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Blue" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(3)} onClick={() => handleBackgroundColour(3)}><Box sx={colourSchemeButton("rgb(0,123,229)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(0,123,229)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Blue */}
+                      <Button variant="outlined" sx={colourSchemeSelection(3)} onClick={() => handleBackgroundColour(3)}><Box sx={colourSchemeButton("rgb(0,123,229)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(0,123,229)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Blue */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Red" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(4)} onClick={() => handleBackgroundColour(4)}><Box sx={colourSchemeButton("rgb(211,46,63)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(211,46,63)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Red */}
+                      <Button variant="outlined" sx={colourSchemeSelection(4)} onClick={() => handleBackgroundColour(4)}><Box sx={colourSchemeButton("rgb(211,46,63)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(211,46,63)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Red */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Brown" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(5)} onClick={() => handleBackgroundColour(5)}><Box sx={colourSchemeButton("rgb(78,53,22)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(78,53,22)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Brown */}
+                      <Button variant="outlined" sx={colourSchemeSelection(5)} onClick={() => handleBackgroundColour(5)}><Box sx={colourSchemeButton("rgb(78,53,22)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(78,53,22)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Brown */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Yellow" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(6)} onClick={() => handleBackgroundColour(6)}><Box sx={colourSchemeButton("rgb(251,192,45)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(251,192,45)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Yellow */}
+                      <Button variant="outlined" sx={colourSchemeSelection(6)} onClick={() => handleBackgroundColour(6)}><Box sx={colourSchemeButton("rgb(251,192,45)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(251,192,45)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Yellow */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Orange" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(7)} onClick={() => handleBackgroundColour(7)}><Box sx={colourSchemeButton("rgb(245,124,0)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(245,124,0)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Orange */}
+                      <Button variant="outlined" sx={colourSchemeSelection(7)} onClick={() => handleBackgroundColour(7)}><Box sx={colourSchemeButton("rgb(245,124,0)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(245,124,0)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Orange */}
                     </Tooltip>
                   </Grid2>
                   <Grid2 item xs={4}>
                     <Tooltip title="Purple" placement="top">
-                      <Button variant="outlined" sx={colourSchemeSelection(8)} onClick={() => handleBackgroundColour(8)}><Box sx={colourSchemeButton("rgb(142,36,170)")}>{readingMode !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(142,36,170)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Purple */}
+                      <Button variant="outlined" sx={colourSchemeSelection(8)} onClick={() => handleBackgroundColour(8)}><Box sx={colourSchemeButton("rgb(142,36,170)")}>{readingMode.current !== 1 ? <SubjectIcon sx={colourSchemeIconColour("rgb(142,36,170)")}></SubjectIcon> : <ArticleTwoToneIcon sx={{color: "white"}}></ArticleTwoToneIcon>}</Box></Button> {/* Purple */}
                     </Tooltip>
                   </Grid2>
                 </Grid2>

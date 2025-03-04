@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Typography, Container, Box, Divider } from "@mui/material";
+import Developers from "./Developers";
 
 const AboutUs = () => {
   useEffect(() => {
@@ -68,7 +69,15 @@ const AboutUs = () => {
       </Box>
 
       <Divider />
-
+      
+      <Box sx={{ marginY: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Meet the Team
+        </Typography>
+        <Developers />
+      </Box>
+      
+      <Divider />
       {/* Contact Us Section */}
       <Box sx={{ marginY: 4 }}>
         <Typography variant="h5" gutterBottom>

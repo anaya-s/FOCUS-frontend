@@ -8,13 +8,38 @@ import { Typography, Box, CircularProgress } from "@mui/material";
 let startRSVP, sendReadingProgressRSVP;
 
 export function RSVP({ textSettings }) {
-  const [fontStyle, fontSize, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed, wordCount, pauseStatus, resetStatus, documentName, parsedText] = textSettings.current;
+  const [fontStyle, fontSize, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed, wordCount, readingSpeed, isOnBreak, pauseStatus, resetStatus, documentName, parsedText] = textSettings.current;
 
   const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
   const [fileName, setFileName] = useState("");
   const isNotValid = useRef(false);
   const resetResolver = useRef(null);
+
+  /* Used to calculate words per minute (reading speed) */
+  const wordsRead = useRef(0); // Stores number of words read
+
+  const startTime = useRef(Date.now());
+
+  useEffect(() => {
+    let calculateSpeedTimer;
+
+    if(isOnBreak.current === false)
+    {
+      calculateSpeedTimer = setInterval(() => {
+        readingSpeed.current = (wordsRead.current / ((Date.now() - startTime.current) / 1000 / 60));
+        // console.log("Words read: ", wordsRead.current, "Time elapsed: ", (Date.now() - startTime.current) / 1000, "WPM: ", readingSpeed.current);
+      }, 1000);
+    }
+    else
+      clearInterval(calculateSpeedTimer);
+
+    // On unmount, clear the interval and reset speed
+    return () => {
+       clearInterval(calculateSpeedTimer);
+       readingSpeed.current = 0;
+    }
+  }, [isOnBreak.current]);
 
   useEffect(() => {
     if (parsedText.current) {
@@ -61,6 +86,7 @@ export function RSVP({ textSettings }) {
         var currentWordIndex = currentWord;
         while(currentWordIndex < words.length) {
             currentWordIndex = currentWordIndex + wordCount.current;
+            wordsRead.current = wordsRead.current + wordCount.current;
             if (pauseStatus.current) {
                 break;
             }

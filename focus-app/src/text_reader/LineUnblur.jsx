@@ -24,6 +24,8 @@ export function LineUnblur({ textSettings }) {
     autoScroll,
     autoScrollSpeed,
     unblurredLinesRef,
+    readingSpeed,
+    isOnBreak,
     pauseStatus,
     resetStatus,
     documentName,
@@ -34,17 +36,51 @@ export function LineUnblur({ textSettings }) {
   const [currentLine, setCurrentLine] = useState(0); // Stores index of current line
   const [fileName, setFileName] = useState("");
   const [hoveredLine, setHoveredLine] = useState(null); // Stores index of hovered line
+  const [wordCounts, setWordCounts] = useState([]); // Stores the number of words for each line
 
   const isNotValid = useRef(false);
 
   const typographyRef = useRef(null); // Create a ref for the Typography component
   const lineRefs = useRef([]); // Create refs for each line
 
+  /* Used to calculate words per minute (reading speed) */
+  const wordsRead = useRef(0); // Stores number of words read
+
+  const startTime = useRef(Date.now());
+
+  const [prevLineRead, setPrevLineRead] = useState(0); // Used to only update wordsRead when the line changes
+
+  useEffect(() => {
+    let calculateSpeedTimer;
+
+    if(isOnBreak.current === false)
+    {
+      calculateSpeedTimer = setInterval(() => {
+        readingSpeed.current = (wordsRead.current / ((Date.now() - startTime.current) / 1000 / 60));
+        // console.log("Words read: ", wordsRead.current, "Time elapsed: ", (Date.now() - startTime.current) / 1000, "WPM: ", readingSpeed.current);
+      }, 1000);
+    }
+    else
+      clearInterval(calculateSpeedTimer);
+
+    // On unmount, clear the interval and reset speed
+    return () => {
+       clearInterval(calculateSpeedTimer);
+       readingSpeed.current = 0;
+    }
+  }, [isOnBreak.current]);
+
   useEffect(() => {
     if (parsedText.current) {
       startLineUnblur(documentName.current, parsedText.current);
     }
   }, [parsedText]);
+
+  useEffect(() => {
+    // Update word counts whenever textArray changes
+    const counts = textArray.map(line => line.length);
+    setWordCounts(counts);
+  }, [textArray]);
 
   sendReadingProgressLineUnblur = async () => {
     const bodyContents = { fileName: fileName, lineNumber: currentLine };
@@ -83,6 +119,11 @@ export function LineUnblur({ textSettings }) {
         if (y >= rect.top && y <= rect.bottom) {
           if(i % unblurredLinesRef.current === 0)
             setHoveredLine(i);
+            if(i !== prevLineRead)
+            {
+              wordsRead.current = wordsRead.current + wordCounts[i];
+              setPrevLineRead(i);
+            }
             break;
         }
       }
