@@ -47,16 +47,6 @@ function Register() {
 
         let data = await response.json();
 
- QuestionnaireAttempt
-      let data = await response.json();
-  
-      if (response.status === 201) {
-        alert("Account successfully created!");
-        //toOnboarding();   
-        toLogin();
-      } else {
-        alert("Unsuccessful transaction");
-=======
         if (response.status === 201) {
           setShowAlert(1);
         } else {
@@ -65,7 +55,6 @@ function Register() {
       } catch(error) {
         console.error("Fetch failed:", error);
         setShowAlert(0);
- main
       }
 
   };
