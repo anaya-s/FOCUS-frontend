@@ -167,11 +167,11 @@ export default function ReadingTime() {
   }, [filter, updateYAxis.current]);
 
   const chartData = {
-    labels: dataLabels,
+    labels: [0, 1, 2, 3, 4],
     datasets: [
       {
         label: yAxisScale === 59 ? "Focus time (minutes)" : "Focus time (seconds)",
-        data: dataFocusTimes,
+        data: [3.4, 1.4, 1.4, 6.5, 3.4],
         borderWidth: 1,
         backgroundColor: "rgba(6, 118, 13, 0.2)",
         borderColor: "rgba(6, 118, 13, 1)",
@@ -182,7 +182,7 @@ export default function ReadingTime() {
       },
       {
         label: yAxisScale === 59 ? "Total reading time (minutes)" : "Total reading time (seconds)",
-        data: dataTotalReadingTimes,
+        data: [0.4, 0.6, 0.2, 0.5, 1],
         borderWidth: 1,
         backgroundColor: "rgba(220, 0, 78, 0.2)",
         borderColor: "black",
@@ -269,24 +269,17 @@ export default function ReadingTime() {
 
 
   return (
-    <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column"}}>
-      <Container sx={{height: "30vh", display: "flex", alignItems: "center", justifyContent: "center"}}>
+    <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw"}}>
+      <Typography variant="h4" sx={{textAlign: "center", mt: "2vh"}}>Reading Times</Typography>
+      <Container sx={{ width: "40vw", display: "flex", alignItems: "center", justifyContent: "center"}}>
         {validConnection !== 2 ?
-          loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions}/> 
+          loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions}/>
           :
           <Container>
             <Typography variant="h5" sx={{textAlign: "center", mt: "5vh"}}>Connection failed</Typography>
             <Button variant="contained" onClick={() => handleFilter(filterBeforeDisconnect)} sx={{mt: "1vh"}}>Retry</Button>
           </Container>
         }
-      </Container>
-      <Divider />
-      <Container sx={{display: "flex", justifyContent: "space-evenly", flexDirection: "row", mt: "2vh", mb: "2vh"}}>
-      <Button onClick={() => changeYAxis()} variant="outlined" disabled={validConnection === 2 || loading}>{yAxisScale === 59 ? "Switch to seconds" : "Switch to minutes"}</Button>
-      <Divider orientation="vertical" flexItem />
-      <Button onClick={() => handleFilter("user")} variant={filter === "user" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>User</Button>
-      <Button onClick={() => handleFilter("session")} variant={filter === "session" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>Session</Button>
-      <Button onClick={() => handleFilter("video")} variant={filter === "video" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}>Video</Button>
       </Container>
     </Box>
   );
