@@ -3,6 +3,14 @@ import { Stepper, Step, StepLabel, Box, Button } from "@mui/material";
 import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 import Questionnaire from "./Questionnaire.jsx"; // Import the questionnaire component
 import CalibrationPage from "./CalibrationOnboarding.jsx"; // Import the calibration component
+import PageOne from "./pages/PageOne";
+import PageTwo from "./pages/PageTwo";
+import PageThree from "./pages/PageThree";
+import PageFour from "./pages/PageFour";
+import PageFive from "./pages/PageFive";
+import PageSix from "./pages/PageSix";
+import config from "../config";
+import PdfUploadPage from "../document_drive/drive";
 
 const steps = [
   "Question 1",
@@ -19,8 +27,8 @@ const Onboarding = () => {
   const navigate = useNavigate(); // Initialize useNavigate
 
   const handleNext = () => {
-    if (activeStep === steps.length - 1) {
-      navigate("/pdfUpload"); // Navigate to the PDF upload page after the calibration step
+    if (activeStep === steps.length -1) {
+      navigate("/drive"); // Navigate to the PDF upload page after the calibration step
     } else {
       setActiveStep((prevStep) => prevStep + 1);
     }
@@ -31,10 +39,19 @@ const Onboarding = () => {
   };
 
   const renderStepContent = (step) => {
-    if (step < 6) {
-      return <Questionnaire questionNumber={step + 1} />;
-    }
     switch (step) {
+      case 0:
+        return <PageOne />;
+      case 1:
+        return <PageTwo />;
+      case 2:
+        return <PageThree />;
+      case 3:
+        return <PageFour />;
+      case 4:
+        return <PageFive />;
+      case 5:
+        return <PageSix />;
       case 6:
         return <CalibrationPage />;
       default:
