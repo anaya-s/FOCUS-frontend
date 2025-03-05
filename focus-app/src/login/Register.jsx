@@ -28,7 +28,6 @@ function Register() {
   const [password, setPassword] = useState("");
 
   const { toLogin } = useNavigation();
-  const { toOnboarding } = useNavigation();
 
   const handleCreateUser = async (e) => {
       e.preventDefault();
