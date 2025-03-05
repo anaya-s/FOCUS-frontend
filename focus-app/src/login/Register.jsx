@@ -49,6 +49,7 @@ function Register() {
 
         if (response.status === 201) {
           setShowAlert(1);
+          toLogin()
         } else {
           setShowAlert(0);
         }
