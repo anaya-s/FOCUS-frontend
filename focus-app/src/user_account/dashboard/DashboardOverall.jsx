@@ -33,9 +33,9 @@ const DashboardOverall = () => {
         {/* <Grid item xs={12} sm={12} md={12}>
           <BlinkRate />
         </Grid> */}
-        <Grid item xs={12} sm={12} md={12}>
+        {/* <Grid item xs={12} sm={12} md={12}>
           <ReadingSpeed />
-        </Grid>
+        </Grid> */}
       </Grid>
     </div>
   )
