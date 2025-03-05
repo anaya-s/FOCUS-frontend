@@ -4,6 +4,7 @@ import Paper from "@mui/material/Paper";
 import { Typography } from '@mui/material';
 import BlinkRate from './BlinkRate';
 import ReadingTime from './ReadingTime';
+import ReadingSpeed from './ReadingSpeed';
 
 const dashboardStyle = {
   display: 'flex',
@@ -13,7 +14,6 @@ const dashboardStyle = {
   maxWidth: '1000px', 
   textAlign: 'center'
 };
-
 
 const DashboardOverall = () => {
 
@@ -30,12 +30,12 @@ const DashboardOverall = () => {
         <Grid item xs={24} sm={12} md={12}>
           <ReadingTime />
         </Grid>
-        <Grid item xs={12} sm={12} md={12}>
+        {/* <Grid item xs={12} sm={12} md={12}>
           <BlinkRate />
-        </Grid>
-        <Grid item xs={12} sm={12} md={12}>
-          <Paper style={{ padding: "16px" }}>Chart 3</Paper>
-        </Grid>
+        </Grid> */}
+        {/* <Grid item xs={12} sm={12} md={12}>
+          <ReadingSpeed />
+        </Grid> */}
       </Grid>
     </div>
   )
