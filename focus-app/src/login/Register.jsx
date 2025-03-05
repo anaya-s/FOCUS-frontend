@@ -32,7 +32,7 @@ function Register() {
 
   const handleCreateUser = async (e) => {
       e.preventDefault();
-
+      try {
         let response = await fetch(`${baseURL}/api/user/register/`, {
           method: "POST",
           headers: {
@@ -46,15 +46,18 @@ function Register() {
         });
 
         let data = await response.json();
-  
+
         if (response.status === 201) {
-          alert("Account successfully created!");
-          //toOnboarding();   
-          toLogin();
+          setShowAlert(1);
         } else {
-          alert("Unsuccessful transaction");
+          setShowAlert(0);
         }
-    };
+      } catch(error) {
+        console.error("Fetch failed:", error);
+        setShowAlert(0);
+      }
+
+  };
 
   return (
     <Box style={pageStyle}>
