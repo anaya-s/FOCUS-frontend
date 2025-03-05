@@ -1,16 +1,29 @@
 import React, { useState } from "react";
 import { Stepper, Step, StepLabel, Box, Button } from "@mui/material";
+import { useNavigate } from "react-router-dom"; // Import useNavigate for navigation
 import Questionnaire from "./Questionnaire.jsx"; // Import the questionnaire component
 import CalibrationPage from "./CalibrationOnboarding.jsx"; // Import the calibration component
-import PdfUploadPage from "./PdfUpload.jsx"; // Existing PDF upload page
 
-const steps = ["Questionnaire", "Calibration", "PDF Upload"];
+const steps = [
+  "Question 1",
+  "Question 2",
+  "Question 3",
+  "Question 4",
+  "Question 5",
+  "Question 6",
+  "Calibration"
+];
 
 const Onboarding = () => {
   const [activeStep, setActiveStep] = useState(0);
+  const navigate = useNavigate(); // Initialize useNavigate
 
   const handleNext = () => {
-    setActiveStep((prevStep) => prevStep + 1);
+    if (activeStep === steps.length - 1) {
+      navigate("/pdfUpload"); // Navigate to the PDF upload page after the calibration step
+    } else {
+      setActiveStep((prevStep) => prevStep + 1);
+    }
   };
 
   const handleBack = () => {
@@ -18,13 +31,12 @@ const Onboarding = () => {
   };
 
   const renderStepContent = (step) => {
+    if (step < 6) {
+      return <Questionnaire questionNumber={step + 1} />;
+    }
     switch (step) {
-      case 0:
-        return <Questionnaire />;
-      case 1:
+      case 6:
         return <CalibrationPage />;
-      case 2:
-        return <PdfUploadPage />;
       default:
         return <div>Unknown Step</div>;
     }
@@ -70,7 +82,6 @@ const Onboarding = () => {
           onClick={handleNext}
           variant="contained"
           color="primary"
-          disabled={activeStep === steps.length - 1}
         >
           {activeStep === steps.length - 1 ? "Finish" : "Next"}
         </Button>
