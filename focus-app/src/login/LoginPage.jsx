@@ -54,7 +54,7 @@ function Login() {
           }}
         >
           <form>
-            <Button
+            {/*TODO <Button
               //onClick={} // Link with Google OAuth
               fullWidth
               variant="contained"
@@ -68,7 +68,7 @@ function Login() {
               <img src="./logo/google_logo.svg" style={{ marginRight: 10 }} />
               Sign in with Google
             </Button>
-            <Divider>OR</Divider>
+            <Divider>OR</Divider> */}
             <Typography textAlign={"left"} marginLeft={0.5}>
               Email
             </Typography>

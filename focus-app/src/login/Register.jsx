@@ -79,7 +79,7 @@ function Register() {
           }}
         >
           <form>
-            <Button
+            {/* TODO <Button
               //onClick={} // Link with Google OAuth
               fullWidth
               variant="contained"
@@ -93,7 +93,7 @@ function Register() {
               <img src="./logo/google_logo.svg" style={{ marginRight: 10 }} />
               Sign up with Google
             </Button>
-            <Divider>OR</Divider>
+            <Divider>OR</Divider> */}
             {/* <Typography textAlign={"left"} marginLeft={0.5}>
               Name
             </Typography>
