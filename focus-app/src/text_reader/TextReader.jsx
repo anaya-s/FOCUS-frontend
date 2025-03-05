@@ -274,7 +274,6 @@ function TextReaderPage() {
     Swal.fire({
 
       title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Break suggested</span>',
-QuestionnaireAttempt
         html: `
         <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
           <img src="../../public/images/homepage/felix_done.png" alt="Felix" style="width: 150px; height: auto">
@@ -285,9 +284,6 @@ QuestionnaireAttempt
           </div>
         </div>
       `,
-=======
-      html: getBreakAlertContent(),
- main
       icon: "info",
       confirmButtonText: "Continue", // maybe also add "Return to drive" button
       confirmButtonColor: "#06760D",

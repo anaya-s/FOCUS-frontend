@@ -111,7 +111,7 @@ const PageThree = ({ updateData }) => {
           </div>
           <div style={speechBubbleStyle}>
             <Typography variant="h6" component="p" style={{ margin: 0 }}>
-              What's your average screen time?
+              What's your daily average sleep time (hours)?
             </Typography>
             <div style={speechBubbleArrowStyle}></div>
             <div style={speechBubbleArrowInnerStyle}></div>
