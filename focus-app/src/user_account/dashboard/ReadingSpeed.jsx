@@ -223,7 +223,7 @@ export default function ReadingSpeed() {
 
   return (
     <Box>
-        <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw"}}>
+        <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw", height: "42vh"}}>
           <Typography variant="h4" sx={{textAlign: "center", mt: "2vh"}}>Reading Speed</Typography>
           <Container sx={{ width: "40vw", display: "flex", alignItems: "center", justifyContent: "center"}}>
                   {validConnection !== 2 ?

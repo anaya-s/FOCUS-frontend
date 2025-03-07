@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Bar } from "react-chartjs-2";
 import zoomPlugin from 'chartjs-plugin-zoom';
-import { Box, Button, CircularProgress, Divider, Alert, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, Divider, Alert, Typography, Tooltip as ToolTip } from "@mui/material";
 import { reauthenticatingFetch } from '../../utils/api';
 import config from '../../config'
 const baseURL = config.apiUrl
@@ -17,6 +17,9 @@ import {
 } from "chart.js";
 import { Container } from "@mui/system";
 
+import HourglassDisabledRoundedIcon from '@mui/icons-material/HourglassDisabledRounded';
+import HourglassEmptyRoundedIcon from '@mui/icons-material/HourglassEmptyRounded';
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -26,7 +29,7 @@ ChartJS.register(
   Legend,
   zoomPlugin
 );
-export default function ReadingTime() {
+export default function ReadingTime({filterInput}) {
   const [loading, setLoading] = useState(true);
   const [dataLabels, setdataLabels] = useState([]);
   const [dataTotalReadingTimes, setdataTotalReadingTimes] = useState([]);
@@ -45,9 +48,17 @@ export default function ReadingTime() {
     "session" - display data per session
     "video" - display data per video
   */
-  const [filter, setFilter] = useState("user");
+  const [filter, setFilter] = useState(filterInput.current);
   const [filterBeforeDisconnect, setFilterBeforeDisconnect] = useState("user");
   const updateYAxis = useRef(false);
+
+  useEffect(() => {
+    if(filter !== filterInput.current)
+    {
+      console.log("second setting: ", filterInput.current);
+      setFilter(filterInput.current);
+    }
+  }, [filterInput.current]);
 
   /* Toggle for setting y-axis scale to seconds or minutes 
   - 59 - minutes
@@ -68,9 +79,15 @@ export default function ReadingTime() {
     var dataTotalReadingTimes = null;
 
     if(filter == "user")
+    {
       datamap = data.sessions;
+      console.log(datamap);
+    }
     else if(filter == "session")
+    {
       datamap = data.videos;
+      console.log(datamap);
+    }
     else
     {
       const reading_times = data.cumulative_reading_time;
@@ -127,7 +144,6 @@ export default function ReadingTime() {
       setdataTotalReadingTimes([]);
       setdataFocusTimes([]);
       setFilter(newFilter);
-      // console.log(`Filter set to ${newFilter}`);
     }
   };
 
@@ -135,9 +151,10 @@ export default function ReadingTime() {
     const fetchData = async () => {
       try {
         setValidConnection(1);
+        setLoading(true);
         const result = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-times/?display=${filter}`);
 
-        // console.log(filter, "==>", result);
+        console.log(filter, "==>", result);
 
         const { dataLabels, dataTotalReadingTimes, dataFocusTimes } = processData(result);
         setdataLabels(dataLabels);
@@ -167,11 +184,11 @@ export default function ReadingTime() {
   }, [filter, updateYAxis.current]);
 
   const chartData = {
-    labels: [0, 1, 2, 3, 4],
+    labels: dataLabels,
     datasets: [
       {
         label: yAxisScale === 59 ? "Focus time (minutes)" : "Focus time (seconds)",
-        data: [3.4, 1.4, 1.4, 6.5, 3.4],
+        data: dataFocusTimes,
         borderWidth: 1,
         backgroundColor: "rgba(6, 118, 13, 0.2)",
         borderColor: "rgba(6, 118, 13, 1)",
@@ -182,7 +199,7 @@ export default function ReadingTime() {
       },
       {
         label: yAxisScale === 59 ? "Total reading time (minutes)" : "Total reading time (seconds)",
-        data: [0.4, 0.6, 0.2, 0.5, 1],
+        data: dataTotalReadingTimes,
         borderWidth: 1,
         backgroundColor: "rgba(220, 0, 78, 0.2)",
         borderColor: "black",
@@ -194,7 +211,6 @@ export default function ReadingTime() {
     ],
   };
   
-
   const chartOptions = {
     responsive: true,
     plugins: {
@@ -204,11 +220,14 @@ export default function ReadingTime() {
       },
       title: {
         display: true,
-        text: filter === "user"
+        text: !loading ? 
+        filter === "user"
           ? "Total Reading and Focus Times across all sessions"
           : filter === "session"
           ? "Total Reading and Focus Times in current session"
-          : "Total Reading and Focus Times in latest video",
+          : "Total Reading and Focus Times in latest video"
+        :
+        "",
       },
       tooltip: {
         callbacks: {
@@ -269,11 +288,12 @@ export default function ReadingTime() {
 
 
   return (
-    <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw"}}>
-      <Typography variant="h4" sx={{textAlign: "center", mt: "2vh"}}>Reading Times</Typography>
+    <div style={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw", height: "42vh"}}>
+      <Button onClick={() => changeYAxis()} sx={{display: "absolute", left: "1vw", top: "2vh", width: "10%", marginBottom: 0, padding: 0}} disabled={validConnection === 2 || loading}>{yAxisScale === 59 ? <ToolTip title={"Show in seconds"} placement="right"><HourglassDisabledRoundedIcon/></ToolTip> : <ToolTip title={"Show in minutes"} placement="left"><HourglassEmptyRoundedIcon/></ToolTip>}</Button>
+      <Typography variant="h4" sx={{textAlign: "center"}}>Reading Times</Typography>
       <Container sx={{ width: "40vw", display: "flex", alignItems: "center", justifyContent: "center"}}>
         {validConnection !== 2 ?
-          loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions}/>
+          loading ? <CircularProgress sx={{mt: "10vh"}}/> : <Bar data={chartData} options={chartOptions}/> 
           :
           <Container>
             <Typography variant="h5" sx={{textAlign: "center", mt: "5vh"}}>Connection failed</Typography>
@@ -281,6 +301,6 @@ export default function ReadingTime() {
           </Container>
         }
       </Container>
-    </Box>
+    </div>
   );
 }

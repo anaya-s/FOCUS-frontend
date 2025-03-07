@@ -58,7 +58,7 @@ export default function BlinkRate() {
     datasets: [
       {
         label: "Blinks",
-        data: [43, 109, 60, 50, 20],
+        data: [20, 21, 14, 19, 25],
         backgroundColor: "rgba(6, 118, 13, 0.2)",
         borderColor: "rgba(6, 118, 13, 1)",
         borderWidth: 1,
@@ -68,7 +68,7 @@ export default function BlinkRate() {
 
   return (
       <Box>
-        <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw"}}>
+        <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw", height: "42vh"}}>
           <Typography variant="h4" sx={{textAlign: "center", mt: "2vh"}}>Blink Rate</Typography>
           <Line data={data} options={options} />
         </Box>
