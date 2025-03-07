@@ -8,10 +8,10 @@ import config from '../../config'
 
 export default function ReadingSpeed() {
   const [loading, setLoading] = useState(true);
-  const [saccades, setSaccades] = useState(150);
-  const [fixations, setFixations] = useState(100);
-  const [totalAverageWPM, setTotalAverageWPM] = useState(50);
-  const [totalWordsRead, setTotalWordsRead] = useState(1000);
+  const [saccades, setSaccades] = useState(2870);
+  const [fixations, setFixations] = useState(2989);
+  const [totalAverageWPM, setTotalAverageWPM] = useState(178);
+  const [totalWordsRead, setTotalWordsRead] = useState(3341);
 
 //   useEffect(() => {
 //     const fetchData = async () => {
@@ -35,40 +35,43 @@ export default function ReadingSpeed() {
 
   return (
     <Box>
-      <Grid container rowSpacing={2} sx={{ mt: "2vh", mb: "2vh" }}>
-        <Grid size={4.01} sx={{ display: "flex", justifyContent: "center" }}>
-          <Card sx={{ width:160, height: 150, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <CardContent>
-              <Typography variant="h6">Total Average WPM</Typography>
-              <Typography variant="h5" sx={{ color: "green" }}>{totalAverageWPM}</Typography>
-            </CardContent>
-          </Card>
+      <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw", height: "42vh", mr: "1.5vw"}}>
+      <Typography variant="h4" sx={{textAlign: "center", mt: "2vh"}}>Eye Metrics</Typography>
+        <Grid container columnSpacing={4} rowSpacing={2} sx={{ mt: "2vh", mb: "2vh", ml: "10vw"}}>
+          <Grid size={4.01} sx={{ display: "flex", justifyContent: "center" }}>
+            <Card sx={{ width:200, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CardContent>
+                <Typography variant="h6">Total Average WPM</Typography>
+                <Typography variant="h5" sx={{ color: "green" }}>{totalAverageWPM}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={4.01} sx={{ display: "flex", justifyContent: "center" }}>
+            <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CardContent>
+                <Typography variant="h6">Total Words Read</Typography>
+                <Typography variant="h5">{totalWordsRead}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={4.01} sx={{ display: "flex", justifyContent: "center" }}>
+            <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CardContent>
+                <Typography variant="h6">Fixations</Typography>
+                <Typography variant="h5">{fixations}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={4.01} sx={{ display: "flex", justifyContent: "center" }}>
+            <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <CardContent>
+                <Typography variant="h6">Saccades</Typography>
+                <Typography variant="h5">{saccades}</Typography>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
-        <Grid size={4.01} sx={{ display: "flex", justifyContent: "center" }}>
-          <Card sx={{ width:150, height: 150, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <CardContent>
-              <Typography variant="h6">Total Words Read</Typography>
-              <Typography variant="h5">{totalWordsRead}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={4.01} sx={{ display: "flex", justifyContent: "center" }}>
-          <Card sx={{ width:150, height: 150, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <CardContent>
-              <Typography variant="h6">Fixations</Typography>
-              <Typography variant="h5">{fixations}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid size={4.01} sx={{ display: "flex", justifyContent: "center" }}>
-          <Card sx={{ width:150, height: 150, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <CardContent>
-              <Typography variant="h6">Saccades</Typography>
-              <Typography variant="h5">{saccades}</Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      </Box>
     </Box>
   );
 }

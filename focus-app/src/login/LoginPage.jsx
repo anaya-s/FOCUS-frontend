@@ -38,7 +38,7 @@ function Login() {
     <Box style={pageStyle}>
       <Container maxWidth="xs">
         <Typography variant="h3" component="h1" gutterBottom>
-          Welcome back👋
+          Welcome back!
         </Typography>
         <Typography variant="h6" component="h1">
           Enter your login details
