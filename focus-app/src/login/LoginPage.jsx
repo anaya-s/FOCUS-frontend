@@ -22,11 +22,16 @@ function Login() {
   const [password, setPassword] = useState("");
 
   let { loginUser } = useContext(AuthContext);
-  const { toReset, toRegister } = useNavigation();
+  const { toReset, toRegister, toOnboarding } = useNavigation();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    loginUser(email, password);
+    const response = await loginUser(email, password);
+    console.log(response);
+    console.log(response.session_id);
+    if (response.session_id === 1) {
+      toOnboarding();
+    }
   };
 
   return (
@@ -49,7 +54,7 @@ function Login() {
           }}
         >
           <form>
-            <Button
+            {/*TODO <Button
               //onClick={} // Link with Google OAuth
               fullWidth
               variant="contained"
@@ -63,7 +68,7 @@ function Login() {
               <img src="./logo/google_logo.svg" style={{ marginRight: 10 }} />
               Sign in with Google
             </Button>
-            <Divider>OR</Divider>
+            <Divider>OR</Divider> */}
             <Typography textAlign={"left"} marginLeft={0.5}>
               Email
             </Typography>

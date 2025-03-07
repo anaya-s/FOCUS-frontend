@@ -105,7 +105,7 @@ const CalibrationPage = () => {
           title: '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Fullscreen Mode Required</span>',
           html: `
           <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
-            <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto">
+            <img src="../../public/images/homepage/felix_done.png" alt="Felix" style="width: 150px; height: auto">
             <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
               <p>Please stay in fullscreen mode during calibration to ensure accurate eye tracking.</p>
             </div>
@@ -176,7 +176,7 @@ const CalibrationPage = () => {
         <p style="font-family: Arial, sans-serif; font-size: 18px; color: black; user-select: none">Click on each circle while looking at it until <span style="color: green; font-weight: bold;">filled</span></p>
         <img src="../../public/images/calibration/calibrationPoints.png" alt="Felix" style="width: 35vw">
         <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
-          <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto; margin-top: 50px">
+          <img src="../../public/images/homepage/felix_done.png" alt="Felix" style="width: 150px; height: auto; margin-top: 50px">
           <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
             <p>Please ensure you are in a well-lit environment and there is no glare from light sources.</p>
             <p style="margin-top: 20px;">Aim to position the <span style="color: red;">gaze dot</span> inside each circle with small mouse movements before clicking.</p>

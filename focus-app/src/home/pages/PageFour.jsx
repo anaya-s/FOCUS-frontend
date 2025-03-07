@@ -6,7 +6,7 @@ const pageStyle = {
   display: "flex",
   alignItems: "center", 
   justifyContent: "center", 
-  height: "100vh",
+  height: "75vh",
   marginRight: "150px",
   padding: "0 20px", 
 };
@@ -44,7 +44,7 @@ const PageFour = () => {
     <div style={pageStyle}>
       <div style={leftColumnStyle}>
         <img
-          src="/images/homepage/felix.png" 
+          src="/images/homepage/felix_done.png" 
           alt="Felix the productivity robot"
           style={imageStyle}
         />

@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
 import LinearProgress from "@mui/material/LinearProgress";
 import Box from "@mui/material/Box";
 
@@ -89,7 +90,16 @@ const progressBarStyle = {
   marginTop: "100px",
 };
 
-const PageOne = () => {
+const PageOne = ({ updateData }) => {
+  const [name, setName] = useState("");
+
+  const handleSubmit = () => {
+    // Update the data in the parent component
+    updateData({ name });
+    // Proceed to the next step (if applicable)
+    console.log("User's name:", name);
+  };
+
   return (
     <Box style={pageStyle}>
       <div style={contentStyle}>
@@ -97,32 +107,37 @@ const PageOne = () => {
         <div style={topRowStyle}>
           <div style={imageContainerStyle}>
             <img
-              src="/images/homepage/felix.png"
+              src="/images/homepage/felix_done.png"
               alt="Felix the productivity robot"
               style={imageStyle}
             />
           </div>
           <div style={speechBubbleStyle}>
             <Typography variant="h6" component="p" style={{ margin: 0 }}>
-              What's your average screen time?
+              What's your name?
             </Typography>
             <div style={speechBubbleArrowStyle}></div>
             <div style={speechBubbleArrowInnerStyle}></div>
           </div>
         </div>
 
-        {/* Buttons stacked vertically */}
-        <Button variant="contained" style={buttonStyle}>
-          1-3 hours
-        </Button>
-        <Button variant="contained" style={buttonStyle}>
-          3-6 hours
-        </Button>
-        <Button variant="contained" style={buttonStyle}>
-          6-9 hours
-        </Button>
-        <Button variant="contained" style={buttonStyle}>
-          9+ hours
+        {/* Input field for name */}
+        <TextField
+          label="Your Name"
+          variant="outlined"
+          fullWidth
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          margin="normal"
+        />
+
+        {/* Submit button */}
+        <Button
+          variant="contained"
+          style={buttonStyle}
+          onClick={handleSubmit}
+        >
+          Submit
         </Button>
       </div>
       

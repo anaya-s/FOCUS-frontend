@@ -6,7 +6,7 @@ const pageStyle = {
   display: "flex",
   alignItems: "center", 
   justifyContent: "center", 
-  height: "100vh",
+  height: "75vh",
   marginLeft: "120px",    
   marginRight: "30px",
   padding: "0 20px", 
