@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }) => {
     } else {
       alert("Credentials do not match");
     }
+    return data;
   };
 
   let logoutUser = useCallback(() => {

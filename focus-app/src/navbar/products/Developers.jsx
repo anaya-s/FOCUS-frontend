@@ -32,55 +32,72 @@ const DeveloperCard = ({ name, image, role, linkedin }) => {
 
 export default function Developers() {
   return (
-    <Box display="flex" justifyContent="center" gap={4} flexWrap="wrap">
-      <DeveloperCard 
-        name="Davide" 
-        image="/images/aboutus/Davide.jpg"
-        role="Project Supervisor"
-        linkedin="https://www.linkedin.com/in/davide-piaggio-90a99912b/"
-      />
-      <DeveloperCard
-        name="Wanzi"
-        role="Project Advisor"
-        linkedin=""
-      />
-      <DeveloperCard
-        name="Brandon" 
-        image="/images/aboutus/Brandon.jpeg"
-        role="Developer"
-        linkedin="https://www.linkedin.com/in/brandon-hong-5726b5189/"
-      />
-      <DeveloperCard 
-        name="Mahiethan" 
-        image="/images/aboutus/Mahiethan.jpg" 
-        role="Developer"
-        linkedin="https://www.linkedin.com/in/mahiethan-nitharsan-421b14235/"
-      />
-      <DeveloperCard 
-        name="Anaya" 
-        image="/images/aboutus/Anaya.png" 
-        role="Developer"
-        linkedin="https://www.linkedin.com/in/anaya-shah-933a46203/"
-      />
-      <DeveloperCard 
-        name="Lewis" 
-        image="/images/aboutus/Lewis.png" 
-        role="Developer"
-        linkedin="https://www.linkedin.com/in/lewis-arnold1/"
-      />
-      <DeveloperCard 
-        name="Soniya" 
-        image="/images/aboutus/Soniya.jpg"
-        role="Developer"
-        linkedin="https://www.linkedin.com/in/soniyaaryal/"
-      />
-      <DeveloperCard 
-        name="Zakariya" 
-        image="/images/aboutus/Zak.png" 
-        role="Developer"
-        linkedin="https://www.linkedin.com/in/zakariya-lilani/"
-      />
-      {/* <DeveloperCard name="Jane Smith" image="/images/aboutus/Waasiq.jpg" /> */}
+    <Box display="flex" flexDirection="column" gap={2} marginLeft='2rem'>
+      {/* Frontend Developers Section */}
+      <Typography variant="h5" fontWeight="bold">Frontend Developers</Typography>
+      <Box display="flex" justifyContent="flex-start" gap={4} flexWrap="wrap">
+        <DeveloperCard
+          name="Brandon Hong" 
+          image="/images/aboutus/Brandon.jpeg"
+          role="Frontend Developer"
+          linkedin="https://www.linkedin.com/in/brandon-hong-5726b5189/"
+        />
+        <DeveloperCard 
+          name="Mahiethan Nitharsan" 
+          image="/images/aboutus/Mahiethan.jpg" 
+          role="Frontend Developer"
+          linkedin="https://www.linkedin.com/in/mahiethan-nitharsan-421b14235/"
+        />
+        <DeveloperCard 
+          name="Anaya Shah" 
+          image="/images/aboutus/Anaya.png" 
+          role="Frontend Developer"
+          linkedin="https://www.linkedin.com/in/anaya-shah-933a46203/"
+        />
+      </Box>
+
+      {/* Backend Developers Section */}
+      <Typography variant="h5" fontWeight="bold">Backend Developers</Typography>
+      <Box display="flex" justifyContent="flex-start" gap={4} flexWrap="wrap">
+        <DeveloperCard 
+          name="Lewis Arnold" 
+          image="/images/aboutus/Lewis.png" 
+          role="Backend Developer"
+          linkedin="https://www.linkedin.com/in/lewis-arnold1/"
+        />
+        <DeveloperCard 
+          name="Soniya Aryal" 
+          image="/images/aboutus/Soniya.jpg"
+          role="Backend Developer"
+          linkedin="https://www.linkedin.com/in/soniyaaryal/"
+        />
+        <DeveloperCard 
+          name="Zakariya Lilani" 
+          image="/images/aboutus/Zak.png" 
+          role="Backend Developer"
+          linkedin="https://www.linkedin.com/in/zakariya-lilani/"
+        />
+        <DeveloperCard
+          name="Waasiq"
+          role="Backend Developer"
+        />
+      </Box>
+
+      {/* Supervisors & Advisors Section */}
+      <Typography variant="h5" fontWeight="bold">Supervisors & Advisors</Typography>
+      <Box display="flex" justifyContent="flex-start" gap={4} flexWrap="wrap">
+        <DeveloperCard 
+          name="Davide Piaggio" 
+          image="/images/aboutus/Davide.jpg"
+          role="Project Supervisor"
+          linkedin="https://www.linkedin.com/in/davide-piaggio-90a99912b/"
+        />
+        <DeveloperCard
+          name="Wanzi Su"
+          role="Project Advisor"
+          image="/images/aboutus/wanzi.png"
+        />
+      </Box>
     </Box>
   );
 }
