@@ -32,6 +32,13 @@ const DashboardOverall = () => {
   const [filter, setFilter] = useState("user");
   const filterRef = useRef("user");
 
+  const totalAverageWPM = useRef(0);
+  const totalWordsRead = useRef(0);
+  const fixations = useRef(0);
+  const saccades = useRef(0);
+
+  const dataRef = useRef([totalAverageWPM, totalWordsRead, fixations, saccades]);
+
   const handleFilter = async(newFilter) => {
     if(filter !== newFilter)
     {
@@ -62,7 +69,7 @@ const DashboardOverall = () => {
       </Container>
       <Grid container columnSpacing={5} rowSpacing={2}>
         <Grid size={6}>
-          <ReadingSpeed/>
+          <ReadingSpeed filterInput={filterRef}/>
         </Grid>
         <Grid size={6}>
           <BlinkRate/>
@@ -71,7 +78,7 @@ const DashboardOverall = () => {
           <ReadingTime filterInput={filterRef}/>
         </Grid>
         <Grid size={6} sx={{ display: "flex", justifyContent: "center" }}>
-          <MetricCard/>
+          <MetricCard filterInput={filterRef} data={dataRef}/>
         </Grid>
       </Grid>
     </Container>

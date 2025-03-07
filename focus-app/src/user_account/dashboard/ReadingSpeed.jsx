@@ -26,7 +26,7 @@ ChartJS.register(
   Legend,
   zoomPlugin
 );
-export default function ReadingSpeed() {
+export default function ReadingSpeed({filterInput}) {
   const [loading, setLoading] = useState(true);
   const [dataLabels, setdataLabels] = useState([]);
   const [yData, setYData] = useState([]);
@@ -46,9 +46,17 @@ export default function ReadingSpeed() {
     "session" - display data per session
     "video" - display data per video
   */
-  const [filter, setFilter] = useState("user");
-  const [filterBeforeDisconnect, setFilterBeforeDisconnect] = useState("user");
-  const updateYAxis = useRef(false);
+    const [filter, setFilter] = useState(filterInput.current);
+    const [filterBeforeDisconnect, setFilterBeforeDisconnect] = useState("user");
+    const updateYAxis = useRef(false);
+  
+    useEffect(() => {
+      if(filter !== filterInput.current)
+      {
+        console.log("second setting: ", filterInput.current);
+        setFilter(filterInput.current);
+      }
+    }, [filterInput.current]);
 
   /* Toggle for setting y-axis scale to seconds or minutes 
   - 59 - minutes
@@ -72,28 +80,35 @@ export default function ReadingSpeed() {
     var dataOverallAverageReadingSpeed = data.average_wpm;
     var dataTotalWords = data.total_words_read;
 
-    console.log(data);
-    const reading_speeds = data.reading_speed_over_time;
-
-    let counter = 0;
-    dataLabels = reading_speeds.map(() => counter++);
-    dataReadingSpeedOverTime =  reading_speeds.map((timestamp) => timestamp.wpm);
-
-
-    return { dataLabels, yDataValues: dataReadingSpeedOverTime, totalAverageWPM: dataOverallAverageReadingSpeed, totalWordsRead: dataTotalWords };
-}
-
-  const changeYAxis = () => {
-
-    if(yAxisScale === 59)
-      setYAxisScale(0); // seconds
+    if(filter == "user")
+      datamap = data.sessions;
+    else if(filter == "session")
+      datamap = data.videos;
     else
-      setYAxisScale(59); // minutes
+    {
+      const reading_speeds = data.reading_speed_over_time;
 
-    // update data
-    updateYAxis.current = true;
-    setLoading(true);
-  }
+      dataLabels = reading_speeds.map((timestamp) => convertToTime(timestamp.timestamp));
+      dataReadingSpeedOverTime =  reading_speeds.map((timestamp) => timestamp.wpm);
+
+      return { dataLabels, yDataValues: dataReadingSpeedOverTime, totalAverageWPM: dataOverallAverageReadingSpeed, totalWordsRead: dataTotalWords };
+    }
+
+    if(filter == "user")
+    {
+      dataLabels = datamap.map((session) => `${session.session_id}`);
+      averageReadingSpeed = datamap.map((session) => session.average_wpm.toFixed(0));
+    }
+    else if(filter == "session")
+    {
+      dataLabels = datamap.map((videos) => `${videos.video_id}`);
+      averageReadingSpeed = datamap.map((videos) => videos.average_wpm.toFixed(0));
+    }
+
+    console.log(dataLabels, averageReadingSpeed);
+
+    return { dataLabels, yDataValues: averageReadingSpeed, totalAverageWPM: dataOverallAverageReadingSpeed, totalWordsRead: dataTotalWords };
+}
 
   const handleFilter = async(newFilter) => {
     if(filter !== newFilter)
@@ -113,6 +128,7 @@ export default function ReadingSpeed() {
     const fetchData = async () => {
       try {
         setValidConnection(1);
+        setLoading(true);
         const result = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-speed/?display=${filter}`);
 
         console.log(filter, "==>", result);
@@ -143,20 +159,18 @@ export default function ReadingSpeed() {
     if(filter !== "")
       fetchData();
 
-    updateYAxis.current = false;
-
-  }, [filter, updateYAxis.current]);
+  }, [filter]);
 
   const chartData = {
-    labels: [0, 1, 2, 3, 4],
+    labels: dataLabels,
     datasets: [
       {
         label: "Reading speed (wpm)",
-        data: [250, 128, 202, 167, 146],
+        data: yData,
         borderWidth: 1,
         backgroundColor: "rgba(6, 118, 13, 0.2)",
         borderColor: "rgba(6, 118, 13, 1)",
-        type: "bar",
+        type: filter === "video" ? "line" : "bar",
         pointRadius: 0.25,
         pointHoverRadius: 5,
       },
@@ -227,7 +241,7 @@ export default function ReadingSpeed() {
           <Typography variant="h4" sx={{textAlign: "center", mt: "2vh"}}>Reading Speed</Typography>
           <Container sx={{ width: "40vw", display: "flex", alignItems: "center", justifyContent: "center"}}>
                   {validConnection !== 2 ?
-                  loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions}/> 
+                  loading ? <CircularProgress sx={{mt: "10vh"}}/> : <Bar data={chartData} options={chartOptions}/> 
                   :
                   <Container>
                       <Typography variant="h5" sx={{textAlign: "center", mt: "5vh"}}>Connection failed</Typography>
@@ -236,6 +250,10 @@ export default function ReadingSpeed() {
                   }
           </Container>
         </Box>
+    </Box>
+  );
+}
+
         {/* <Box sx={{display: "flex", flexDirection: "column", mt: "2vh"}}>
             <Container sx={{display: "flex", justifyContent: "space-between", flexDirection: "row", mb: "2vh"}}>
                 <Container>
@@ -246,6 +264,3 @@ export default function ReadingSpeed() {
                 </Container>
             </Container>
         </Box> */}
-    </Box>
-  );
-}

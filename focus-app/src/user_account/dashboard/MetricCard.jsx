@@ -6,12 +6,14 @@ import config from '../../config'
 // const baseURL = config.apiUrl
 
 
-export default function ReadingSpeed() {
+export default function ReadingSpeed({filterInput, data}) {
   const [loading, setLoading] = useState(true);
-  const [saccades, setSaccades] = useState(2870);
-  const [fixations, setFixations] = useState(2989);
-  const [totalAverageWPM, setTotalAverageWPM] = useState(178);
-  const [totalWordsRead, setTotalWordsRead] = useState(3341);
+  // const [saccades, setSaccades] = useState(2870);
+  // const [fixations, setFixations] = useState(2989);
+  // const [totalAverageWPM, setTotalAverageWPM] = useState(178);
+  // const [totalWordsRead, setTotalWordsRead] = useState(3341);
+
+  const [ totalAverageWPM, totalWordsRead, fixations, saccades ] = data.current;
 
 //   useEffect(() => {
 //     const fetchData = async () => {
@@ -42,7 +44,7 @@ export default function ReadingSpeed() {
             <Card sx={{ width:200, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <CardContent>
                 <Typography variant="h6">Total Average WPM</Typography>
-                <Typography variant="h5" sx={{ color: "green" }}>{totalAverageWPM}</Typography>
+                <Typography variant="h5" sx={{ color: "green" }}>{totalAverageWPM.current}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -50,7 +52,7 @@ export default function ReadingSpeed() {
             <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <CardContent>
                 <Typography variant="h6">Total Words Read</Typography>
-                <Typography variant="h5">{totalWordsRead}</Typography>
+                <Typography variant="h5">{totalWordsRead.current}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -58,7 +60,7 @@ export default function ReadingSpeed() {
             <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <CardContent>
                 <Typography variant="h6">Fixations</Typography>
-                <Typography variant="h5">{fixations}</Typography>
+                <Typography variant="h5">{fixations.current}</Typography>
               </CardContent>
             </Card>
           </Grid>
@@ -66,7 +68,7 @@ export default function ReadingSpeed() {
             <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <CardContent>
                 <Typography variant="h6">Saccades</Typography>
-                <Typography variant="h5">{saccades}</Typography>
+                <Typography variant="h5">{saccades.current}</Typography>
               </CardContent>
             </Card>
           </Grid>
