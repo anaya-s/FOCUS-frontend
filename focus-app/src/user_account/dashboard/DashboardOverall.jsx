@@ -61,17 +61,17 @@ const DashboardOverall = () => {
         <Button onClick={() => handleFilter("video")} variant={filter === "video" ? "contained" : "outlined"} disabled={validConnection === 2 || loading}><ScheduleRoundedIcon/></Button>
       </Container>
       <Grid container columnSpacing={5} rowSpacing={2}>
-        <Grid size={6}>
-          <ReadingSpeed filterInput={filterRef}/>
+        <Grid xs={6}>
+          <MetricCard filterInput={filterRef}/>
         </Grid>
-        <Grid size={6}>
+        <Grid xs={6}>
           <BlinkRate/>
         </Grid>
-        <Grid size={6}>
+        <Grid xs={6}>
           <ReadingTime filterInput={filterRef}/>
         </Grid>
-        <Grid size={6} sx={{ display: "flex", justifyContent: "center" }}>
-          <MetricCard filterInput={filterRef}/>
+        <Grid xs={6}>
+          <ReadingSpeed filterInput={filterRef}/>
         </Grid>
       </Grid>
     </Container>
