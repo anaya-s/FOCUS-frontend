@@ -1,113 +1,122 @@
 import { useEffect, useState } from "react";
-import { Box, Typography, Card, CardContent } from "@mui/material";
-import Grid from '@mui/material/Grid2';
+import { Box, Typography, Card, CardContent, Grid, CircularProgress } from "@mui/material";
 import { reauthenticatingFetch } from '../../utils/api';
-import config from '../../config'
-const baseURL = config.apiUrl
+import config from '../../config';
 
+const baseURL = config.apiUrl;
 
-export default function ReadingSpeed({filterInput}) {
+export default function ReadingSpeed({ filter }) {
   const [loading, setLoading] = useState(true);
-
   const [totalAverageWPM, setTotalAverageWPM] = useState(0);
   const [totalWordsRead, setTotalWordsRead] = useState(0);
   const [saccades, setSaccades] = useState(0);
   const [fixations, setFixations] = useState(0);
+  const [validConnection, setValidConnection] = useState(1);
 
   function processData(data, type) {
-    if(type === "speed") {
-    var dataOverallAverageReadingSpeed = data.average_wpm;
-    var dataTotalWords = data.total_words_read;
+    if (!data) return { totalAverageWPM: 0, totalWordsRead: 0, fixations: 0, saccades: 0 };
 
-    return { totalAverageWPM: dataOverallAverageReadingSpeed, totalWordsRead: dataTotalWords };
+    if (type === "speed") {
+      return {
+        totalAverageWPM: data.average_wpm || 0,
+        totalWordsRead: data.total_words_read || 0,
+      };
+    } else {
+      return {
+        fixations: filter === "user" ? data.avg_fixation_count_per_session || 0 : data.fixation_count || 0,
+        saccades: filter === "user" ? data.avg_saccade_count_per_session || 0 : data.saccade_count || 0,
+      };
     }
-    else
-    {
-      var dataFixations = 0;
-      var dataSaccades = 0;
-
-      if(filterInput.current === "user")
-      {
-        dataFixations = data.avg_fixation_count_per_session;
-        dataSaccades = data.avg_saccade_count_per_session;
-      }
-      else
-      {
-        dataFixations = data.fixation_count;
-        dataSaccades = data.saccade_count;
-      }
-
-      return { fixations: dataFixations, saccades: dataSaccades };
-    }
-  };
+  }
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const resultOne = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-speed/?display=${filterInput.current}`);
-        
+        setValidConnection(1);
+        setLoading(true);
+
+        const resultOne = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-speed/?display=${filter}`);
         const { totalAverageWPM, totalWordsRead } = processData(resultOne, "speed");
         setTotalAverageWPM(totalAverageWPM);
         setTotalWordsRead(totalWordsRead);
 
-        const resultTwo = await reauthenticatingFetch("GET", `${baseURL}/api/eye/fix-sacc/?display=${filterInput.current}`);
-
-        const { fixations, saccades } = processData(resultTwo, "fixations");
+        const resultTwo = await reauthenticatingFetch("GET", `${baseURL}/api/eye/fix-sacc/?display=${filter}`);
+        const { fixations, saccades } = processData(resultTwo, "fix-sacc");
         setFixations(fixations);
         setSaccades(saccades);
 
         setLoading(false);
+        setValidConnection(0);
       } catch (err) {
         console.error(err);
         setValidConnection(2);
-        setLoading(true);
-        setTotalAverageWPM(0);
-        setTotalWordsRead(0);
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [filterInput.current]);
+  }, [filter]);
 
   return (
-    <Box>
-      <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw", height: "42vh", mr: "1.5vw", alignItems: "center", justifyContent: "center"}}>
-      <Typography variant="h4" sx={{textAlign: "center", mt: "2vh"}}>Eye Metrics</Typography>
-        <Grid container columnSpacing={4} rowSpacing={2} sx={{ mt: "2vh", mb: "2vh", width: "75%"}} wrap="wrap" justifyContent="center">
-          <Grid xs={12} sx={{ display: "flex", justifyContent: "center"}}>
-            <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <CardContent>
-                <Typography variant="h6">Average WPM</Typography>
-                <Typography variant="h5" sx={{ color: "green" }}>{totalAverageWPM.toFixed(0)}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid xs={12} sx={{ display: "flex", justifyContent: "center" }}>
-            <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <CardContent>
-                <Typography variant="h6">Total Words Read</Typography>
-                <Typography variant="h5">{totalWordsRead.toFixed(0)}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid xs={12} sx={{ display: "flex", justifyContent: "center" }}>
-            <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <CardContent>
-                <Typography variant="h6">Fixations</Typography>
-                <Typography variant="h5">{fixations.toFixed(0)}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid xs={12} sx={{ display: "flex", justifyContent: "center" }}>
-            <Card sx={{ width:150, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <CardContent>
-                <Typography variant="h6">Saccades</Typography>
-                <Typography variant="h5">{saccades.toFixed(0)}</Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+    <Box
+      sx={{
+        borderRadius: 2,
+        boxShadow: 3,
+        bgcolor: "#f5f5f5",
+        p: 3,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+      }}
+    >
+      <Typography 
+        variant="h5" 
+        sx={{ mb: 2, fontWeight: "bold", fontSize: "1.5rem" }}
+      >
+        Eye Metrics
+      </Typography>
+
+      {loading ? (
+        <CircularProgress sx={{ mt: "10vh" }} />
+      ) : (
+        <Grid container spacing={2} justifyContent="center">
+          {[
+            { label: "Average WPM", value: totalAverageWPM },
+            { label: "Total Words Read", value: totalWordsRead },
+            { label: "Fixations", value: fixations },
+            { label: "Saccades", value: saccades },
+          ].map((metric, index) => (
+            <Grid item xs={6} sm={4} md={3} key={index}>
+              <Card
+                sx={{
+                  width: 150,
+                  height: 100,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                }}
+              >
+                <CardContent sx={{ 
+                  display: "flex", 
+                  flexDirection: "column", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  height: "100%",
+                  width: "100%"
+                }}>
+                  <Typography variant="h6">{metric.label}</Typography>
+                  <Typography variant="h5" sx={{ color: "green", fontWeight: "bold" }}>
+                    {metric.value.toFixed(0)}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
         </Grid>
-      </Box>
+      )}
     </Box>
   );
 }
