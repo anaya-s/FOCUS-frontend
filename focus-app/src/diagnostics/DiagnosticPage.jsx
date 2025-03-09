@@ -207,7 +207,7 @@ function DiagnosticPage()
 
         socket.current.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            console.log("Selected filter:", filter.current);
+            // console.log("Selected filter:", filter.current);
             if (data.mode === "diagnostic") {
                 if(filter.current === "face")
                 {
@@ -348,11 +348,6 @@ function DiagnosticPage()
     
             // Compare current frame with the previous frame
             if (frame !== previousFrameDataUrl.current) {
-                // Store image data and timestamp in framesData array
-                setFramesData((prevFrames) => [
-                    ...prevFrames,
-                    { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
-                ]);
     
                 // Calculate the time difference between the current frame and the last sent frame
                 const timeDiff = timestamp - previous_send_time;
@@ -495,7 +490,7 @@ function DiagnosticPage()
             </Container>
             <Container style={{width: "50vw", maxWidth: "50vw", display: "flex", flexDirection: "column"}}>
                 <Typography variant="h6">
-                    Frames per second (FPS): <span style={{ color: fpsValue <= 15 ? "red" : fpsValue <= 25 ? "orange" : "green" }}> {fpsValue === null ? "Calculating..." : `${fpsValue.toFixed(0)} FPS`}</span>
+                    Frames per second (FPS): <span style={{ fontFamily: "monospace", color: fpsValue <= 15 ? "red" : fpsValue <= 25 ? "orange" : "green" }}> {retryConnection <= 0 ? fpsValue === null  ? "Calculating..." : `${fpsValue.toFixed(0)} FPS` : "No value"}</span>
                 </Typography>
 
                 <Box display="flex" flexDirection="row" mt={"2vh"} mb={"2vh"} style={{minWidth: "40vw", flexWrap: "wrap"}}>
