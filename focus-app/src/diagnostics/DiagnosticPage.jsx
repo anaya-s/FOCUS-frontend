@@ -2,8 +2,12 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import webgazer from "../webgazer/webgazer";
 import { reauthenticatingFetch } from "../utils/api";
 
-import { Box, Typography, LinearProgress, Container, Collapse, Alert, IconButton, CircularProgress, FormControlLabel, Checkbox } from "@mui/material";
-import { ReplayRounded as ReplayRoundedIcon } from "@mui/icons-material";
+import { Box, Typography, LinearProgress, Container, Collapse, Alert, IconButton, CircularProgress, FormControlLabel, Checkbox, ToggleButtonGroup, ToggleButton } from "@mui/material";
+import { 
+    ReplayRounded as ReplayRoundedIcon,
+    VisibilityRounded as EyeRoundedIcon,
+    FaceRounded as FaceRoundedIcon
+} from "@mui/icons-material";
 
 import Swal from "sweetalert2";
 
@@ -16,7 +20,6 @@ function DiagnosticPage()
     const socket = useRef(null);
 
     const [connectionOpen, setStatusConn] = useState(false);
-    const [framesData, setFramesData] = useState([]);
     
     const [loadingProgress, setLoadingProgress] = useState(0);
     const [isLoading, setWebgazerLoading] = useState(true);
@@ -47,11 +50,36 @@ function DiagnosticPage()
     const [fpsValue, setFpsValue] = useState(null);
 
     // From backend
+
+    // Filter for face or eye:
+    const filter = useRef("face");
+
+    /*
+    Zoom level for the video frame (either show iris points zoomed in or out):
+        False - Zoomed out (Show whole face)
+        True - Zoomed in (Show cropped eye region)
+    */
+    const zoom = useRef(false);
+
+    const handleZoom = () => {
+        zoom.current = !zoom.current;
+    };
+
+    const handleFilterSelection = (event, newValue) => {
+        if(newValue !== null && newValue !== filter.current)
+            filter.current = newValue;
+    };
+
     const [face_detected, setFaceDetected] = useState(null);
     const [yaw, setYaw] = useState(null);
     const [pitch, setPitch] = useState(null);
     const [roll, setRoll] = useState(null);
-    const [eye_speed, setEyeSpeed] = useState(null);
+    const [face_speed, setFaceSpeed] = useState(null);
+
+    
+    const [left_iris_velocity, setLeftIrisVelocity] = useState(null);
+    const [right_iris_velocity, setRightIrisVelocity] = useState(null);
+    const [movement_type, setMovementType] = useState(null);
 
     /*
     Status of WebSocket connection (used for retrying connection and for showing alerts):
@@ -179,22 +207,42 @@ function DiagnosticPage()
 
         socket.current.onmessage = (event) => {
             const data = JSON.parse(event.data);
+            // console.log("Selected filter:", filter.current);
             if (data.mode === "diagnostic") {
-            const { frame, face_detected, yaw, pitch, roll, eye_speed } = data;
-            // Handle the received data, e.g., update state or perform actions
-            //   console.log("Received frame:", frame);
-            //   console.log("Face detected:", face_detected);
-            //   console.log("Yaw:", yaw);
-            //   console.log("Pitch:", pitch);
-            //   console.log("Roll:", roll);
-            //   console.log("Eye speed:", eye_speed);
+                if(filter.current === "face")
+                {
+                    const { frame, face_detected, yaw, pitch, roll, face_speed } = data;
+                    // Handle the received data, e.g., update state or perform actions
+                    // console.log("Received frame:", frame);
+                    // console.log("Face detected:", face_detected);
+                    // console.log("Yaw:", yaw);
+                    // console.log("Pitch:", pitch);
+                    // console.log("Roll:", roll);
+                    // console.log("Eye speed:", face_speed);
 
-                drawImageOnCanvas(frame);
-                setFaceDetected(face_detected);
-                setYaw(yaw);
-                setPitch(pitch);
-                setRoll(roll);
-                setEyeSpeed(eye_speed);
+                    drawImageOnCanvas(frame);
+                    setFaceDetected(face_detected);
+                    setYaw(yaw);
+                    setPitch(pitch);
+                    setRoll(roll);
+                    setFaceSpeed(face_speed);
+                }
+                else
+                {
+                    const { frame, face_detected, left_iris_velocity, right_iris_velocity, movement_type } = data;
+
+                    // console.log("Received frame:", frame);
+                    // console.log("Face detected:", face_detected);
+                    // console.log("Left iris velocity:", left_iris_velocity);
+                    // console.log("Right iris velocity:", right_iris_velocity);
+                    // console.log("Movement type:", movement_type);
+
+                    drawImageOnCanvas(frame);
+                    setFaceDetected(face_detected);
+                    setLeftIrisVelocity(left_iris_velocity);
+                    setRightIrisVelocity(right_iris_velocity);
+                    setMovementType(movement_type);
+                }
             }
         };
 
@@ -236,7 +284,9 @@ function DiagnosticPage()
                 // Draw the image in the middle of the canvas
                 ctx.drawImage(image, x, y);
                 };
-            }   
+            }
+            
+            
         }
         else if(retryConnection !== -1)
         {
@@ -278,67 +328,94 @@ function DiagnosticPage()
     }, [isLoading]);
 
     var total_frames = 0;
-    var previous_frame = 0;
+    var previous_total_count = 0;
+    var previous_total_time = 0;
+
+    var sent_frames = 0;
     var previous_time = 0;
+    var previous_count = 0;
+
+    var previous_send_time = 0;
 
     // Initialize state for previous frame data URL
     const previousFrameDataUrl = useRef(null);
 
 
     const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
-    if (socket.current && socket.current.readyState === WebSocket.OPEN) {
-        const timestamp = Date.now(); // Get current timestamp of current frame
-        const frame = canvas.toDataURL("image/jpeg");
+        if (socket.current && socket.current.readyState === WebSocket.OPEN) {
+            const timestamp = Date.now(); // Get current timestamp of current frame
+            const frame = canvas.toDataURL("image/jpeg");
+    
+            // Compare current frame with the previous frame
+            if (frame !== previousFrameDataUrl.current) {
+    
+                // Calculate the time difference between the current frame and the last sent frame
+                const timeDiff = timestamp - previous_send_time;
+                // console.log("Timestamp: ", timestamp, "Previous sent time", previous_time , "Time difference: ", timeDiff);
 
-        // Compare current frame with the previous frame
-        if (frame !== previousFrameDataUrl.current) {
-        // Store image data and timestamp in framesData array
-        setFramesData((prevFrames) => [
-            ...prevFrames,
-            { frame: frame, timestamp: timestamp, xCoordinatePx: xCoord, yCoordinatePx: yCoord },
-        ]);
+                if(previous_total_time === 0)
+                {
+                    previous_total_time = timestamp;
+                    previous_total_count = 1;
+                }
+    
+                // Only send the frame if the time difference is greater than or equal to 100 milliseconds (10 FPS)
+                if (timeDiff >= 100) {               
+                    // Send the frame via WebSocket
+                    socket.current.send(
+                        JSON.stringify({
+                            frame: frame,
+                            timestamp: timestamp,
+                            xCoordinatePx: xCoord,
+                            yCoordinatePx: yCoord,
+                            draw_mesh: showFaceMesh.current,
+                            draw_contours: showContours.current,
+                            show_axis: showAxes.current,
+                            draw_eye: showEyes.current,
+                            mode: "diagnostic",
+                        })
+                    );
 
-        // Send the frame via WebSocket
-        socket.current.send(
-            JSON.stringify({
-            frame: frame,
-            timestamp: timestamp,
-            xCoordinatePx: xCoord,
-            yCoordinatePx: yCoord,
-            draw_mesh: showFaceMesh.current,
-            draw_contours: showContours.current,
-            show_axis: showAxes.current,
-            draw_eye: showEyes.current,
-            mode: "diagnostic",
-            })
-        );
+                    previous_send_time = timestamp;
 
-        total_frames += 1;
-        if (total_frames === 1) {
-            previous_time = timestamp;
-            previous_frame = total_frames;
+                    if (previous_time === 0)
+                    {
+                        previous_time = timestamp;
+                        previous_count = 1;
+                    }
+
+                    // Below should be 10 FPS
+                    sent_frames += 1;
+
+                    if (sent_frames % 30 === 0) {
+                        const actualFPS = ((sent_frames - previous_count) / ((timestamp - previous_time) / 1000));
+                        window.console.log("Actual FPS: ", actualFPS);
+                        previous_time = timestamp;
+                        previous_count = sent_frames;
+                    }
+                }
+
+                total_frames += 1;
+
+                // Calculate and log FPS every 30 sent frames
+                if (total_frames % 30 === 0) {
+                    const FPS = ((total_frames - previous_total_count) / ((timestamp - previous_total_time) / 1000));
+                    setFpsValue(FPS);
+                    window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord, "FPS: ", FPS);
+                    previous_total_time = timestamp;
+                    previous_total_count = total_frames;
+                }
+
+                // Update the previous frame data URL and timestamp
+                previousFrameDataUrl.current = frame;
+            }
         }
-        if (total_frames % 30 === 0) {
-            window.console.log("Frames sent: ", total_frames, "Timestamp: ", timestamp, "X: ", xCoord, "Y: ", yCoord);
-            const FPS = (total_frames - previous_frame) / ((timestamp - previous_time) / 1000);
-            setFpsValue(FPS);
-            // console.log("FPS: ", FPS);
-            previous_frame = total_frames;
-            previous_time = timestamp;
+        else
+        {
+            // console.error("WebSocket connection no longer open.");
+            setStatusConn(false);
+            webgazer.clearGazeListener();
         }
-
-        // Update the previous frame data URL
-        previousFrameDataUrl.current = frame;
-        }
-
-        // handleYCoord(yCoord);
-    }
-    else
-    {
-        // console.error("WebSocket connection no longer open.");
-        setStatusConn(false);
-        webgazer.clearGazeListener();
-    }
     }, []);
 
     const gazeListener = (data, canvas) => {
@@ -392,7 +469,7 @@ function DiagnosticPage()
             </Alert>
             </Collapse>
             <Collapse in={retryConnection === 1} sx={{position: "absolute", top: "15vh", right: "5vh"}}>
-            <Alert variant="filled" severity="info">
+            <Alert variant="filled" icon={<CircularProgress size="20px" color="white" sx={{display: "flex", alignItems: "center"}}/>} severity="info">
                 Connecting...
             </Alert>
             </Collapse>
@@ -413,42 +490,88 @@ function DiagnosticPage()
             </Container>
             <Container style={{width: "50vw", maxWidth: "50vw", display: "flex", flexDirection: "column"}}>
                 <Typography variant="h6">
-                    Frames per second (FPS): <span style={{ color: fpsValue <= 15 ? "red" : fpsValue <= 25 ? "orange" : "red" }}> {fpsValue === null ? "Calculating..." : `${fpsValue.toFixed(0)} FPS`}</span>
+                    Frames per second (FPS): <span style={{ fontFamily: "monospace", color: fpsValue <= 15 ? "red" : fpsValue <= 25 ? "orange" : "green" }}> {retryConnection <= 0 ? fpsValue === null  ? "Calculating..." : `${fpsValue.toFixed(0)} FPS` : "No value"}</span>
                 </Typography>
 
-                <Typography variant="h5" mt={"5vh"}>Head tracking</Typography>
+                <Box display="flex" flexDirection="row" mt={"2vh"} mb={"2vh"} style={{minWidth: "40vw", flexWrap: "wrap"}}>
+                    <Typography variant="h6" mr={"2vw"}>Filter frame by: </Typography>
+                    <ToggleButtonGroup
+                        color="primary"
+                        value={filter.current}
+                        exclusive
+                        disabled={retryConnection > 0}
+                        onChange={handleFilterSelection}>
+                        <ToggleButton value="face">
+                            <FaceRoundedIcon/>
+                        </ToggleButton>
+                        <ToggleButton value="eye">
+                            <EyeRoundedIcon/>
+                        </ToggleButton>
+                    </ToggleButtonGroup>
+                </Box>
 
                 <Typography variant="h6" mt={"2vh"}>
-                    Face detected? { face_detected === 1 ? <span style={{ color: "green" }}>TRUE</span> : <span style={{ color: "red" }}>FALSE</span> }
+                    Face detected? { retryConnection <= 0 ? face_detected === 1 ? <span style={{ fontFamily: "monospace", color: "green" }}>TRUE</span> : <span style={{ fontFamily: "monospace", color: "red" }}>FALSE</span> : <span style={{fontFamily: "monospace"}}>No value</span> }
                 </Typography>
 
-                <Box display="flex" flexDirection="row" mt={"2vh"} style={{minWidth: "40vw", flexWrap: "wrap"}}>
-                    <FormControlLabel control={<Checkbox checked={showFaceMesh.current} onChange={() => handleChange("face")}/>} label="Show face mesh" />
-                    <FormControlLabel control={<Checkbox checked={showEyes.current} onChange={() => handleChange("eyes")}/>} label="Show eye points" />
-                    <FormControlLabel control={<Checkbox checked={showContours.current} onChange={() => handleChange("contours")}/>} label="Show contours" />
-                    <FormControlLabel control={<Checkbox checked={showAxes.current} onChange={() => handleChange("axes")}/>} label="Show axes" />
-                </Box>
+                { filter.current === "face" ? 
+                    (
+                        <Box>
+                            <Typography variant="h5" mt={"5vh"}>Head tracking</Typography>
 
-                <Box display="flex" gap={2} mt={"2vh"} style={{ minWidth: "40vw", flexWrap: "wrap" }}>
-                    <Typography>
-                        <span style={{ fontWeight: "bold" }}>Pitch: </span> 
-                        <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch" }}>{pitch === null ? "No value" : pitch.toFixed(5)}</span>
-                    </Typography>
-                    <Typography>
-                        <span style={{ fontWeight: "bold" }}>Yaw: </span> 
-                        <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch" }}>{yaw === null ? "No value" : yaw.toFixed(5)}</span>
-                    </Typography>
-                    <Typography>
-                        <span style={{ fontWeight: "bold" }}>Roll: </span> 
-                        <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch" }}>{roll === null ? "No value" : roll.toFixed(5)}</span>
-                    </Typography>
-                </Box>
+                            <Box display="flex" flexDirection="row" mt={"2vh"} style={{minWidth: "40vw", flexWrap: "wrap"}}>
+                                <FormControlLabel control={<Checkbox checked={showFaceMesh.current} disabled={retryConnection > 0} onChange={() => handleChange("face")}/>} label="Show face mesh" />
+                                <FormControlLabel control={<Checkbox checked={showEyes.current} disabled={retryConnection > 0} onChange={() => handleChange("eyes")}/>} label="Show eye points" />
+                                <FormControlLabel control={<Checkbox checked={showContours.current} disabled={retryConnection > 0} onChange={() => handleChange("contours")}/>} label="Show contours" />
+                                <FormControlLabel control={<Checkbox checked={showAxes.current} disabled={retryConnection > 0} onChange={() => handleChange("axes")}/>} label="Show axes" />
+                            </Box>
 
-                <Typography variant="h5" mt={"5vh"}>Eye tracking</Typography>
-                <Typography mt={"1vh"}>
-                    <span style={{ fontWeight: "bold" }}>Eye velocity: </span> 
-                    <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch" }}>{eye_speed === null ? "No value" : eye_speed.toFixed(5)}</span>
-                </Typography>
+                            <Box display="flex" gap={2} mt={"2vh"} style={{ minWidth: "40vw", flexWrap: "wrap" }}>
+                                <Typography>
+                                    <span style={{ fontWeight: "bold" }}>Pitch: </span> 
+                                    <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch", fontSize: "14pt" }}>{pitch === null || pitch === undefined  || retryConnection > 0 ? "No value" : pitch.toFixed(5)}</span>
+                                </Typography>
+                                <Typography>
+                                    <span style={{ fontWeight: "bold" }}>Yaw: </span> 
+                                    <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch", fontSize: "14pt" }}>{yaw === null || yaw === undefined  || retryConnection > 0  ? "No value" : yaw.toFixed(5)}</span>
+                                </Typography>
+                                <Typography>
+                                    <span style={{ fontWeight: "bold" }}>Roll: </span> 
+                                    <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch", fontSize: "14pt"}}>{roll === null || roll === undefined  || retryConnection > 0  ? "No value" : roll.toFixed(5)}</span>
+                                </Typography>
+                                <Typography>
+                                    <span style={{ fontWeight: "bold" }}>Face movement velocity: </span> 
+                                    <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch", fontSize: "14pt"}}>{face_speed === null || face_speed === undefined  || retryConnection > 0  ? "No value" : face_speed.toFixed(5)}</span>
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )
+                    :
+                    (
+                        <Box>
+                            <Typography variant="h5" mt={"5vh"}>Eye tracking</Typography>
+
+                            <Box display="flex" flexDirection="row" mt={"2vh"} style={{minWidth: "40vw", flexWrap: "wrap"}}>
+                                <FormControlLabel control={<Checkbox checked={zoom.current} disabled={retryConnection > 0} onChange={() => handleZoom()}/>} label="Zoom into eye region" />
+                            </Box>
+
+                            <Box display="flex" gap={2} mt={"2vh"} style={{ minWidth: "40vw", flexWrap: "wrap" }}>
+                                <Typography>
+                                    <span style={{ fontWeight: "bold" }}>Left eye velocity: </span> 
+                                    <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch", fontSize: "14pt" }}>{left_iris_velocity === null || left_iris_velocity === undefined  || retryConnection > 0  ? "No value" : left_iris_velocity.toFixed(5)}</span>
+                                </Typography>
+                                <Typography>
+                                    <span style={{ fontWeight: "bold" }}>Right eye velocity: </span> 
+                                    <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch", fontSize: "14pt" }}>{right_iris_velocity === null || right_iris_velocity === undefined  || retryConnection > 0  ? "No value" : right_iris_velocity.toFixed(5)}</span>
+                                </Typography>
+                                <Typography>
+                                    <span style={{ fontWeight: "bold" }}>Eye movement type: </span> 
+                                    <span style={{ fontFamily: "monospace", display: "inline-block", width: "14ch", fontSize: "14pt"}}>{movement_type === null || movement_type === undefined || retryConnection > 0 ? "No value" : movement_type}</span>
+                                </Typography>
+                            </Box>
+                        </Box>
+                    )
+                }
             </Container>
             </Box>
         </Box>
