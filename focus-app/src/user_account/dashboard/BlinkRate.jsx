@@ -97,7 +97,7 @@ export default function BlinkRate({ filter }) {
       sx={{
         borderRadius: 2,
         boxShadow: 3,
-        bgcolor: "#f5f5f5",
+        bgcolor: "white",
         p: 3,
         display: "flex",
         flexDirection: "column",
