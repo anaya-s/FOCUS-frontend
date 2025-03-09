@@ -10,7 +10,7 @@ let startSpeedReading, sendReadingProgress;
 
 export function SpeedReading({textSettings}) {
 
-  const [fontStyle, fontSize, textOpacity, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed, pauseStatus, resetStatus, documentName, parsedText] = textSettings.current;
+  const [fontStyle, fontSize, textOpacity, letterSpacing, lineSpacing, backgroundBrightness, invertTextColour, backgroundColour, backgroundColourSelection, highlightSpeed, readingSpeed, isOnBreak, pauseStatus, resetStatus, documentName, parsedText] = textSettings.current;
 
   /* File handling */
   const [textArray, setTextArray] = useState([]); // Stores 2D array of text (lines and words)
@@ -18,9 +18,34 @@ export function SpeedReading({textSettings}) {
   const [currentLine, setCurrentLine] = useState(0); // Stores index of current line
   const [currentWord, setCurrentWord] = useState(0); // Stores index of current word
 
+  /* Used to calculate words per minute (reading speed) */
+  const wordsRead = useRef(0); // Stores number of words read
+
   const [fileName, setFileName] = useState("");
 
   const isNotValid = useRef(false);
+
+  const startTime = useRef(Date.now());
+
+  useEffect(() => {
+    let calculateSpeedTimer;
+
+    if(isOnBreak.current === false)
+    {
+      calculateSpeedTimer = setInterval(() => {
+        readingSpeed.current = (wordsRead.current / ((Date.now() - startTime.current) / 1000 / 60));
+        // console.log("Words read: ", wordsRead.current, "Time elapsed: ", (Date.now() - startTime.current) / 1000, "WPM: ", readingSpeed.current);
+      }, 1000);
+    }
+    else
+      clearInterval(calculateSpeedTimer);
+
+    // On unmount, clear the interval and reset speed
+    return () => {
+       clearInterval(calculateSpeedTimer);
+       readingSpeed.current = 0;
+    }
+  }, [isOnBreak.current]);
 
   useEffect(() => {
     if (parsedText.current) {
@@ -69,16 +94,17 @@ const iterateWords = async (lines) => {
         wordNo < lines[lineNo].length;
         wordNo++
       ) {
-
         if (pauseStatus.current) {
           break;
         }
         setCurrentLine(lineNo);
         setCurrentWord(wordNo);
+        wordsRead.current = wordsRead.current + 1;
         await new Promise((resolve) =>
           setTimeout(resolve, 1000 / highlightSpeed.current)
         ); // set time interval
       }
+      setCurrentWord(0);
     }
   }
 };

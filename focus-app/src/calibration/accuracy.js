@@ -71,7 +71,7 @@ function calculatePrecision(past50Array,div) {
         html: `
         <p style="font-family: Arial, sans-serif; font-size: 18px; color: black; user-select: none">Please proceed to stare at the middle countdown number for the <span style="font-weight: bold">next 5 seconds.</span></p>
         <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center;  user-select: none"">
-          <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; height: auto; margin-top: 50px">
+          <img src="../../public/images/homepage/felix_done.png" alt="Felix" style="width: 150px; height: auto; margin-top: 50px">
           <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
             <p>This will allow me to calculate the accuracy of the gaze predictions.</p>
             <p style="margin-top: 20px;">Please keep your eyes focused on the screen during this process.</p>

@@ -404,7 +404,7 @@ function DocumentDrivePage() {
         '<span style="font-family: Isotok Web, sans-serif; font-size: 24px; color: black; user-select: none">Confirm File Deletion</span>',
       html: `
       <div style="font-family: Arial, sans-serif; font-size: 16px; color: black; display: flex; align-items: center; user-select: none">
-        <img src="../../public/images/homepage/felix.png" alt="Felix" style="width: 150px; margin-top: 30px; user-select: none; pointer-events: none">
+        <img src="../../public/images/homepage/felix_done.png" alt="Felix" style="width: 150px; margin-top: 30px; user-select: none; pointer-events: none">
         <div style="margin-left: 20px; text-align: left; color: white; background-color: #30383F; border-radius: 15px; padding: 15px">
           <p>Are you sure you want to delete the file <span style="font-weight: bold">${documentTiles[index].name}</span>?</p>
           <p>This action cannot be undone.</p>

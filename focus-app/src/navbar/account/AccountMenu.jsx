@@ -86,7 +86,7 @@ export default function AccountMenu() {
             aria-expanded={open ? "true" : undefined}
           >
             <Avatar sx={{ width: 32, height: 32 }}>
-              {username.charAt(0).toUpperCase() || ""} 
+              {username.length !== 0 ? username.charAt(0).toUpperCase() : ""} 
             </Avatar>
           </IconButton>
         </Tooltip>
