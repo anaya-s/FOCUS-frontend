@@ -12,7 +12,7 @@ const DashboardOverall = () => {
   const [filter, setFilter] = useState("user");
   const filterRef = useRef("user");
 
-  const handleFilter = (newFilter) => {
+  const handleFilter = async (newFilter) => {
     if (filter !== newFilter) {
       setFilter(newFilter);
       filterRef.current = newFilter;
