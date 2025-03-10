@@ -186,10 +186,15 @@ export default function ReadingTime({ filter }) {
       },
       tooltip: {
         callbacks: {
-          label: (context) => {
+          label: function (context) {
             const index = context.dataIndex;
-            const totalTime = (dataTotalReadingTimes[index] || 0) + (dataFocusTimes[index] || 0);
-            return `${context.dataset.label}: ${totalTime.toFixed(3)}`;
+            if (context.dataset.label === "Total Reading Time (Seconds)" | context.dataset.label === "Total Reading Time (Minutes)") {
+              if(yAxisScale === 59)
+                return `Total reading time (minutes): ${(dataTotalReadingTimes[index] + dataFocusTimes[index]).toFixed(3)}`;
+              else
+                return `Total reading time (seconds): ${(dataTotalReadingTimes[index] + dataFocusTimes[index]).toFixed(3)}`;
+            }
+            return `${context.dataset.label}: ${context.raw.toFixed(3)}`;
           },
         },
       },
