@@ -129,12 +129,12 @@ export default function AccountMenu() {
         transformOrigin={{ horizontal: "right", vertical: "top" }}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
       >
-        <MenuItem onClick={() => {webgazer.end(); stopCamera(); toDashboard();}}>
+        {/* <MenuItem onClick={() => {webgazer.end(); stopCamera(); toDashboard();}}>
           <ListItemIcon>
             <AnalyticsIcon fontSize="small" />
           </ListItemIcon>
           Dashboard
-        </MenuItem>
+        </MenuItem> */}
         <MenuItem onClick={() => {webgazer.end(); stopCamera(); toProfile();}}>
           <ListItemIcon>
             <PersonIcon fontSize="small" />
