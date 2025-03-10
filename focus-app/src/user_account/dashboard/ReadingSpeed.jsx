@@ -75,37 +75,37 @@ export default function ReadingSpeed({ filter }) {
     return { dataLabels, yDataValues, totalAverageWPM, totalWordsRead };
   }
 
+  const fetchData = async () => {
+    try {
+      setValidConnection(1);
+      setLoading(true);
+      const result = await reauthenticatingFetch(
+        "GET",
+        `${baseURL}/api/eye/reading-speed/?display=${filter}`
+      );
+
+      console.log(filter, "==>", result);
+
+      const { dataLabels, yDataValues, totalAverageWPM, totalWordsRead } = processData(result);
+      setDataLabels(dataLabels);
+      setYData(yDataValues);
+      setTotalAverageWPM(totalAverageWPM);
+      setTotalWordsRead(totalWordsRead);
+
+      setLoading(false);
+      setValidConnection(0);
+    } catch (err) {
+      console.error(err);
+      setValidConnection(2);
+      setLoading(false);
+      setDataLabels([]);
+      setYData([]);
+      setTotalAverageWPM(0);
+      setTotalWordsRead(0);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setValidConnection(1);
-        setLoading(true);
-        const result = await reauthenticatingFetch(
-          "GET",
-          `${baseURL}/api/eye/reading-speed/?display=${filter}`
-        );
-
-        console.log(filter, "==>", result);
-
-        const { dataLabels, yDataValues, totalAverageWPM, totalWordsRead } = processData(result);
-        setDataLabels(dataLabels);
-        setYData(yDataValues);
-        setTotalAverageWPM(totalAverageWPM);
-        setTotalWordsRead(totalWordsRead);
-
-        setLoading(false);
-        setValidConnection(0);
-      } catch (err) {
-        console.error(err);
-        setValidConnection(2);
-        setLoading(false);
-        setDataLabels([]);
-        setYData([]);
-        setTotalAverageWPM(0);
-        setTotalWordsRead(0);
-      }
-    };
-
     fetchData();
   }, [filter]);
 
@@ -129,15 +129,15 @@ export default function ReadingSpeed({ filter }) {
     responsive: true,
     plugins: {
       legend: { position: "top", display: false },
-      // title: {
-      //   display: true,
-      //   text:
-      //     filter === "user"
-      //       ? "Average Reading Speed Across All Sessions"
-      //       : filter === "session"
-      //       ? "Average Reading Speed in Current Session"
-      //       : "Average Reading Speed in Latest Video",
-      // },
+      title: {
+        display: false,
+        text:
+          filter === "user"
+            ? "Average Reading Speed Across All Sessions"
+            : filter === "session"
+            ? "Average Reading Speed in Current Session"
+            : "Average Reading Speed in Latest Video",
+      },
       zoom: {
         pan: { enabled: true, mode: "x" },
         zoom: {
@@ -185,7 +185,7 @@ export default function ReadingSpeed({ filter }) {
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
-        minHeight: "300px",
+        minHeight: "358px",
       }}
     >
       <Typography 
@@ -206,7 +206,7 @@ export default function ReadingSpeed({ filter }) {
       >
         {validConnection !== 2 ? (
           loading ? (
-            <CircularProgress sx={{ mt: "10vh" }} />
+            <CircularProgress/>
           ) : (
             <Box sx={{ width: "100%", height: "100%", flexGrow: 1, display: "flex", justifyContent: "center" }}>
               <Bar data={chartData} options={chartOptions} />
@@ -221,12 +221,12 @@ export default function ReadingSpeed({ filter }) {
               justifyContent: "center",
             }}
           >
-            <Typography variant="h5" sx={{ textAlign: "center", mt: "5vh" }}>
+            <Typography variant="h5" sx={{ textAlign: "center" }}>
               Connection failed
             </Typography>
             <Button
               variant="contained"
-              onClick={() => fetchData()}
+              onClick={fetchData}
               sx={{ mt: "1vh" }}
             >
               Retry

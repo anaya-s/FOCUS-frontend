@@ -96,7 +96,7 @@ export default function BlinkRate({ filter }) {
         display: false,
       },
       title: {
-        display: true,
+        display: false,
         text: "Blink Rate",
       },
     },
@@ -140,7 +140,7 @@ export default function BlinkRate({ filter }) {
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
-        minHeight: "300px",
+        minHeight: "358px",
       }}
     >
       <Typography 
@@ -176,7 +176,7 @@ export default function BlinkRate({ filter }) {
               justifyContent: "center",
             }}
           >
-            <Typography variant="h5" sx={{ textAlign: "center", mt: "5vh" }}>
+            <Typography variant="h5" sx={{ textAlign: "center" }}>
               Connection failed
             </Typography>
             <Button

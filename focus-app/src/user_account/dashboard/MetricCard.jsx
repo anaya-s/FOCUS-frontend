@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Typography, Card, CardContent, Grid, CircularProgress } from "@mui/material";
+import { Box, Typography, Card, CardContent, Grid, CircularProgress, Button } from "@mui/material";
 import { reauthenticatingFetch } from '../../utils/api';
 import config from '../../config';
 
@@ -29,31 +29,31 @@ export default function ReadingSpeed({ filter }) {
     }
   }
 
+  const fetchData = async () => {
+    try {
+      setValidConnection(1);
+      setLoading(true);
+
+      const resultOne = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-speed/?display=${filter}`);
+      const { totalAverageWPM, totalWordsRead } = processData(resultOne, "speed");
+      setTotalAverageWPM(totalAverageWPM);
+      setTotalWordsRead(totalWordsRead);
+
+      const resultTwo = await reauthenticatingFetch("GET", `${baseURL}/api/eye/fix-sacc/?display=${filter}`);
+      const { fixations, saccades } = processData(resultTwo, "fix-sacc");
+      setFixations(fixations);
+      setSaccades(saccades);
+
+      setLoading(false);
+      setValidConnection(0);
+    } catch (err) {
+      console.error(err);
+      setValidConnection(2);
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setValidConnection(1);
-        setLoading(true);
-
-        const resultOne = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-speed/?display=${filter}`);
-        const { totalAverageWPM, totalWordsRead } = processData(resultOne, "speed");
-        setTotalAverageWPM(totalAverageWPM);
-        setTotalWordsRead(totalWordsRead);
-
-        const resultTwo = await reauthenticatingFetch("GET", `${baseURL}/api/eye/fix-sacc/?display=${filter}`);
-        const { fixations, saccades } = processData(resultTwo, "fix-sacc");
-        setFixations(fixations);
-        setSaccades(saccades);
-
-        setLoading(false);
-        setValidConnection(0);
-      } catch (err) {
-        console.error(err);
-        setValidConnection(2);
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, [filter]);
 
@@ -68,7 +68,8 @@ export default function ReadingSpeed({ filter }) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        height: "100%"
+        height: "100%",
+        minHeight: "150px",
       }}
     >
       <Typography 
@@ -78,9 +79,8 @@ export default function ReadingSpeed({ filter }) {
         Eye Metrics
       </Typography>
 
-      {loading ? (
-        <CircularProgress/>
-      ) : (
+      {validConnection !== 2 ? (
+        loading ? <CircularProgress/> : 
         <Grid container spacing={2} display="flex" justifyContent="center" alignItems="center">
           {[
             { label: "Average WPM", value: totalAverageWPM },
@@ -116,6 +116,28 @@ export default function ReadingSpeed({ filter }) {
             </Grid>
           ))}
         </Grid>
+      )
+      :
+      (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Typography variant="h5" sx={{ textAlign: "center" }}>
+            Connection failed
+          </Typography>
+          <Button
+            variant="contained"
+            onClick={fetchData}
+            sx={{ mt: "1vh" }}
+          >
+            Retry
+          </Button>
+        </Box>
       )}
     </Box>
   );

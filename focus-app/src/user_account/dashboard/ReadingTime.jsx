@@ -96,50 +96,50 @@ export default function ReadingTime({ filter }) {
     return { dataLabels, dataTotalReadingTimes, dataFocusTimes };
   }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setValidConnection(1);
-        setLoading(true);
+  const fetchData = async () => {
+    try {
+      setValidConnection(1);
+      setLoading(true);
 
-        const result = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-times/?display=${filter}`);
-        // console.log(filter, "==>", result);
+      const result = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-times/?display=${filter}`);
+      // console.log(filter, "==>", result);
 
-        var { dataLabels, dataTotalReadingTimes, dataFocusTimes } = processData(result);
+      var { dataLabels, dataTotalReadingTimes, dataFocusTimes } = processData(result);
 
-        function filterUniqueTimestamps(labels, totalReadingTimes, focusTimes) {
-            let seen = new Set();
-            let filteredLabels = [];
-            let filteredTotalReadingTimes = [];
-            let filteredFocusTimes = [];
-        
-            for (let i = 0; i < labels.length; i++) {
-                if (!seen.has(labels[i])) {
-                    seen.add(labels[i]);
-                    filteredLabels.push(labels[i]);
-                    filteredTotalReadingTimes.push(totalReadingTimes[i]);
-                    filteredFocusTimes.push(focusTimes[i]);
-                }
-            }
-        
-            return { filteredLabels, filteredTotalReadingTimes, filteredFocusTimes };
-        }
-        
-        const { filteredLabels, filteredTotalReadingTimes, filteredFocusTimes } = 
-            filterUniqueTimestamps(dataLabels, dataTotalReadingTimes, dataFocusTimes);
-
-        setDataLabels(filteredLabels);
-        setDataTotalReadingTimes(filteredTotalReadingTimes);
-        setDataFocusTimes(filteredFocusTimes);
-        setValidConnection(0);
-      } catch (err) {
-        console.error(err);
-        setValidConnection(2);
-      } finally {
-        setLoading(false);
+      function filterUniqueTimestamps(labels, totalReadingTimes, focusTimes) {
+          let seen = new Set();
+          let filteredLabels = [];
+          let filteredTotalReadingTimes = [];
+          let filteredFocusTimes = [];
+      
+          for (let i = 0; i < labels.length; i++) {
+              if (!seen.has(labels[i])) {
+                  seen.add(labels[i]);
+                  filteredLabels.push(labels[i]);
+                  filteredTotalReadingTimes.push(totalReadingTimes[i]);
+                  filteredFocusTimes.push(focusTimes[i]);
+              }
+          }
+      
+          return { filteredLabels, filteredTotalReadingTimes, filteredFocusTimes };
       }
-    };
+      
+      const { filteredLabels, filteredTotalReadingTimes, filteredFocusTimes } = 
+          filterUniqueTimestamps(dataLabels, dataTotalReadingTimes, dataFocusTimes);
 
+      setDataLabels(filteredLabels);
+      setDataTotalReadingTimes(filteredTotalReadingTimes);
+      setDataFocusTimes(filteredFocusTimes);
+      setValidConnection(0);
+    } catch (err) {
+      console.error(err);
+      setValidConnection(2);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, [filter, yAxisScale]);
 
@@ -175,15 +175,15 @@ export default function ReadingTime({ filter }) {
     responsive: true,
     plugins: {
       legend: { position: "top", display: true },
-      // title: {
-      //   display: true,
-      //   text:
-      //     filter === "user"
-      //       ? "Total Reading and Focus Times Across All Sessions"
-      //       : filter === "session"
-      //       ? "Total Reading and Focus Times in Current Session"
-      //       : "Total Reading and Focus Times in Latest Video",
-      // },
+      title: {
+        display: false,
+        text:
+          filter === "user"
+            ? "Total Reading and Focus Times Across All Sessions"
+            : filter === "session"
+            ? "Total Reading and Focus Times in Current Session"
+            : "Total Reading and Focus Times in Latest Video",
+      },
       tooltip: {
         callbacks: {
           label: (context) => {
@@ -236,6 +236,7 @@ export default function ReadingTime({ filter }) {
         alignItems: "center",
         justifyContent: "center",
         height: "100%",
+        minHeight: "696px",
       }}
     >
       <ToolTip title={yAxisScale === 59 ? "Show in Seconds" : "Show in Minutes"} placement="right">
@@ -248,7 +249,6 @@ export default function ReadingTime({ filter }) {
         </Button>
       </ToolTip>
   
-      {/* Title - Centered at the Top */}
       <Typography
         variant="h5"
         sx={{
@@ -264,7 +264,6 @@ export default function ReadingTime({ filter }) {
         Reading Times
       </Typography>
   
-      {/* Chart Container */}
       <Container
         sx={{
           width: "100%",
@@ -274,7 +273,29 @@ export default function ReadingTime({ filter }) {
           mt: 5, // Add margin-top to avoid overlap
         }}
       >
-        {loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions} />}
+        {validConnection !== 2 ? (
+          loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions} />
+        ) : (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Typography variant="h5" sx={{ textAlign: "center" }}>
+              Connection failed
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={fetchData}
+              sx={{ mt: "1vh" }}
+            >
+              Retry
+            </Button>
+          </Box>
+        )}
       </Container>
     </Box>
   );

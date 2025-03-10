@@ -56,24 +56,24 @@ const DashboardOverall = () => {
 
         {/* Eye Metrics Panel */}
         <Grid item xs={12}>
-          <Box sx={{ backgroundColor: "white", p: 2, borderRadius: 2 }}>
+          <Box sx={{ backgroundColor: "#F3F5F9", p: 2, borderRadius: 2 }}>
             <MetricCard filter={filter} />
           </Box>
         </Grid>
 
         {/* Charts */}
         <Grid item xs={12} md={6}>
-          <Box sx={{ backgroundColor: "white", p: 2, borderRadius: 2 }}>
+          <Box sx={{ backgroundColor: "#F3F5F9", p: 2, borderRadius: 2 }}>
             <ReadingSpeed filter={filter} />
           </Box>
         </Grid>
         <Grid item xs={12} md={6}>
-          <Box sx={{ backgroundColor: "white", p: 2, borderRadius: 2 }}>
+          <Box sx={{ backgroundColor: "#F3F5F9", p: 2, borderRadius: 2 }}>
             <BlinkRate filter={filter} />
           </Box>
         </Grid>
         <Grid item xs={12}>
-          <Box sx={{ backgroundColor: "white", p: 2, borderRadius: 2 }}>
+          <Box sx={{ backgroundColor: "#F3F5F9", p: 2, borderRadius: 2 }}>
             <ReadingTime filter={filter} />
           </Box>
         </Grid>
