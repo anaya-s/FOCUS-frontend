@@ -119,7 +119,7 @@ export default function ReadingSpeed({ filter }) {
         backgroundColor: "rgba(6, 118, 13, 0.2)",
         borderColor: "rgba(6, 118, 13, 1)",
         type: filter === "video" ? "line" : "bar",
-        pointRadius: 0.25,
+        pointRadius: 1,
         pointHoverRadius: 5,
       },
     ],
@@ -128,16 +128,16 @@ export default function ReadingSpeed({ filter }) {
   const chartOptions = {
     responsive: true,
     plugins: {
-      legend: { position: "top", display: true },
-      title: {
-        display: true,
-        text:
-          filter === "user"
-            ? "Average Reading Speed Across All Sessions"
-            : filter === "session"
-            ? "Average Reading Speed in Current Session"
-            : "Average Reading Speed in Latest Video",
-      },
+      legend: { position: "top", display: false },
+      // title: {
+      //   display: true,
+      //   text:
+      //     filter === "user"
+      //       ? "Average Reading Speed Across All Sessions"
+      //       : filter === "session"
+      //       ? "Average Reading Speed in Current Session"
+      //       : "Average Reading Speed in Latest Video",
+      // },
       zoom: {
         pan: { enabled: true, mode: "x" },
         zoom: {
@@ -165,6 +165,10 @@ export default function ReadingSpeed({ filter }) {
               : "Timestamp",
         },
         min: 0,
+        ticks: {
+          autoSkip: true, // skip labels to prevent clutter
+          ...(filter === "video" && { maxTicksLimit: dataLabels.length  / 8}) // Adjust the number of labels displayed (may need to reduce further if changing graph size)
+        },
       },
     },
   };
