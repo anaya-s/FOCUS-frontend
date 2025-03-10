@@ -328,7 +328,7 @@ function TextReaderPage() {
   const pdfSetPageRef = useRef(false);
   const isPDFRef = useRef(false);
 
-  const fpsIntervalRef = useRef(100);
+  const fpsIntervalRef = useRef(60);
 
   const colourSchemeSelection = (selection) => ({
     border: backgroundColourSelectionRef.current == selection ? "3px solid #06760D" : "normal"
@@ -781,9 +781,9 @@ const previousFrameDataUrl = useRef(null);
 
 useEffect(() => {
   if(readingMode.current === 4 && calibrationAccuracy !== -1)
-    fpsIntervalRef.current = 50; // increase FPS limit to counteract performance impact from calculating gaze predictions
+    fpsIntervalRef.current = 20; // stabalises frame rate to 15 FPS for line unblurring
   else
-    fpsIntervalRef.current = 100;
+    fpsIntervalRef.current = 60; // stabalises frame rate to 15 FPS for other reading modes
 }, [readingMode.current]);
 
 
@@ -796,9 +796,6 @@ const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
 
       // Compare current frame with the previous frame
       if (frame !== previousFrameDataUrl.current) {
-
-        // if(readingMode.current !== 2 & readingMode.current !== 3)
-        //   readingSpeedRef.current = undefined;
 
         // Calculate the time difference between the current frame and the last sent frame
         const timeDiff = timestamp - previous_send_time;
@@ -857,6 +854,8 @@ const sendVideoFrame = useCallback(async (xCoord, yCoord, canvas) => {
         // Update the previous frame data URL and timestamp
         previousFrameDataUrl.current = frame;
       }
+
+      handleYCoord(yCoord);
     }
   }
   else
