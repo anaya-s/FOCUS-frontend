@@ -24,6 +24,16 @@ export default function BlinkRate({ filter }) {
   const [blinkData, setBlinkData] = useState([]);
   const [validConnection, setValidConnection] = useState(1);
 
+  // Convert timestamp to HH:MM:SS
+  const convertToTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  };
+
   const fetchData = async () => {
     try {
       setValidConnection(1);
@@ -31,8 +41,24 @@ export default function BlinkRate({ filter }) {
 
       const result = await reauthenticatingFetch("GET", `${baseURL}/api/eye/blink-rate/?display=${filter}`);
 
-      setDataLabels(result.sessions.map((session) => session.session_id));
-      setBlinkData(result.sessions.map((session) => session.blinks_per_minute));
+      console.log(filter, "=>", result);
+
+      if(filter === "user")
+      {
+        setDataLabels(result.sessions.map((session) => session.session_id));
+        setBlinkData(result.sessions.map((session) => session.blink_rate));
+      } 
+      else if(filter === "session")
+      {
+        setDataLabels(result.videos.map((video) => video.video_id));
+        setBlinkData(result.videos.map((video) => video.blink_rate));
+      }
+      else // filter === "video"
+      {
+        setDataLabels(result.blink_rate_over_time.map((blink_rate_over_time) => convertToTime(blink_rate_over_time.timestamp)));
+        setBlinkData(result.blink_rate_over_time.map((blink_rate_over_time) => blink_rate_over_time.blink_rate));
+      }
+
 
       setLoading(false);
       setValidConnection(0);
@@ -85,7 +111,17 @@ export default function BlinkRate({ filter }) {
       x: {
         title: {
           display: true,
-          text: "Session ID",
+          text: filter === "user" ? "Session ID" : filter === "session" ? "Video ID" : "Timestamp",
+        },
+        ticks: {
+          callback: function (value, index, values) {
+            if(filter === "video")
+            {
+              const fullTime = String(dataLabels[index]); // Get full timestamp
+              return fullTime ? fullTime.slice(0, 5) : ""; // Show only HH:MM
+            }
+            return value;
+          },
         },
         beginAtZero: false,
       },
@@ -125,7 +161,7 @@ export default function BlinkRate({ filter }) {
       >
         {validConnection !== 2 ? (
           loading ? (
-            <CircularProgress sx={{ mt: "10vh" }} />
+            <CircularProgress/>
           ) : (
             <Box sx={{ width: "100%", height: "100%", flexGrow: 1, display: "flex", justifyContent: "center" }}>
               <Line data={chartData} options={chartOptions} />
