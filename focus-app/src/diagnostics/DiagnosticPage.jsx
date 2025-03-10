@@ -373,6 +373,8 @@ function DiagnosticPage()
                             show_axis: showAxes.current,
                             draw_eye: showEyes.current,
                             mode: "diagnostic",
+                            filter: filter.current,
+                            zoom: zoom.current
                         })
                     );
 
