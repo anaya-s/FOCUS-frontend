@@ -34,7 +34,7 @@ const buttonStyle = {
 
 const NavBar = () => {
   let { user } = useContext(AuthContext);
-  const { toHome, toLogin, toAbout, toOurProducts, toDrive, toDiagnostics} = useNavigation();
+  const { toHome, toLogin, toAbout, toOurProducts, toDrive, toDiagnostics, toDashboard} = useNavigation();
 
   // Function to stop webcam access (if any) after ending webgazer
   const stopCamera = () => {
@@ -65,6 +65,7 @@ const NavBar = () => {
         {user ? <Divider orientation="vertical" variant="middle" flexItem sx={{mr: "16px"}} /> : null}
         {user ? <Button style={buttonStyle} variant="outlined" onClick={() => {webgazer.end(); stopCamera(); toDrive(0);}}> Your Drive </Button> : null}
         {user ? <Button style={buttonStyle} variant="outlined" onClick={() => {webgazer.end(); stopCamera(); toDiagnostics();}}> Diagnostics </Button> : null}
+        {user ? <Button style={buttonStyle} variant="outlined" onClick={() => {webgazer.end(); stopCamera(); toDashboard();}}> Dashboard </Button> : null}
         {user ? <AccountMenu /> : <Button style={buttonStyle} variant="contained" onClick={() => {webgazer.end(); stopCamera(); toLogin();}}> Login </Button>}
       </div>
     </div>

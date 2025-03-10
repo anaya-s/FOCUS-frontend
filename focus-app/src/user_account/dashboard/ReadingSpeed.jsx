@@ -1,11 +1,19 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
-import zoomPlugin from 'chartjs-plugin-zoom';
-import { Box, Button, CircularProgress, Divider, Alert, Typography } from "@mui/material";
-import { reauthenticatingFetch } from '../../utils/api';
-import config from '../../config'
-const baseURL = config.apiUrl
+import zoomPlugin from "chartjs-plugin-zoom";
+import {
+  Box,
+  CircularProgress,
+  Typography,
+  Button,
+  Container,
+} from "@mui/material";
+import { reauthenticatingFetch } from "../../utils/api";
+import config from "../../config";
 
+const baseURL = config.apiUrl;
+
+// Import Chart.js components
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -15,8 +23,8 @@ import {
   Legend,
   BarElement,
 } from "chart.js";
-import { Container } from "@mui/system";
 
+// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -26,226 +34,206 @@ ChartJS.register(
   Legend,
   zoomPlugin
 );
-export default function ReadingSpeed() {
+
+export default function ReadingSpeed({ filter }) {
   const [loading, setLoading] = useState(true);
-  const [dataLabels, setdataLabels] = useState([]);
+  const [dataLabels, setDataLabels] = useState([]);
   const [yData, setYData] = useState([]);
   const [totalAverageWPM, setTotalAverageWPM] = useState(0);
   const [totalWordsRead, setTotalWordsRead] = useState(0);
-
-  /*
-  Status of connection to backend server
-    2 - connection failed
-    1 - connection in progress
-    0 - connection successful
-  */
   const [validConnection, setValidConnection] = useState(1);
 
-  /* Set filter when displaying data
-    "user" - display all data
-    "session" - display data per session
-    "video" - display data per video
-  */
-  const [filter, setFilter] = useState("user");
-  const [filterBeforeDisconnect, setFilterBeforeDisconnect] = useState("user");
-  const updateYAxis = useRef(false);
-
-  /* Toggle for setting y-axis scale to seconds or minutes 
-  - 59 - minutes
-  - 0 - seconds
-  */
-  const [yAxisScale, setYAxisScale] = useState(59);
-
-  // Used to convert timestamp to time in HH:MM:SS format for x-axis
+  // Convert timestamp to HH:MM:SS
   const convertToTime = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
   };
 
   function processData(data) {
-    var datamap = null;
-    var dataLabels = null;
+    if (!data) return { dataLabels: [], yDataValues: [], totalAverageWPM: 0, totalWordsRead: 0 };
 
-    var dataReadingSpeedOverTime = null;
-    var averageReadingSpeed = null;
-    
-    var dataOverallAverageReadingSpeed = data.average_wpm;
-    var dataTotalWords = data.total_words_read;
+    let dataLabels, yDataValues;
+    let totalAverageWPM = data.average_wpm || 0;
+    let totalWordsRead = data.total_words_read || 0;
 
-    console.log(data);
-    const reading_speeds = data.reading_speed_over_time;
+    if (filter === "user") {
+      dataLabels = data.sessions?.map(session => `${session.session_id}`) || [];
+      yDataValues = data.sessions?.map(session => session.average_wpm.toFixed(0)) || [];
+    } else if (filter === "session") {
+      dataLabels = data.videos?.map(video => `${video.video_id}`) || [];
+      yDataValues = data.videos?.map(video => video.average_wpm.toFixed(0)) || [];
+    } else if (filter === "video") {
+      const readingSpeeds = data.reading_speed_over_time || [];
+      dataLabels = readingSpeeds.map(entry => convertToTime(entry.timestamp));
+      yDataValues = readingSpeeds.map(entry => entry.wpm);
+    }
 
-    let counter = 0;
-    dataLabels = reading_speeds.map(() => counter++);
-    dataReadingSpeedOverTime =  reading_speeds.map((timestamp) => timestamp.wpm);
-
-
-    return { dataLabels, yDataValues: dataReadingSpeedOverTime, totalAverageWPM: dataOverallAverageReadingSpeed, totalWordsRead: dataTotalWords };
-}
-
-  const changeYAxis = () => {
-
-    if(yAxisScale === 59)
-      setYAxisScale(0); // seconds
-    else
-      setYAxisScale(59); // minutes
-
-    // update data
-    updateYAxis.current = true;
-    setLoading(true);
+    return { dataLabels, yDataValues, totalAverageWPM, totalWordsRead };
   }
 
-  const handleFilter = async(newFilter) => {
-    if(filter !== newFilter)
-    {
+  const fetchData = async () => {
+    try {
+      setValidConnection(1);
       setLoading(true);
-      // Clear previous data
-      setdataLabels([]);
+      const result = await reauthenticatingFetch(
+        "GET",
+        `${baseURL}/api/eye/reading-speed/?display=${filter}`
+      );
+
+      console.log(filter, "==>", result);
+
+      const { dataLabels, yDataValues, totalAverageWPM, totalWordsRead } = processData(result);
+      setDataLabels(dataLabels);
+      setYData(yDataValues);
+      setTotalAverageWPM(totalAverageWPM);
+      setTotalWordsRead(totalWordsRead);
+
+      setLoading(false);
+      setValidConnection(0);
+    } catch (err) {
+      console.error(err);
+      setValidConnection(2);
+      setLoading(false);
+      setDataLabels([]);
       setYData([]);
       setTotalAverageWPM(0);
       setTotalWordsRead(0);
-      setFilter(newFilter);
-      // console.log(`Filter set to ${newFilter}`);
     }
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setValidConnection(1);
-        const result = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-speed/?display=${filter}`);
-
-        console.log(filter, "==>", result);
-
-        const { dataLabels, yDataValues, totalAverageWPM, totalWordsRead } = processData(result);
-        setdataLabels(dataLabels);
-        setYData(yDataValues);
-        setTotalAverageWPM(totalAverageWPM);
-        setTotalWordsRead(totalWordsRead);
-
-        setLoading(false);
-        setValidConnection(0);
-      } catch (err) {
-        console.error(err);
-
-        setValidConnection(2);
-        setLoading(true);
-
-        setFilterBeforeDisconnect(filter);
-        setFilter("");
-        setdataLabels([]);
-        setYData([]);
-        setTotalAverageWPM(0);
-        setTotalWordsRead(0);
-      }
-    };
-
-    if(filter !== "")
-      fetchData();
-
-    updateYAxis.current = false;
-
-  }, [filter, updateYAxis.current]);
+    fetchData();
+  }, [filter]);
 
   const chartData = {
-    labels: [0, 1, 2, 3, 4],
+    labels: dataLabels,
     datasets: [
       {
-        label: "Reading speed (wpm)",
-        data: [250, 128, 202, 167, 146],
+        label: "Reading Speed (WPM)",
+        data: yData,
         borderWidth: 1,
         backgroundColor: "rgba(6, 118, 13, 0.2)",
         borderColor: "rgba(6, 118, 13, 1)",
-        type: "bar",
-        pointRadius: 0.25,
+        type: filter === "video" ? "line" : "bar",
+        pointRadius: 1,
         pointHoverRadius: 5,
       },
     ],
   };
-  
 
   const chartOptions = {
     responsive: true,
     plugins: {
-      legend: {
-        position: "top",
-        display: true,
-      },
+      legend: { position: "top", display: false },
       title: {
-        display: true,
-        text: filter === "user"
-          ? "Average reading speed across all sessions"
-          : filter === "session"
-          ? "Average reading speed in current session"
-          : "Average reading speed in latest video",
+        display: false,
+        text:
+          filter === "user"
+            ? "Average Reading Speed Across All Sessions"
+            : filter === "session"
+            ? "Average Reading Speed in Current Session"
+            : "Average Reading Speed in Latest Video",
       },
       zoom: {
-        pan: {
-          enabled: true,
-          mode: "x",
-        },
+        pan: { enabled: true, mode: "x" },
         zoom: {
-          wheel: {
-            enabled: true,
-          },
-          pinch: {
-            enabled: true,
-          },
+          wheel: { enabled: true },
+          pinch: { enabled: true },
           mode: "x",
-          limits: {
-            x: { min: 0 }, // Prevent negative zoom on the x-axis
-            y: { min: 0 }, // Prevent negative zoom on the y-axis
-          },
+          limits: { x: { min: 0 }, y: { min: 0 } },
         },
       },
     },
     scales: {
       y: {
-        title: {
-          display: true,
-          text: "Reading speed (words per minute)",
-        },
-        beginAtZero: true, // Prevents negative values
-        suggestedMin: 0, // Ensures the Y-axis does not go below zero
+        title: { display: true, text: "Reading Speed (Words per Minute)" },
+        beginAtZero: true,
+        suggestedMin: 0,
       },
       x: {
         title: {
           display: true,
-          text: filter === "user" ? "Session ID" : filter === "session" ? "Video ID" : "Timestamp",
+          text:
+            filter === "user"
+              ? "Session ID"
+              : filter === "session"
+              ? "Video ID"
+              : "Timestamp",
         },
-        min: 0, // Ensures the X-axis does not go below zero
+        min: 0,
+        ticks: {
+          autoSkip: true, // skip labels to prevent clutter
+          ...(filter === "video" && { maxTicksLimit: dataLabels.length  / 8}) // Adjust the number of labels displayed (may need to reduce further if changing graph size)
+        },
       },
     },
   };
-  
-  
-
 
   return (
-    <Box>
-        <Box sx={{border: "1px solid black", display: "flex", flexDirection: "column", width: "40vw", height: "42vh"}}>
-          <Typography variant="h4" sx={{textAlign: "center", mt: "2vh"}}>Reading Speed</Typography>
-          <Container sx={{ width: "40vw", display: "flex", alignItems: "center", justifyContent: "center"}}>
-                  {validConnection !== 2 ?
-                  loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions}/> 
-                  :
-                  <Container>
-                      <Typography variant="h5" sx={{textAlign: "center", mt: "5vh"}}>Connection failed</Typography>
-                      <Button variant="contained" onClick={() => handleFilter(filterBeforeDisconnect)} sx={{mt: "1vh"}}>Retry</Button>
-                  </Container>
-                  }
-          </Container>
-        </Box>
-        {/* <Box sx={{display: "flex", flexDirection: "column", mt: "2vh"}}>
-            <Container sx={{display: "flex", justifyContent: "space-between", flexDirection: "row", mb: "2vh"}}>
-                <Container>
-                    <Typography variant="h5" sx={{border: "1px solid black", height: "10vh", alignContent: "center"}}>Total average reading speed: {totalAverageWPM} wpm</Typography>
-                </Container>
-                <Container>
-                    <Typography variant="h5" sx={{border: "1px solid black", height: "10vh", alignContent: "center"}}>Total words read: {totalWordsRead}</Typography>
-                </Container>
-            </Container>
-        </Box> */}
+    <Box
+      sx={{
+        borderRadius: 2,
+        boxShadow: 3,
+        bgcolor: "white",
+        p: 3,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        minHeight: "358px",
+      }}
+    >
+      <Typography 
+        variant="h5" 
+        sx={{ mb: 2, fontWeight: "bold", fontSize: "1.5rem" }}
+      >
+        Reading Speed
+      </Typography>
+
+      <Container
+        sx={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "250px",
+        }}
+      >
+        {validConnection !== 2 ? (
+          loading ? (
+            <CircularProgress/>
+          ) : (
+            <Box sx={{ width: "100%", height: "100%", flexGrow: 1, display: "flex", justifyContent: "center" }}>
+              <Bar data={chartData} options={chartOptions} />
+            </Box>
+          )
+        ) : (
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Typography variant="h5" sx={{ textAlign: "center" }}>
+              Connection failed
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={fetchData}
+              sx={{ mt: "1vh" }}
+            >
+              Retry
+            </Button>
+          </Box>
+        )}
+      </Container>
     </Box>
   );
 }
