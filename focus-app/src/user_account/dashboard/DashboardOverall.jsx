@@ -33,20 +33,23 @@ const DashboardOverall = () => {
         {/* Filter Buttons */}
         <Grid item xs={12}>
           <Box display="flex" justifyContent="center" gap={2}>
+            {/* <Typography variant="h6" sx={{ fontWeight: "bold", fontSize: "1.5rem" }}>
+              Filter by:
+            </Typography> */}
             <Button 
               onClick={() => handleFilter("user")} 
               variant={filter === "user" ? "contained" : "outlined"}>
-              <PersonRoundedIcon /> User
+              <PersonRoundedIcon sx={{mr: "1vw"}}/> User
             </Button>
             <Button 
               onClick={() => handleFilter("session")} 
               variant={filter === "session" ? "contained" : "outlined"}>
-              <TheatersRoundedIcon /> Session
+              <TheatersRoundedIcon sx={{mr: "1vw"}}/> Session
             </Button>
             <Button 
               onClick={() => handleFilter("video")} 
               variant={filter === "video" ? "contained" : "outlined"}>
-              <ScheduleRoundedIcon /> Video
+              <ScheduleRoundedIcon sx={{mr: "1vw"}}/> Video
             </Button>
           </Box>
         </Grid>

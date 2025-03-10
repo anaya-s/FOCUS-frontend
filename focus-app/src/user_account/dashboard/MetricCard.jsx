@@ -68,7 +68,7 @@ export default function ReadingSpeed({ filter }) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        height: "100%",
+        height: "100%"
       }}
     >
       <Typography 
@@ -79,16 +79,16 @@ export default function ReadingSpeed({ filter }) {
       </Typography>
 
       {loading ? (
-        <CircularProgress sx={{ mt: "10vh" }} />
+        <CircularProgress/>
       ) : (
-        <Grid container spacing={2} justifyContent="center">
+        <Grid container spacing={2} display="flex" justifyContent="center" alignItems="center">
           {[
             { label: "Average WPM", value: totalAverageWPM },
             { label: "Total Words Read", value: totalWordsRead },
             { label: "Fixations", value: fixations },
             { label: "Saccades", value: saccades },
           ].map((metric, index) => (
-            <Grid item xs={6} sm={4} md={3} key={index}>
+            <Grid item xs={6} sm={4} md={3} key={index} sx={{width: 150, height: 100, display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center"}}>
               <Card
                 sx={{
                   width: 150,
