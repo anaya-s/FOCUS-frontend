@@ -103,12 +103,34 @@ export default function ReadingTime({ filter }) {
         setLoading(true);
 
         const result = await reauthenticatingFetch("GET", `${baseURL}/api/eye/reading-times/?display=${filter}`);
-        console.log(filter, "==>", result);
+        // console.log(filter, "==>", result);
 
-        const { dataLabels, dataTotalReadingTimes, dataFocusTimes } = processData(result);
-        setDataLabels(dataLabels);
-        setDataTotalReadingTimes(dataTotalReadingTimes);
-        setDataFocusTimes(dataFocusTimes);
+        var { dataLabels, dataTotalReadingTimes, dataFocusTimes } = processData(result);
+
+        function filterUniqueTimestamps(labels, totalReadingTimes, focusTimes) {
+            let seen = new Set();
+            let filteredLabels = [];
+            let filteredTotalReadingTimes = [];
+            let filteredFocusTimes = [];
+        
+            for (let i = 0; i < labels.length; i++) {
+                if (!seen.has(labels[i])) {
+                    seen.add(labels[i]);
+                    filteredLabels.push(labels[i]);
+                    filteredTotalReadingTimes.push(totalReadingTimes[i]);
+                    filteredFocusTimes.push(focusTimes[i]);
+                }
+            }
+        
+            return { filteredLabels, filteredTotalReadingTimes, filteredFocusTimes };
+        }
+        
+        const { filteredLabels, filteredTotalReadingTimes, filteredFocusTimes } = 
+            filterUniqueTimestamps(dataLabels, dataTotalReadingTimes, dataFocusTimes);
+
+        setDataLabels(filteredLabels);
+        setDataTotalReadingTimes(filteredTotalReadingTimes);
+        setDataFocusTimes(filteredFocusTimes);
         setValidConnection(0);
       } catch (err) {
         console.error(err);
@@ -132,6 +154,8 @@ export default function ReadingTime({ filter }) {
         borderWidth: 1,
         stack: "combined",
         type: filter === "video" ? "line" : "bar",
+        pointRadius: 1,
+        pointHoverRadius: 5,
       },
       {
         label: yAxisScale === 59 ? "Total Reading Time (Minutes)" : "Total Reading Time (Seconds)",
@@ -141,6 +165,8 @@ export default function ReadingTime({ filter }) {
         borderWidth: 1,
         stack: "combined",
         type: filter === "video" ? "line" : "bar",
+        pointRadius: 1,
+        pointHoverRadius: 5,
       },
     ],
   };
@@ -149,15 +175,15 @@ export default function ReadingTime({ filter }) {
     responsive: true,
     plugins: {
       legend: { position: "top", display: true },
-      title: {
-        display: true,
-        text:
-          filter === "user"
-            ? "Total Reading and Focus Times Across All Sessions"
-            : filter === "session"
-            ? "Total Reading and Focus Times in Current Session"
-            : "Total Reading and Focus Times in Latest Video",
-      },
+      // title: {
+      //   display: true,
+      //   text:
+      //     filter === "user"
+      //       ? "Total Reading and Focus Times Across All Sessions"
+      //       : filter === "session"
+      //       ? "Total Reading and Focus Times in Current Session"
+      //       : "Total Reading and Focus Times in Latest Video",
+      // },
       tooltip: {
         callbacks: {
           label: (context) => {
@@ -189,6 +215,10 @@ export default function ReadingTime({ filter }) {
           text: filter === "user" ? "Session ID" : filter === "session" ? "Video ID" : "Timestamp",
         },
         stacked: true,
+        ticks: {
+          autoSkip: true, // skip labels to prevent clutter
+          ...(filter === "video" && { maxTicksLimit: dataLabels.length  / 8}) // Adjust the number of labels displayed (may need to reduce further if changing graph size)
+        },
       },
     },
   };
@@ -196,6 +226,7 @@ export default function ReadingTime({ filter }) {
   return (
     <Box
       sx={{
+        position: "relative", // Make the Box a reference for absolute positioning
         borderRadius: 2,
         boxShadow: 3,
         bgcolor: "white",
@@ -207,26 +238,42 @@ export default function ReadingTime({ filter }) {
         height: "100%",
       }}
     >
-      <Button onClick={changeYAxis} sx={{ mb: 2 }} disabled={validConnection === 2 || loading}>
-        {yAxisScale === 59 ? (
-          <ToolTip title="Show in Seconds">
+      <ToolTip title={yAxisScale === 59 ? "Show in Seconds" : "Show in Minutes"} placement="right">
+        <Button onClick={changeYAxis} sx={{ position: "absolute", top: 24, left: 10 }} disabled={validConnection === 2 || loading}>
+          {yAxisScale === 59 ? (
             <HourglassDisabledRoundedIcon />
-          </ToolTip>
-        ) : (
-          <ToolTip title="Show in Minutes">
+          ) : (
             <HourglassEmptyRoundedIcon />
-          </ToolTip>
-        )}
-      </Button>
-
-      <Typography 
-        variant="h5" 
-        sx={{ mb: 2, fontWeight: "bold", fontSize: "1.5rem" }}
+          )}
+        </Button>
+      </ToolTip>
+  
+      {/* Title - Centered at the Top */}
+      <Typography
+        variant="h5"
+        sx={{
+          position: "absolute",
+          top: 24,
+          left: "50%",
+          transform: "translateX(-50%)", // Center it horizontally
+          fontWeight: "bold",
+          fontSize: "1.5rem",
+          mb: 2
+        }}
       >
         Reading Times
       </Typography>
-
-      <Container sx={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+  
+      {/* Chart Container */}
+      <Container
+        sx={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mt: 5, // Add margin-top to avoid overlap
+        }}
+      >
         {loading ? <CircularProgress /> : <Bar data={chartData} options={chartOptions} />}
       </Container>
     </Box>
