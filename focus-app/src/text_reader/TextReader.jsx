@@ -93,6 +93,7 @@ function TextReaderPage() {
     5 - Natural Language Processing (NLP) assistance
   */
   const readingMode = useRef(3);
+  const [mode, setMode] = useState(3);
 
   /* Hide reading modes based on input document type:
   0 - hide nothing
@@ -236,6 +237,7 @@ function TextReaderPage() {
       if (parsedText.length === 0) // Image-based PDF file
       {
         readingMode.current = 1;
+        setMode(1);
         setHideSettings(1);
       }
       else
@@ -243,6 +245,7 @@ function TextReaderPage() {
         if(file.type !== "application/pdf") // Word or text file
         {
           readingMode.current = 3;
+          setMode(3);
           setHideSettings(2);
         }
       }
@@ -321,6 +324,7 @@ function TextReaderPage() {
     { label: "Merriweather", value: "Merriweather, serif" }, 
   ];
 
+  /* Text settings sliders that use refs for storing and updating values across components */
   const fontStyleRef = useRef(fontOptions[1].value);
   const fontSizeRef = useRef(28);
   const textOpacityRef = useRef(0.5);
@@ -331,11 +335,28 @@ function TextReaderPage() {
   const backgroundColourRef = useRef([0, 0, 0]);
   const backgroundColourSelectionRef = useRef(1);
 
+  /* States for text settings sliders */
+  const [fontStyle, setFontStyle] = useState(fontOptions[1].value);
+  const [fontSize, setFontSize] = useState(28);
+  const [textOpacity, setTextOpacity] = useState(0.5);
+  const [letterSpacing, setLetterSpacing] = useState(0);
+  const [lineSpacing, setLineSpacing] = useState(3);
+  const [backgroundBrightness, setBackgroundBrightness] = useState(0);
+  const [backgroundColour, setBackgroundColour] = useState([0, 0, 0]);
+
+  /* Sliders for Reading Mode 1 */
   const pdfScaleRef = useRef(1);
   const pdfCurrentPageRef = useRef(1);
   const pdfTotalPagesRef = useRef(1);
   const pdfSetPageRef = useRef(false);
   const isPDFRef = useRef(false);
+
+  /* States for Reading Mode 1 sliders */
+  const [pdfScale, setPdfScale] = useState(1);
+  const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
+  const [pdfSetPage, setPdfSetPage] = useState(false);
+
+  /* Functions to handle change of slider values */
 
   const colourSchemeSelection = (selection) => ({
     border: backgroundColourSelectionRef.current == selection ? "3px solid #06760D" : "normal"
@@ -356,65 +377,99 @@ function TextReaderPage() {
     fontSize: "30px", color: invertTextColourRef.current ? "white" : colour
   });
 
-  const handleFontStyle = (event) => {
+  const handleFontStyle = async(event) => {
     fontStyleRef.current = event.target.value;
+    setFontStyle(event.target.value);
   };
 
-  const handleFontSize = (event) => {
+  const handleFontSize = async(event) => {
     fontSizeRef.current = event.target.value;
+    setFontSize(event.target.value);
   };
 
-  const handleTextOpacity = (event) => {
+  const handleTextOpacity = async(event) => {
     textOpacityRef.current = event.target.value;
+    setTextOpacity(event.target.value);
   };
 
-  const handleBackgroundBrightness = (event) => {
+  const handleBackgroundBrightness = async(event) => {
     backgroundBrightnessRef.current = event.target.value;
     if(event.target.value > 0.5)
       invertTextColourRef.current = true;
     else
       invertTextColourRef.current = false;
+    setBackgroundBrightness(event.target.value);
   };
 
-  const handleLetterSpacing = (event) => {
+  const handleLetterSpacing = async(event) => {
     letterSpacingRef.current = event.target.value;
+    setLetterSpacing(event.target.value);
   };
 
-  const handleLineSpacing = (event) => {
+  const handleLineSpacing = async(event) => {
     lineSpacingRef.current = event.target.value;
+    setLineSpacing(event.target.value);
   };
 
-  const handlePdfScale = (event) => {
+  const handlePdfScale = async(event) => {
     pdfScaleRef.current = event.target.value;
+    setPdfScale(event.target.value);
   };
 
-  const handlePdfPageChange = (event) => {
+  const handlePdfPageChange = async(event) => {
     pdfCurrentPageRef.current = event.target.value;
+    setPdfCurrentPage(event.target.value);
     pdfSetPageRef.current = true;
+    setPdfSetPage(true);
   };
 
   const setDefaultSettings = () => {
     fontStyleRef.current = fontOptions[1].value;
+    setFontStyle(fontOptions[1].value);
+
     fontSizeRef.current = 28;
+    setFontSize(28);
+
     textOpacityRef.current = 0.5;
+    setTextOpacity(0.5);
+
     letterSpacingRef.current = 0;
+    setLetterSpacing(0);
 
     if(readingMode.current === 4)
+    {
       lineSpacingRef.current = 7;
+      setLineSpacing(7);
+    }
     else
+    {
       lineSpacingRef.current = 3;
+      setLineSpacing(3);
+    }
 
     backgroundBrightnessRef.current = 0;
+    setBackgroundBrightness(0);
+
     invertTextColourRef.current = false;
+    
     backgroundColourRef.current = [0,0,0];
+    setBackgroundColour([0,0,0]);
+
     backgroundColourSelectionRef.current = 1;
 
     if(readingMode.current === 2)
+    {
       highlightSpeedRef.current = 5;
+      setHighlightSpeed(5);
+    }
     else
+    {
       highlightSpeedRef.current = 2;
+      setHighlightSpeed(2);
+    }
 
     wordCountRef.current = 1;
+    setWordCount(1);
     
     setPrevLineUnblur(false);
     prevLineUnblurRef.current = false;
@@ -422,9 +477,12 @@ function TextReaderPage() {
     autoScrollRef.current = false;
 
     pdfScaleRef.current = 1;
+    setPdfScale(1);
 
     showVerbsRef.current = true;
+    setShowVerbs(true);
     showConjucationsRef.current = true;
+    setShowConjucations(true);
   };
 
   const handleKeyPress = (e) => {
@@ -437,41 +495,49 @@ function TextReaderPage() {
     if(colour == 1)
     {
       backgroundColourRef.current = [0,0,0];
+      setBackgroundColour([0,0,0]);
       backgroundColourSelectionRef.current = 1;
     }
     else if(colour == 2)
     {
       backgroundColourRef.current = [6,118,3];
+      setBackgroundColour([6,118,3]);
       backgroundColourSelectionRef.current = 2;
     }
     else if(colour == 3)
     {
       backgroundColourRef.current = [0,123,229];
+      setBackgroundColour([0,123,229]);
       backgroundColourSelectionRef.current = 3;
     }
     else if(colour == 4)
     {
       backgroundColourRef.current = [211,46,63];
+      setBackgroundColour([211,46,63])
       backgroundColourSelectionRef.current = 4; 
     }
     else if(colour == 5)
     {
       backgroundColourRef.current = [78,53,22];
+      setBackgroundColour([78,53,22]);
       backgroundColourSelectionRef.current = 5;
     }
     else if(colour == 6)
     {
       backgroundColourRef.current = [251,192,45];
+      setBackgroundColour([251,192,45]);
       backgroundColourSelectionRef.current = 6;
     }
     else if(colour == 7)
     {
       backgroundColourRef.current = [245,124,0];
+      setBackgroundColour([245,124,0]);
       backgroundColourSelectionRef.current = 7;
     }
     else if(colour == 8)
     {
       backgroundColourRef.current = [142,36,170];
+      setBackgroundColour([142,36,170]);
       backgroundColourSelectionRef.current = 8;
     }
   };
@@ -494,7 +560,9 @@ function TextReaderPage() {
   /* Reading mode parameters */
 
   const highlightSpeedRef = useRef(2);
+  const [highlightSpeed, setHighlightSpeed] = useState(2);
   const wordCountRef = useRef(1);
+  const [wordCount, setWordCount] = useState(1);
   const maxWordCountRef = useRef(0);
   const [yCoord, setYCoord] = useState(0);
   const yCoordRef = useRef(yCoord);
@@ -509,10 +577,14 @@ function TextReaderPage() {
   const [calibrationAccuracy, setCalibrationAccuracy] = useState(0);
 
   const pauseStatusRef = useRef(true);
+  const [pauseStatus, setPauseStatus] = useState(true);
   const resetStatusRef = useRef(true);
+  const [resetStatus, setResetStatus] = useState(true);
 
   const showVerbsRef = useRef(true);
+  const [showVerbs, setShowVerbs] = useState(true);
   const showConjucationsRef = useRef(true);
+  const [showConjucations, setShowConjucations] = useState(true);
 
   const readingSpeedRef = useRef(0);
 
@@ -522,14 +594,14 @@ function TextReaderPage() {
   const lineUnblurSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, highlightSpeedRef, yCoordRef, prevLineUnblurRef, autoScrollRef, autoScrollSpeedRef, unblurredLinesRef, readingSpeedRef, isOnBreak, pauseStatusRef, resetStatusRef, fileNameRef, parsedTextRef]);
   const nlpSettings = useRef([fontStyleRef, fontSizeRef, textOpacityRef, letterSpacingRef, lineSpacingRef, backgroundBrightnessRef, invertTextColourRef, backgroundColourRef, backgroundColourSelectionRef, showVerbsRef, showConjucationsRef, fileNameRef, parsedTextRef]);
 
-  const [pauseStatus, setPauseStatus] = useState(true);
-
   const handleHighlightSpeed = (event, newValue) => {
     highlightSpeedRef.current = newValue;
+    setHighlightSpeed(newValue);
   };
 
   const handleWordCount = (event, newValue) => {
     wordCountRef.current = newValue;
+    setWordCount(newValue);
   };
 
   const handleReadingModeSelection = (mode) => () => {
@@ -537,6 +609,7 @@ function TextReaderPage() {
     setPauseStatus(pauseStatusRef.current);
     readingSpeedRef.current = 0; // reset reading speed when changing reading mode
     readingMode.current = mode;
+    setMode(mode);
   };
 
   const setPauseStatusValues = () => {
@@ -548,6 +621,7 @@ function TextReaderPage() {
     pauseStatusRef.current = true;
     setPauseStatus(pauseStatusRef.current);
     resetStatusRef.current = true;
+    setResetStatus(true);
   };
 
   const handleYCoord = (yCoord) => {
@@ -1216,7 +1290,7 @@ useEffect(() => {
             <Box>
               <Container sx={{display: "flex", flexDirection: "row", mt: "4vh", alignItems: "center"}}>
                 <Tooltip title="Italicise all verbs in the text" placement="left">  
-                  <Checkbox checked={showVerbsRef.current} onChange={() => {showVerbsRef.current = !showVerbsRef.current}}/>
+                  <Checkbox checked={showVerbsRef.current} onChange={() => {showVerbsRef.current = !showVerbsRef.current; setShowVerbs(showVerbsRef.current);}}/>
                   <Typography variant="caption" sx={{ml: "1vw"}}>
                     Highlight verbs
                   </Typography>
@@ -1224,7 +1298,7 @@ useEffect(() => {
               </Container>
               <Container sx={{display: "flex", flexDirection: "row", mt: "2vh", alignItems: "center"}}>
                 <Tooltip title="Underline all conjucations in the text" placement="left">  
-                  <Checkbox checked={showConjucationsRef.current} onChange={() => {showConjucationsRef.current = !showConjucationsRef.current}}/>
+                  <Checkbox checked={showConjucationsRef.current} onChange={() => {showConjucationsRef.current = !showConjucationsRef.current; setShowConjucations(showConjucationsRef.current);}}/>
                   <Typography variant="caption" sx={{ml: "1vw"}}>
                     Highlight conjucations
                   </Typography>
