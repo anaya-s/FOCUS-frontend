@@ -2,8 +2,9 @@
 
 Front-end code for the ES410 Master’s Group 18 project, FOCUS (Functional Optometry for Cognitive User Support): a website designed to enhance reading productivity, improve attention, as well as detect and mitigate eye strain.
 
-The website, built with the ReactJS framework, utilises built-in or connected webcams to capture frames of the user's face, in compliance with our Privacy Policy, to identify and measure eye features and metrics. It also employs [WebGazer](https://webgazer.cs.brown.edu/), an eye-tracking library licensed under the GNU General Public License (GPL) v3, to perform eye-tracking. For more details, refer to `LICENSE-WebGazer`.
+The website, built with the ReactJS framework, utilises built-in or connected webcams to capture frames of the user's face, in compliance with our Privacy Policy, to identify and measure eye features and metrics. It also employs [WebGazer](https://webgazer.cs.brown.edu/), an eye-tracking library licensed under the GNU General Public License (GPL) v3, to perform eye-tracking. For more details, please refer to the [section at the end of the file](#webgazer-license) for the Webgazer license.
 
+For the main license used for this project, please see [LICENSE.txt](/LICENSE.txt).
 
 ## How to run the front-end?
 
