@@ -10,7 +10,13 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { Box, Typography, CircularProgress, Container, Button } from "@mui/material";
+import { Box, Typography, CircularProgress, Container, Button, Tooltip as ToolTip } from "@mui/material";
+
+import {
+  Insights as InsightsIcon,
+  Timeline as TimelineIcon
+} from '@mui/icons-material';
+
 import { reauthenticatingFetch } from "../../utils/api";
 import config from "../../config";
 
@@ -20,9 +26,21 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 export default function BlinkRate({ filter }) {
   const [loading, setLoading] = useState(true);
+
   const [dataLabels, setDataLabels] = useState([]);
+  const [dataLabelsWithPredictions, setDataLabelsWithPredictions] = useState([]);
+
   const [blinkData, setBlinkData] = useState([]);
+  const [blinkDataAndPredictions, setBlinkDataAndPredictions] = useState([]);
+
   const [validConnection, setValidConnection] = useState(1);
+
+  const [showPredictions, setShowPredictions] = useState(false);
+
+  // Function to handle showing predictions
+  const handleShowPredictions = () => {
+    setShowPredictions(!showPredictions);
+  };
 
   // Convert timestamp to HH:MM:SS
   const convertToTime = (dateString) => {
@@ -55,10 +73,53 @@ export default function BlinkRate({ filter }) {
       }
       else // filter === "video"
       {
-        setDataLabels(result.blink_rate_over_time.map((blink_rate_over_time) => convertToTime(blink_rate_over_time.timestamp)));
-        setBlinkData(result.blink_rate_over_time.map((blink_rate_over_time) => blink_rate_over_time.blink_rate));
-      }
+        // Get timestamps strings
+        const dataLabels_timestamps = result.blink_rate_over_time.map((blink_rate_over_time) => blink_rate_over_time.timestamp);
 
+        // Convert timestamps to HH:MM:SS (without predictions)
+        const dataLabels = dataLabels_timestamps.map((timestamp) => convertToTime(timestamp));
+
+        // Get blink data (without predictions)
+        const blinkData = result.blink_rate_over_time.map((blink_rate_over_time) => blink_rate_over_time.blink_rate)
+
+        // Get predictions
+        const predictions = result.blink_predictions.lstm_predictions.map((blink_prediction) => blink_prediction);
+
+        // Combine blink data with predictions
+        const combinedData = blinkData.concat(predictions);
+
+        /* Need to update dataLabels to include predictions */
+
+        var dataLabelsWithPredictions = []; // Array to store data labels with predictions
+
+        // Get last timestamp as Date object
+        var lastTimestamp = new Date(dataLabels_timestamps[dataLabels_timestamps.length - 1]);
+
+        dataLabelsWithPredictions = dataLabels; // Copy data labels to new array
+
+        for(let i = 0; i < predictions.length; i++)
+        {
+          // Add 1 minute to last timestamp
+          lastTimestamp.setMinutes(lastTimestamp.getMinutes() + 1);
+
+          // Convert timestamp to HH:MM:SS and append to the new data labels array
+          dataLabelsWithPredictions.push(convertToTime(lastTimestamp));
+        }
+
+        console.log("Blink Data:", blinkData);
+        console.log("Predictions:", predictions);
+
+        console.log("Combined Data:", dataLabelsWithPredictions, combinedData);
+
+        setDataLabels(result.blink_rate_over_time.map((blink_rate_over_time) => convertToTime(blink_rate_over_time.timestamp)));
+        setDataLabelsWithPredictions(dataLabelsWithPredictions);
+        
+        setBlinkData(blinkData);
+        setBlinkDataAndPredictions(combinedData);
+
+        // if(blinkData.length < 5)
+        //   setShowPredictions(true); // Show predictions so graph does not look empty
+      }
 
       setLoading(false);
       setValidConnection(0);
@@ -71,19 +132,33 @@ export default function BlinkRate({ filter }) {
 
   useEffect(() => {
     fetchData();
-  }, [filter]);
+  }, [filter, showPredictions]);
 
   const chartData = {
-    labels: dataLabels.length > 0 ? dataLabels : [0, 1, 2, 3, 4], // Placeholder if no data
+    labels: (filter === "video" & showPredictions) ? (showPredictions ? (dataLabelsWithPredictions.length > 0 ? dataLabelsWithPredictions : (dataLabels.length > 0 ? dataLabels : [0, 1, 2, 3, 4])) : dataLabels.length > 0 ? dataLabels : [0, 1, 2, 3, 4]) : dataLabels.length > 0 ? dataLabels : [0, 1, 2, 3, 4],
     datasets: [
       {
-        label: "Blinks per Minute",
-        data: blinkData.length > 0 ? blinkData : [20, 21, 14, 19, 25], // Placeholder if no data
-        backgroundColor: "rgba(6, 118, 13, 0.2)",
-        borderColor: "rgba(6, 118, 13, 1)",
+        data: (filter === "video" & showPredictions) ? (showPredictions ? (blinkDataAndPredictions.length > 0 ? blinkDataAndPredictions : (blinkData.length > 0 ? blinkData : [0, 1, 2, 3, 4])) : blinkData.length > 0 ? blinkData : [0, 1, 2, 3, 4]) : blinkData.length > 0 ? blinkData : [0, 1, 2, 3, 4],
         borderWidth: 2,
         pointRadius: 4,
-        pointBackgroundColor: "rgba(6, 118, 13, 1)",
+        pointBackgroundColor: (ctx) => {
+          if (filter === "video" & showPredictions)
+            return ctx.dataIndex < blinkData.length ? "rgba(6, 118, 13, 1)" : "rgba(0, 119, 255, 1)";
+          return "rgba(6, 118, 13, 1)";
+        },
+        segment: {
+          borderColor: (ctx) => {
+            if (filter === "video" & showPredictions)
+              return ctx.p0DataIndex < blinkData.length - 1 ? "rgba(6, 118, 13, 1)" : "rgba(0, 119, 225, 1)";
+            return "rgba(6, 118, 13, 1)";
+          },
+          borderDash: (ctx) => {
+            if (filter === "video" & showPredictions)
+              return ctx.p0DataIndex < blinkData.length - 1 ? [] : [5, 5];
+            return [];
+          },
+        },
+        pointHoverRadius: 5,
       },
     ],
   };
@@ -99,6 +174,18 @@ export default function BlinkRate({ filter }) {
         display: false,
         text: "Blink Rate",
       },
+      tooltip: {
+          callbacks: {
+            label: function (context) {
+              const index = context.dataIndex;
+              if(filter === "video" & showPredictions)
+              {
+                return index < blinkData.length ? `Blinks per Minute: ${blinkData[index]}` : `Predicted Blinks per Minute: ${blinkDataAndPredictions[index].toFixed(0)}`;
+              }
+              return `Blinks per Minute: ${blinkData[index]}`;
+            }
+          }
+        }
     },
     scales: {
       y: {
@@ -117,7 +204,7 @@ export default function BlinkRate({ filter }) {
           callback: function (value, index, values) {
             if(filter === "video")
             {
-              const fullTime = String(dataLabels[index]); // Get full timestamp
+              const fullTime = String(dataLabelsWithPredictions[index]); // Get full timestamp
               return fullTime ? fullTime.slice(0, 5) : ""; // Show only HH:MM
             }
             return value;
@@ -131,6 +218,7 @@ export default function BlinkRate({ filter }) {
   return (
     <Box
       sx={{
+        position: "relative",
         borderRadius: 2,
         boxShadow: 3,
         bgcolor: "white",
@@ -143,6 +231,11 @@ export default function BlinkRate({ filter }) {
         minHeight: "358px",
       }}
     >
+      <ToolTip title={showPredictions ? "Hide predictions" : "Show predictions"} placement="left">
+        <Button onClick={() => handleShowPredictions()}sx={{ position: "absolute", top: 24, right: 10 }} disabled={filter !== "video" || (validConnection === 2 || loading)}>
+          {showPredictions ? <TimelineIcon/> : <InsightsIcon/>}
+        </Button>
+      </ToolTip>
       <Typography 
         variant="h5" 
         sx={{ mb: 2, fontWeight: "bold", fontSize: "1.5rem" }}
