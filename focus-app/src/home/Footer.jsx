@@ -10,6 +10,13 @@ import {
 const Footer = () => {
   const [hoveredLink, setHoveredLink] = useState(null);
 
+  const checkIfLoggedIn = () => {
+    if(localStorage.getItem("authTokens"))
+      return true;
+    else
+      return false;
+  };
+
   return (
     <Box sx={{backgroundColor: '#f5f5f2'}}>
       <Box 
@@ -35,18 +42,24 @@ const Footer = () => {
             <Link href="/" variant="body2" color="inherit" underline="hover">Homepage</Link><br />
             <Link href="/about" variant="body2" color="inherit" underline="hover">About Us</Link><br />
             <Link href="/products" variant="body2" color="inherit" underline="hover">Our Products</Link><br />
-            <Link href="/login" variant="body2" color="inherit" underline="hover">Login</Link><br />
-            <Link href="/register" variant="body2" color="inherit" underline="hover">Register</Link><br />
+            <Divider sx={{mb: "10px", visibility: "hidden"}}/>
+            {!checkIfLoggedIn() ? (
+            <div>
+              <Link href="/login" variant="body2" color="inherit" underline="hover">Login</Link><br />
+              <Link href="/register" variant="body2" color="inherit" underline="hover">Register</Link><br />
+            </div>
+            ) : null
+            } 
           </Grid2>
 
           <Grid2 item xs={5}>
             <Typography variant="h5" sx={{visibility: "hidden"}}>Quick Links</Typography>
             <Divider sx={{mb: "10px", visibility: "hidden"}}/>
+            <Link href="/drive" variant="body2" color="inherit" underline="hover">Drive</Link><br />
             <Link href="/account/dashboard" variant="body2" color="inherit" underline="hover">Dashboard</Link><br />
+            <Divider sx={{mb: "10px", visibility: "hidden"}}/>
             <Link href="/account/profile" variant="body2" color="inherit" underline="hover">Profile</Link><br />
             <Link href="/account/settings" variant="body2" color="inherit" underline="hover">Settings</Link><br />
-            <Link href="/calibrate" variant="body2" color="inherit" underline="hover">Calibration</Link><br />
-            <Link href="/reading" variant="body2" color="inherit" underline="hover">Reading</Link><br />
           </Grid2>
 
           <Grid2 item xs={5}>
