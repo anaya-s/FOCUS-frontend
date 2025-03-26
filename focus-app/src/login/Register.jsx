@@ -18,7 +18,7 @@ const pageStyle = {
   justifyContent: "center",
   alignItems: "center",
   textAlign: "center",
-  marginTop: '100px'
+  marginTop: "5vh"
 };
 
 function Register() {
@@ -147,10 +147,10 @@ function Register() {
             >
               Sign up
             </Button>
-            <Typography>
+            {/* <Typography>
               By signing up, you agree to our{" "}
               <Link style={{ cursor: "pointer" }}>T&Cs</Link>
-            </Typography>
+            </Typography> */}
           </form>
         </Box>
         <Typography sx={{ marginTop: 2 }} fontSize="18px">

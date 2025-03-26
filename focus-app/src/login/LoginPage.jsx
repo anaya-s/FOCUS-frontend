@@ -15,6 +15,7 @@ const pageStyle = {
   justifyContent: "center",
   alignItems: "center",
   textAlign: "center",
+  marginTop: "5vh"
 };
 
 function Login() {
@@ -113,6 +114,7 @@ function Login() {
                 backgroundColor: "green",
                 "&:hover": { backgroundColor: "darkgreen" },
               }}
+              disabled={!password || !email}
             >
               Sign in
             </Button>
